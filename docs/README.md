@@ -32,7 +32,6 @@ Engineering architecture documents:
 - tech stack and architecture principles
 - repository structure
 - payment implementation strategy
-- UI engineering guidance
 - UI/UX constitution and redesign direction
 - frontend information architecture and route distribution
 
@@ -86,11 +85,14 @@ Formal API specification documents.
 - contract overviews
 - field definitions
 - error-code documentation
-- OpenAPI / Swagger exports when maintained
 - current module specs:
   - `auth.md`
+  - `admin.md`
   - `product.md`
   - `order.md`
+  - `review.md`
+  - `search.md`
+  - `user.md`
 
 ## Reading Order
 
