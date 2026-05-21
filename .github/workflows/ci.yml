@@ -115,7 +115,7 @@ jobs:
         run: |
           ./mvnw spring-boot:run -B -Dspring-boot.run.profiles=seed > backend-ci.log 2>&1 &
           for i in $(seq 1 90); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/health)
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/health || true)
             if [ "$code" = "200" ]; then
               echo "Backend ready after ${i}s"
               break
@@ -132,7 +132,7 @@ jobs:
         run: |
           npm run dev -- --host 0.0.0.0 > frontend-ci.log 2>&1 &
           for i in $(seq 1 30); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5173)
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5173 || true)
             if [ "$code" = "200" ]; then
               echo "Frontend ready after ${i}s"
               break
