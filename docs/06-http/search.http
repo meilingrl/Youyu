@@ -1,0 +1,117 @@
+### CampusMarket - Search
+### Run this file after changes to search or hot-keyword behavior.
+
+@baseUrl = http://localhost:8080
+@adminToken = mock-9001-ADMIN
+
+### Public keyword search
+GET {{baseUrl}}/api/products?keyword=Advanced%20Math
+
+###
+
+### Public keyword search (paginated)
+GET {{baseUrl}}/api/products?keyword=Math&page=1&pageSize=5
+
+###
+
+### Public keyword search with category filter
+GET {{baseUrl}}/api/products?keyword=Dorm&categoryId=3
+
+###
+
+### Public product type filter (digital)
+GET {{baseUrl}}/api/products?productType=digital
+
+###
+
+### Public combined filter: keyword + category + productType
+GET {{baseUrl}}/api/products?keyword=Math&categoryId=1&productType=digital
+
+###
+
+### Public hot-search ranking
+GET {{baseUrl}}/api/search/hot
+
+###
+
+### Public search suggestions
+GET {{baseUrl}}/api/search/suggest?q=adv&limit=5
+
+###
+
+### Public search suggestions (blank / noise input should return empty list)
+GET {{baseUrl}}/api/search/suggest?q=!!!&limit=5
+
+###
+
+### Admin: list search governance rules
+GET {{baseUrl}}/api/admin/search/governance-rules
+Authorization: Bearer mock-9001-ADMIN
+
+###
+
+### Admin: create a sensitive-word rule
+POST {{baseUrl}}/api/admin/search/governance-rules
+Authorization: Bearer mock-9001-ADMIN
+Content-Type: application/json
+
+{
+  "ruleType": "SENSITIVE_WORD",
+  "keyword": "counterfeit"
+}
+
+###
+
+### Admin: create a hide-keyword rule
+POST {{baseUrl}}/api/admin/search/governance-rules
+Authorization: Bearer mock-9001-ADMIN
+Content-Type: application/json
+
+{
+  "ruleType": "HIDE_KEYWORD",
+  "keyword": "test"
+}
+
+###
+
+### Admin: create a pin-keyword rule
+POST {{baseUrl}}/api/admin/search/governance-rules
+Authorization: Bearer mock-9001-ADMIN
+Content-Type: application/json
+
+{
+  "ruleType": "PIN_KEYWORD",
+  "keyword": "advanced math"
+}
+
+###
+
+### Admin: update governance rule (toggle active)
+PUT {{baseUrl}}/api/admin/search/governance-rules/1
+Authorization: Bearer mock-9001-ADMIN
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+###
+
+### Admin: delete governance rule
+DELETE {{baseUrl}}/api/admin/search/governance-rules/1
+Authorization: Bearer mock-9001-ADMIN
+
+###
+
+### Admin: browse search logs (paginated)
+GET {{baseUrl}}/api/admin/search/logs?page=1&pageSize=10
+Authorization: Bearer mock-9001-ADMIN
+
+###
+
+### Manual validation flow: create logs then verify governed suggestions
+GET {{baseUrl}}/api/products?keyword=Advanced%20Math
+
+###
+
+GET {{baseUrl}}/api/search/suggest?q=adv&limit=5

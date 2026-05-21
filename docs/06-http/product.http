@@ -1,0 +1,139 @@
+### CampusMarket — Products & Shop
+### Run this file after every change to product or shop endpoints.
+
+@baseUrl = http://localhost:8080
+@userToken = mock-1001-USER
+@sellerToken = mock-1001-USER
+
+# ─────────────────────────────────────────────
+# PUBLIC PRODUCT BROWSING
+# ─────────────────────────────────────────────
+
+### List products (no auth required)
+GET {{baseUrl}}/api/products
+
+###
+
+### List products — keyword filter
+GET {{baseUrl}}/api/products?keyword=高数
+
+###
+
+### List products — category filter
+GET {{baseUrl}}/api/products?categoryId=1
+
+###
+
+### List products — digital type only
+GET {{baseUrl}}/api/products?productType=digital
+
+###
+
+### Get product detail
+GET {{baseUrl}}/api/products/3001
+
+###
+
+### Get product detail — non-existent → expect 404
+GET {{baseUrl}}/api/products/99999
+
+# ─────────────────────────────────────────────
+# SELLER OPERATIONS
+# ─────────────────────────────────────────────
+
+###
+
+### Publish a new digital product
+POST {{baseUrl}}/api/products
+Authorization: Bearer {{sellerToken}}
+Content-Type: application/json
+
+{
+  "title": "HTTP测试商品-数字资料",
+  "description": "测试用数字资料商品",
+  "salePrice": 9.90,
+  "stockQuantity": 999,
+  "productType": "digital",
+  "categoryId": 1,
+  "supportsDigitalDelivery": true,
+  "allowPreview": true,
+  "previewRuleText": "前20%内容可预览"
+}
+
+###
+
+### Publish without auth → expect 401
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{
+  "title": "未授权商品",
+  "salePrice": 1.00
+}
+
+###
+
+### Get seller's own products
+GET {{baseUrl}}/api/products/mine
+Authorization: Bearer {{sellerToken}}
+
+###
+
+### Update product status (take offline)
+PUT {{baseUrl}}/api/products/3003/status
+Authorization: Bearer {{sellerToken}}
+Content-Type: application/json
+
+{
+  "status": "off_sale"
+}
+
+# ─────────────────────────────────────────────
+# FAVORITES
+# ─────────────────────────────────────────────
+
+###
+
+### List own favorites
+GET {{baseUrl}}/api/favorites
+Authorization: Bearer {{userToken}}
+
+###
+
+### Add product to favorites
+POST {{baseUrl}}/api/favorites
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "productId": 3001
+}
+
+###
+
+### Remove from favorites
+DELETE {{baseUrl}}/api/favorites/3001
+Authorization: Bearer {{userToken}}
+
+# ─────────────────────────────────────────────
+# SHOP (PUBLIC)
+# ─────────────────────────────────────────────
+
+###
+
+### Get shop detail (public)
+GET {{baseUrl}}/api/shops/4001
+
+###
+
+### List products in a shop
+GET {{baseUrl}}/api/shops/4001/products
+
+# ─────────────────────────────────────────────
+# CATEGORIES
+# ─────────────────────────────────────────────
+
+###
+
+### List all categories
+GET {{baseUrl}}/api/categories

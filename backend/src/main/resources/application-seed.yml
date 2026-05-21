@@ -1,0 +1,9 @@
+# Optional demo + performance catalog inserts. Use when the DB file is new or you deleted ~/.campusmarket/h2/.
+# Example: mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=seed
+spring:
+  config:
+    activate:
+      on-profile: seed
+  sql:
+    init:
+      data-locations: classpath:seed/data.sql,classpath:seed/seed-transactions.sql,classpath:seed/data-perf-catalog.sql

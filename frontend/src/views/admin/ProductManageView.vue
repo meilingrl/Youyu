@@ -1,0 +1,149 @@
+<script setup>
+import { onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
+import ListPageShell from '@/components/shell/ListPageShell.vue'
+import { getAdminProducts, updateAdminProductStatus } from '@/api/modules/admin'
+import { resolveErrorMessage } from '@/utils/error-utils'
+
+const loading = ref(false)
+const error = ref('')
+const rows = ref([])
+const total = ref(0)
+const page = ref(1)
+const pageSize = ref(10)
+const filters = reactive({
+  keyword: '',
+  status: '',
+  reviewStatus: '',
+  productType: ''
+})
+
+async function loadProducts() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const response = await getAdminProducts({ ...filters, page: page.value, pageSize: pageSize.value })
+    rows.value = response.data.items || []
+    total.value = response.data.total || 0
+  } catch (err) {
+    error.value = resolveErrorMessage(err)
+    ElMessage.error(error.value)
+  } finally {
+    loading.value = false
+  }
+}
+
+function onPageChange(p) {
+  page.value = p
+  loadProducts()
+}
+
+function onPageSizeChange(ps) {
+  pageSize.value = ps
+  page.value = 1
+  loadProducts()
+}
+
+function onSearch() {
+  page.value = 1
+  loadProducts()
+}
+
+async function changeStatus(row, status) {
+  try {
+    await ElMessageBox.confirm(`确认将商品状态调整为 ${status} 吗？`, '商品状态变更', {
+      type: 'warning'
+    })
+    await updateAdminProductStatus(row.id, { status })
+    ElMessage.success('商品状态已更新')
+    await loadProducts()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(resolveErrorMessage(error))
+    }
+  }
+}
+
+onMounted(loadProducts)
+</script>
+
+<template>
+  <ListPageShell
+    title="商品管理"
+    description="聚焦商品列表、审核状态查看和上下架处理，不扩展到前台发布编辑链路。"
+    :rows="rows"
+    :loading="loading"
+    :error="error"
+    empty-title="暂无商品记录"
+    empty-description="当前没有符合条件的商品。"
+    @retry="loadProducts"
+  >
+    <template #filters>
+      <div class="filter-row">
+        <el-input v-model="filters.keyword" placeholder="搜索商品标题 / 卖家 / 分类" clearable @keyup.enter="onSearch" />
+        <el-select v-model="filters.productType" placeholder="商品类型" clearable>
+          <el-option label="电子资料" value="digital" />
+          <el-option label="实物商品" value="physical" />
+        </el-select>
+        <el-select v-model="filters.status" placeholder="商品状态" clearable>
+          <el-option label="在售" value="on_sale" />
+          <el-option label="下架" value="off_sale" />
+          <el-option label="关闭" value="closed" />
+        </el-select>
+        <el-select v-model="filters.reviewStatus" placeholder="审核状态" clearable>
+          <el-option label="待审核" value="pending_review" />
+          <el-option label="已通过" value="approved" />
+          <el-option label="已驳回" value="rejected" />
+          <el-option label="无需审核" value="not_required" />
+        </el-select>
+        <el-button type="primary" :loading="loading" @click="onSearch">查询</el-button>
+      </div>
+    </template>
+
+    <template #table>
+      <el-table v-loading="loading" :data="rows">
+        <el-table-column prop="title" label="商品标题" min-width="220" />
+        <el-table-column prop="sellerName" label="卖家" min-width="100" />
+        <el-table-column prop="categoryName" label="分类" min-width="120" />
+        <el-table-column prop="productType" label="类型" min-width="100" />
+        <el-table-column prop="status" label="商品状态" min-width="100" />
+        <el-table-column prop="reviewStatus" label="审核状态" min-width="120" />
+        <el-table-column prop="reviewRejectReason" label="驳回原因" min-width="220" />
+        <el-table-column label="操作" min-width="160" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.status !== 'on_sale' && row.reviewStatus !== 'pending_review'"
+              link
+              type="success"
+              @click="changeStatus(row, 'on_sale')"
+            >
+              上架
+            </el-button>
+            <el-button
+              v-if="row.status === 'on_sale'"
+              link
+              type="warning"
+              @click="changeStatus(row, 'off_sale')"
+            >
+              下架
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <div class="pagination-row">
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :total="total"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next"
+          background
+          @current-change="onPageChange"
+          @size-change="onPageSizeChange"
+        />
+      </div>
+    </template>
+  </ListPageShell>
+</template>

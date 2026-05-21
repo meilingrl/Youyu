@@ -1,0 +1,68 @@
+### CampusMarket - Recommendations
+### Run this file to validate recommendation endpoints.
+
+@baseUrl = http://localhost:8080
+
+# ─────────────────────────────────────────────
+# Public cold-start home recommendation
+# ─────────────────────────────────────────────
+
+### Public cold-start — verify response structure
+GET {{baseUrl}}/api/recommend/home?limit=4
+# Expect: success=true, data array with id, title, salePrice, source="popularity", score, reason
+
+###
+
+### Public cold-start — larger limit
+GET {{baseUrl}}/api/recommend/home?limit=8
+# Expect: success=true, data has up to 8 items, all with source="popularity"
+
+###
+
+# ─────────────────────────────────────────────
+# Personalized home recommendation
+# ─────────────────────────────────────────────
+
+### Personalized — logged-in user with purchase history
+GET {{baseUrl}}/api/recommend/home?limit=4
+Authorization: Bearer mock-1001-USER
+# Expect: success=true, some items may have source="category_preference" with reason
+
+###
+
+### Personalized — no purchase history (falls back to popularity)
+GET {{baseUrl}}/api/recommend/home?limit=4
+Authorization: Bearer mock-1002-USER
+# Expect: success=true, falls back to popularity-based (source="popularity")
+
+###
+
+# ─────────────────────────────────────────────
+# Also-bought recommendations
+# ─────────────────────────────────────────────
+
+### Also-bought for product 3001
+GET {{baseUrl}}/api/recommend/also-bought/3001?limit=4
+# Expect: success=true, data array (may be empty if no co-purchases), items have source="also-bought", coPurchaseCount
+
+###
+
+### Also-bought for product with no co-purchases
+GET {{baseUrl}}/api/recommend/also-bought/99999?limit=4
+# Expect: success=true, data=[] (empty array, no error)
+
+###
+
+# ─────────────────────────────────────────────
+# Edge cases
+# ─────────────────────────────────────────────
+
+### Edge case — default limit
+GET {{baseUrl}}/api/recommend/home
+# Expect: success=true, returns default 8 items
+
+###
+
+### Edge case — large limit
+GET {{baseUrl}}/api/recommend/home?limit=100
+# Expect: success=true, returns at most available products, no server error

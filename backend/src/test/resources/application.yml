@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:campusmarket-test;MODE=MySQL;DATABASE_TO_UPPER=false;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:seed/data.sql,classpath:seed/seed-transactions.sql,classpath:seed/data-perf-catalog.sql

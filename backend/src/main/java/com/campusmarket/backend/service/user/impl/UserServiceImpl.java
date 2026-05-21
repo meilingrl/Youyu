@@ -1,0 +1,274 @@
+package com.campusmarket.backend.service.user.impl;
+
+import com.campusmarket.backend.common.api.ResultCode;
+import com.campusmarket.backend.common.auth.AuthContextHolder;
+import com.campusmarket.backend.common.auth.AuthUser;
+import com.campusmarket.backend.common.exception.BusinessException;
+import com.campusmarket.backend.controller.user.dto.CreateUserAddressRequest;
+import com.campusmarket.backend.controller.user.dto.SubmitStudentVerificationRequest;
+import com.campusmarket.backend.mapper.user.StudentVerificationMapper;
+import com.campusmarket.backend.mapper.user.UserMapper;
+import com.campusmarket.backend.service.user.UserService;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    private final UserMapper userMapper;
+    private final StudentVerificationMapper studentVerificationMapper;
+
+    public UserServiceImpl(UserMapper userMapper, StudentVerificationMapper studentVerificationMapper) {
+        this.userMapper = userMapper;
+        this.studentVerificationMapper = studentVerificationMapper;
+    }
+
+    @Override
+    public Map<String, Object> profile() {
+        Long userId = currentUserId();
+        Map<String, Object> user = userMapper.findById(userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "用户不存在"));
+        return linkedMap(
+                "user", publicUser(user),
+                "privilege", userMapper.findPrivilegeProfile(userId).orElseGet(Map::of),
+                "verification", verificationStatus()
+        );
+    }
+
+    @Override
+    public Map<String, Object> preference() {
+        Long userId = currentUserId();
+        return userMapper.findPreferenceByUserId(userId)
+                .map(LinkedHashMap::new)
+                .orElseGet(() -> new LinkedHashMap<>(defaultPreference(userId)));
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updatePreference(Map<String, Object> request) {
+        Long userId = currentUserId();
+        Map<String, Object> current = userMapper.findPreferenceByUserId(userId)
+                .map(LinkedHashMap::new)
+                .orElseGet(() -> new LinkedHashMap<>(defaultPreference(userId)));
+        current.putAll(sanitizePreference(request));
+        userMapper.upsertPreference(userId, current);
+        return new LinkedHashMap<>(current);
+    }
+
+    @Override
+    public Map<String, Object> insightSnapshot() {
+        Long userId = currentUserId();
+        Map<String, Object> summary = userMapper.summarizePurchaseInsight(userId);
+        return linkedMap(
+                "userId", userId,
+                "totalSpendAmount", summary.get("totalSpendAmount"),
+                "totalPurchasedItemCount", summary.get("totalPurchasedItemCount"),
+                "recentBrowses", userMapper.findRecentPurchases(userId, 5),
+                "favoritePreferenceSummary", userMapper.summarizePurchasedCategories(userId, 5),
+                "lastCalculatedAt", DATETIME_FORMATTER.format(LocalDateTime.now()),
+                "metricSource", "real_query"
+        );
+    }
+
+    @Override
+    public Map<String, Object> verificationStatus() {
+        Long userId = currentUserId();
+        return studentVerificationMapper.findLatestByUserId(userId)
+                .map(this::publicVerification)
+                .orElseGet(() -> linkedMap(
+                        "verificationStatus", "unverified",
+                        "message", "尚未提交学生认证"
+                ));
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> submitVerification(SubmitStudentVerificationRequest request) {
+        Long userId = currentUserId();
+        String studentNo = trim(request.getStudentNo());
+        String realName = trim(request.getRealName());
+        if (studentVerificationMapper.existsApprovedStudentNoForOtherUser(studentNo, userId)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "该学号已绑定其他有效账号");
+        }
+
+        studentVerificationMapper.findLatestByUserId(userId).ifPresent(latest -> {
+            String status = String.valueOf(latest.get("verificationStatus"));
+            if ("pending_review".equals(status)) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "已有待审核认证申请，请等待审核结果");
+            }
+            if ("approved".equals(status)) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "当前账号已完成学生认证");
+            }
+        });
+
+        Long verificationId = studentVerificationMapper.insert(
+                userId,
+                studentNo,
+                realName,
+                trim(request.getCollege()),
+                trim(request.getMajor()),
+                trim(request.getGrade()),
+                trim(request.getCampusEmail()),
+                trim(request.getVerificationMethod())
+        );
+        return studentVerificationMapper.findById(verificationId)
+                .map(this::publicVerification)
+                .orElseThrow(() -> new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "认证申请保存失败"));
+    }
+
+    @Override
+    public List<Map<String, Object>> addresses() {
+        return userMapper.findAddresses(currentUserId());
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> createAddress(CreateUserAddressRequest request) {
+        Long userId = currentUserId();
+        boolean firstAddress = userMapper.findAddresses(userId).isEmpty();
+        boolean defaultAddress = request.isDefaultAddress() || firstAddress;
+        if (defaultAddress) {
+            userMapper.clearDefaultAddress(userId);
+        }
+        Long addressId = userMapper.insertAddress(
+                userId,
+                trim(request.getReceiverName()),
+                trim(request.getReceiverPhone()),
+                trim(request.getAddressType()),
+                trim(request.getProvince()),
+                trim(request.getCity()),
+                trim(request.getDistrict()),
+                trim(request.getDetailAddress()),
+                trim(request.getCampusArea()),
+                defaultAddress
+        );
+        return userMapper.findAddresses(userId).stream()
+                .filter(item -> addressId.equals(item.get("id")))
+                .findFirst()
+                .orElseGet(() -> linkedMap("addressId", addressId));
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> setDefaultAddress(Long addressId) {
+        Long userId = currentUserId();
+        boolean exists = userMapper.findAddresses(userId).stream()
+                .anyMatch(item -> addressId.equals(item.get("id")));
+        if (!exists) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "地址不存在");
+        }
+        userMapper.clearDefaultAddress(userId);
+        userMapper.setDefaultAddress(userId, addressId);
+        return linkedMap("addressId", addressId, "isDefault", true);
+    }
+
+    private Map<String, Object> publicUser(Map<String, Object> user) {
+        return linkedMap(
+                "id", user.get("id"),
+                "username", user.get("username"),
+                "nickname", user.get("nickname"),
+                "avatar", user.get("avatar"),
+                "email", user.get("email"),
+                "phone", user.get("phone"),
+                "status", user.get("status"),
+                "verificationStatus", user.get("verificationStatus"),
+                "creditLevel", user.get("creditLevel"),
+                "registeredAt", user.get("registeredAt"),
+                "lastLoginAt", user.get("lastLoginAt")
+        );
+    }
+
+    private Map<String, Object> defaultPreference(Long userId) {
+        return linkedMap(
+                "userId", userId,
+                "themeMode", "system",
+                "themeColor", "campus_blue",
+                "homeDisplayMode", "card",
+                "defaultAddressId", null,
+                "defaultFulfillmentType", "any",
+                "defaultPaymentMethod", "mock_payment",
+                "defaultSortType", "comprehensive",
+                "notificationPreference", linkedMap(
+                        "orderReminder", true,
+                        "reviewReminder", true
+                )
+        );
+    }
+
+    private Map<String, Object> sanitizePreference(Map<String, Object> request) {
+        Map<String, Object> sanitized = new HashMap<>();
+        if (request == null) {
+            return sanitized;
+        }
+        copyIfPresent(request, sanitized, "themeMode");
+        copyIfPresent(request, sanitized, "themeColor");
+        copyIfPresent(request, sanitized, "homeDisplayMode");
+        copyIfPresent(request, sanitized, "defaultAddressId");
+        copyIfPresent(request, sanitized, "defaultFulfillmentType");
+        copyIfPresent(request, sanitized, "defaultPaymentMethod");
+        copyIfPresent(request, sanitized, "defaultSortType");
+        Object notificationPreference = request.get("notificationPreference");
+        if (notificationPreference instanceof Map<?, ?> preferenceMap) {
+            Map<String, Object> notification = new LinkedHashMap<>();
+            preferenceMap.forEach((key, value) -> notification.put(String.valueOf(key), value));
+            sanitized.put("notificationPreference", notification);
+        }
+        return sanitized;
+    }
+
+    private void copyIfPresent(Map<String, Object> source, Map<String, Object> target, String key) {
+        if (source.containsKey(key)) {
+            target.put(key, source.get(key));
+        }
+    }
+
+    private Map<String, Object> publicVerification(Map<String, Object> verification) {
+        return linkedMap(
+                "verificationId", verification.get("verificationId"),
+                "verificationStatus", verification.get("verificationStatus"),
+                "studentNoMasked", maskStudentNo(String.valueOf(verification.get("studentNo"))),
+                "college", verification.get("college"),
+                "major", verification.get("major"),
+                "grade", verification.get("grade"),
+                "verificationMethod", verification.get("verificationMethod"),
+                "submittedAt", verification.get("submittedAt"),
+                "reviewedAt", verification.get("reviewedAt"),
+                "rejectReason", verification.get("rejectReason")
+        );
+    }
+
+    private String maskStudentNo(String studentNo) {
+        if (studentNo == null || studentNo.length() <= 4) {
+            return "****";
+        }
+        return studentNo.substring(0, 2) + "****" + studentNo.substring(studentNo.length() - 2);
+    }
+
+    private Long currentUserId() {
+        AuthUser authUser = AuthContextHolder.get();
+        if (authUser == null || authUser.getUserId() == null) {
+            throw new BusinessException(ResultCode.UNAUTHORIZED, "请先登录");
+        }
+        return authUser.getUserId();
+    }
+
+    private Map<String, Object> linkedMap(Object... values) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (int index = 0; index < values.length; index += 2) {
+            map.put(String.valueOf(values[index]), values[index + 1]);
+        }
+        return map;
+    }
+
+    private String trim(String value) {
+        return value == null ? "" : value.trim();
+    }
+}

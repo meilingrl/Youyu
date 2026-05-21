@@ -1,0 +1,12 @@
+AGENTS.md
+!AGENTS.md
+.claude/
+*.log
+backend/data/
+backend/target/
+frontend/dist/
+frontend/node_modules/
+frontend/test-results/
+frontend/playwright-report/
+.idea/
+.vscode/

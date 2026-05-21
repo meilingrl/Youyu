@@ -1,0 +1,56 @@
+### CampusMarket - User Reports
+### Prerequisite: backend started with -Dspring-boot.run.profiles=seed
+
+@baseUrl = http://localhost:8080
+@userToken = mock-1001-USER
+@adminToken = mock-9001-ADMIN
+
+### Submit product report as USER
+POST {{baseUrl}}/api/reports
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "targetType": "product",
+  "targetId": 3001,
+  "targetLabel": "Advanced Math Review Pack",
+  "reason": "inaccurate_content",
+  "content": "The product description appears inconsistent with the preview."
+}
+
+### Submit report without token - expect 401
+POST {{baseUrl}}/api/reports
+Content-Type: application/json
+
+{
+  "targetType": "product",
+  "targetId": 3001,
+  "reason": "inaccurate_content",
+  "content": "Anonymous reports are not accepted."
+}
+
+### Submit report with invalid targetType - expect business error
+POST {{baseUrl}}/api/reports
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "targetType": "unknown",
+  "targetId": 3001,
+  "reason": "inaccurate_content",
+  "content": "Invalid target type should be rejected."
+}
+
+### Admin can see submitted reports
+GET {{baseUrl}}/api/admin/reports?status=pending
+Authorization: Bearer {{adminToken}}
+
+### Admin processes a report
+PUT {{baseUrl}}/api/admin/reports/6001/process
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "resolved",
+  "resolution": "Verified and recorded by admin."
+}

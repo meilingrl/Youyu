@@ -1,0 +1,9 @@
+~$*.doc
+~$*.docx
+Thumbs.db
+.DS_Store
+.claude/
+Job1/
+Job2/
+Job3/
+Job4/

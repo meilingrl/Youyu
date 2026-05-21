@@ -1,0 +1,268 @@
+### CampusMarket — Admin Panel
+### Run this file after every change to admin endpoints.
+### Prerequisite: backend started with -Dspring-boot.run.profiles=seed
+
+@baseUrl = http://localhost:8080
+@adminToken = mock-9001-ADMIN
+@userToken = mock-1001-USER
+
+# ─────────────────────────────────────────────
+# AUTH GUARD
+# ─────────────────────────────────────────────
+
+### Admin endpoint with USER token → expect 403
+GET {{baseUrl}}/api/admin/dashboard
+Authorization: Bearer {{userToken}}
+
+###
+
+### Admin endpoint with no token → expect 401
+GET {{baseUrl}}/api/admin/dashboard
+
+# ─────────────────────────────────────────────
+# DASHBOARD
+# ─────────────────────────────────────────────
+
+###
+
+### Dashboard overview
+GET {{baseUrl}}/api/admin/dashboard
+Authorization: Bearer {{adminToken}}
+
+# ─────────────────────────────────────────────
+# USER MANAGEMENT
+# ─────────────────────────────────────────────
+
+###
+
+### List all users — page 1, size 10
+GET {{baseUrl}}/api/admin/users?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List users — filter active, page 1
+GET {{baseUrl}}/api/admin/users?status=active&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List users — keyword search, page 1
+GET {{baseUrl}}/api/admin/users?keyword=张&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### User detail
+GET {{baseUrl}}/api/admin/users/1001
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Disable user
+PUT {{baseUrl}}/api/admin/users/1003/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "disabled",
+  "restrictionReason": "测试禁用"
+}
+
+###
+
+### Re-enable user
+PUT {{baseUrl}}/api/admin/users/1003/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "active",
+  "restrictionReason": ""
+}
+
+# ─────────────────────────────────────────────
+# STUDENT VERIFICATION
+# ─────────────────────────────────────────────
+
+###
+
+### List all verifications — page 1, size 10
+GET {{baseUrl}}/api/admin/verifications?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List verifications — pending only
+GET {{baseUrl}}/api/admin/verifications?status=pending_review&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Approve verification
+PUT {{baseUrl}}/api/admin/verifications/2002/review
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "approve",
+  "reviewNote": "信息核实通过"
+}
+
+###
+
+### Reject verification — missing rejectReason → expect 400
+PUT {{baseUrl}}/api/admin/verifications/2002/review
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "reject"
+}
+
+###
+
+### Reject verification — with reason
+PUT {{baseUrl}}/api/admin/verifications/2003/review
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "reject",
+  "rejectReason": "学号与实名信息不一致",
+  "reviewNote": "请补充有效校园身份证明"
+}
+
+# ─────────────────────────────────────────────
+# PRODUCT MANAGEMENT
+# ─────────────────────────────────────────────
+
+###
+
+### List all products — page 1, size 10
+GET {{baseUrl}}/api/admin/products?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List products — pending review only
+GET {{baseUrl}}/api/admin/products?reviewStatus=pending_review&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List products — digital type
+GET {{baseUrl}}/api/admin/products?productType=digital&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+# ─────────────────────────────────────────────
+# REVIEW TASKS
+# ─────────────────────────────────────────────
+
+###
+
+### List all review tasks — page 1, size 10
+GET {{baseUrl}}/api/admin/review-tasks?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List review tasks — pending
+GET {{baseUrl}}/api/admin/review-tasks?status=pending_review&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Approve review task
+PUT {{baseUrl}}/api/admin/review-tasks/5001/review
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "approve",
+  "reviewNote": "资料内容合规，可上架"
+}
+
+###
+
+### Reject review task
+PUT {{baseUrl}}/api/admin/review-tasks/5001/review
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "action": "reject",
+  "rejectReason": "资料来源不清晰",
+  "reviewNote": "请补充原创或授权说明"
+}
+
+# ─────────────────────────────────────────────
+# SHOP MANAGEMENT
+# ─────────────────────────────────────────────
+
+###
+
+### List all shops — page 1, size 10
+GET {{baseUrl}}/api/admin/shops?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List shops — pending review
+GET {{baseUrl}}/api/admin/shops?reviewStatus=pending_review&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Shop detail
+GET {{baseUrl}}/api/admin/shops/4001
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Approve shop
+PUT {{baseUrl}}/api/admin/shops/4002/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "active",
+  "reviewStatus": "approved"
+}
+
+# ─────────────────────────────────────────────
+# REPORT MANAGEMENT
+# ─────────────────────────────────────────────
+
+###
+
+### List all reports — page 1, size 10
+GET {{baseUrl}}/api/admin/reports?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List reports — pending
+GET {{baseUrl}}/api/admin/reports?status=pending&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Process report — move to resolved
+PUT {{baseUrl}}/api/admin/reports/6001/process
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "resolved",
+  "resolution": "已核实并通知相关用户"
+}
+
+###
+
+### Process report — missing status → expect 400
+PUT {{baseUrl}}/api/admin/reports/6001/process
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}

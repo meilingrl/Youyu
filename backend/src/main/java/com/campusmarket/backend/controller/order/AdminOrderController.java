@@ -1,0 +1,62 @@
+package com.campusmarket.backend.controller.order;
+
+import com.campusmarket.backend.common.api.ApiResponse;
+import com.campusmarket.backend.common.auth.LoginRequired;
+import com.campusmarket.backend.common.auth.UserRole;
+import com.campusmarket.backend.common.support.RequestContext;
+import com.campusmarket.backend.service.order.OrderService;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/admin/orders")
+@LoginRequired(roles = {UserRole.ADMIN})
+public class AdminOrderController {
+
+    private final OrderService orderService;
+
+    public AdminOrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
+
+    @GetMapping
+    public ApiResponse<List<Map<String, Object>>> list(HttpServletRequest request) {
+        return ApiResponse.success(orderService.listAdminOrders(), traceId(request));
+    }
+
+    @GetMapping("/{orderId}")
+    public ApiResponse<Map<String, Object>> detail(@PathVariable Long orderId, HttpServletRequest request) {
+        return ApiResponse.success(orderService.getOrderDetail(null, orderId, true), traceId(request));
+    }
+
+    @PostMapping("/{orderId}/ship")
+    public ApiResponse<Map<String, Object>> ship(@PathVariable Long orderId,
+                                                 @RequestBody Map<String, Object> command,
+                                                 HttpServletRequest request) {
+        return ApiResponse.success(orderService.sellerShip(orderId, command), traceId(request));
+    }
+
+    @PostMapping("/{orderId}/offline/seller-confirm")
+    public ApiResponse<Map<String, Object>> sellerConfirmOffline(@PathVariable Long orderId,
+                                                                 HttpServletRequest request) {
+        return ApiResponse.success(orderService.sellerConfirmOffline(orderId), traceId(request));
+    }
+
+    @PostMapping("/{orderId}/refunds/{refundId}/complete")
+    public ApiResponse<Map<String, Object>> completeRefund(@PathVariable Long orderId,
+                                                           @PathVariable Long refundId,
+                                                           HttpServletRequest request) {
+        return ApiResponse.success(orderService.completeRefund(orderId, refundId), traceId(request));
+    }
+
+    private String traceId(HttpServletRequest request) {
+        return (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE);
+    }
+}

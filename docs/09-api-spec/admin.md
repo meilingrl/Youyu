@@ -1,0 +1,669 @@
+# API Spec: admin
+
+## Document Info
+
+- Status: active
+- Source of truth:
+  - controller: `backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java`
+  - request DTO: `backend/src/main/java/com/campusmarket/backend/controller/admin/dto/UpdateUserStatusRequest.java`
+  - request DTO: `backend/src/main/java/com/campusmarket/backend/controller/admin/dto/ReviewVerificationRequest.java`
+  - shared response / error handling: `backend/src/main/java/com/campusmarket/backend/common/api/ApiResponse.java`
+  - shared response / error handling: `backend/src/main/java/com/campusmarket/backend/controller/advice/GlobalExceptionHandler.java`
+  - request sample: `docs/06-http/admin.http`
+  - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
+- Last updated: 2026-05-17
+
+## Scope
+
+This document covers governance and operational endpoints under `/api/admin`:
+
+- dashboard
+- users
+- student verifications
+- products
+- review tasks
+- shops
+- reports
+- search governance rules and search logs
+
+It does not cover admin login under `/api/admin/auth` or admin order operations under `/api/admin/orders`.
+
+## Authentication And Roles
+
+- All endpoints in this module require admin role access.
+- `AdminController` uses class-level `@LoginRequired(roles = {UserRole.ADMIN})`.
+- Current project samples use Bearer tokens such as `mock-9001-ADMIN`.
+
+## Response Envelope
+
+All endpoints in this module use the unified response envelope:
+
+```json
+{
+  "success": true,
+  "code": "SUCCESS",
+  "message": "Request succeeded",
+  "data": {},
+  "traceId": "..."
+}
+```
+
+## Error Semantics
+
+### HTTP Status And `ResultCode`
+
+| HTTP status | `ResultCode` | Meaning |
+|---|---|---|
+| `400` | `BAD_REQUEST` | Invalid request parameters or validation failure |
+| `401` | `UNAUTHORIZED` | Missing token or invalid token |
+| `403` | `FORBIDDEN` | Logged-in user is not an admin |
+| `404` | `NOT_FOUND` | Requested admin-side resource does not exist |
+| `500` | `INTERNAL_SERVER_ERROR` | Unhandled or server-side failure |
+
+### `BUSINESS_ERROR`
+
+- Current backend behavior returns `200 OK` with `success=false`, `code="BUSINESS_ERROR"`, and a business-facing message.
+- Governance flows that reject an invalid state transition may still respond through this envelope rather than a non-2xx status.
+
+## Endpoints
+
+### `GET /api/admin/dashboard`
+
+#### Purpose
+
+Return the admin dashboard overview snapshot.
+
+#### Request
+
+No query parameters, path parameters, or body.
+
+#### Response
+
+- `data` is the dashboard object returned by `AdminService.dashboard()`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data` | object | Aggregated admin overview snapshot |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `GET /api/admin/users`
+
+#### Purpose
+
+List users from the admin view with optional filtering.
+
+#### Request
+
+##### Query
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `keyword` | no | string | Default empty string |
+| `status` | no | string | Default empty string |
+| `verificationStatus` | no | string | Default empty string |
+| `page` | no | number | Default `1` |
+| `pageSize` | no | number | Default `10`, max `100` |
+
+#### Response
+
+- `data` is the paginated user-list result returned by `AdminService.listUsers(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data.items` | array | Current page of users |
+| `data.total` | number | Total matching records |
+| `data.page` | number | Current page number |
+| `data.pageSize` | number | Current page size |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `GET /api/admin/users/{userId}`
+
+#### Purpose
+
+Return admin-side detail for a specific user.
+
+#### Request
+
+##### Path
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `userId` | yes | number | Target user ID |
+
+#### Response
+
+- `data` is the user detail object returned by `AdminService.userDetail(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data` | object | Detailed user and governance context |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: user does not exist
+
+### `PUT /api/admin/users/{userId}/status`
+
+#### Purpose
+
+Update admin-managed user availability state.
+
+#### Request
+
+This endpoint uses `UpdateUserStatusRequest` with `@Valid`.
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `status` | yes | string | `@NotBlank` |
+| `restrictionReason` | no | string | Max 255 |
+
+#### Response
+
+- `data` is the updated user status result returned by `AdminService.updateUserStatus(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data` | object | Updated user governance result |
+
+#### Error Cases
+
+- `400`: validation failure or unsupported status
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: user does not exist
+
+### `GET /api/admin/verifications`
+
+#### Purpose
+
+List student verification records for admin review.
+
+#### Request
+
+##### Query
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `keyword` | no | string | Default empty string |
+| `status` | no | string | Default empty string |
+| `page` | no | number | Default `1` |
+| `pageSize` | no | number | Default `10`, max `100` |
+
+#### Response
+
+- `data` is the paginated verification-list result returned by `AdminService.listVerifications(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data.items` | array | Current page of verifications |
+| `data.total` | number | Total matching records |
+| `data.page` | number | Current page number |
+| `data.pageSize` | number | Current page size |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `PUT /api/admin/verifications/{verificationId}/review`
+
+#### Purpose
+
+Approve or reject a student verification request.
+
+#### Request
+
+This endpoint uses `ReviewVerificationRequest` with `@Valid`.
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `action` | yes | string | `@NotBlank`, current flow expects values such as `approve` or `reject` |
+| `rejectReason` | no | string | Max 255; required by business rules when rejecting |
+| `reviewNote` | no | string | Max 255 |
+
+#### Response
+
+- `data` is the updated verification-review result returned by `AdminService.reviewVerification(...)`.
+
+#### Error Cases
+
+- `400`: validation failure, unsupported action, or missing reject reason when rejecting
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: verification or related resource does not exist
+
+### `GET /api/admin/products`
+
+#### Purpose
+
+List products from the admin governance view.
+
+#### Request
+
+##### Query
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `keyword` | no | string | Default empty string |
+| `status` | no | string | Default empty string |
+| `reviewStatus` | no | string | Default empty string |
+| `productType` | no | string | Default empty string |
+| `page` | no | number | Default `1` |
+| `pageSize` | no | number | Default `10`, max `100` |
+
+#### Response
+
+- `data` is the paginated product-list result returned by `AdminService.listProducts(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data.items` | array | Current page of products |
+| `data.total` | number | Total matching records |
+| `data.page` | number | Current page number |
+| `data.pageSize` | number | Current page size |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `PUT /api/admin/products/{productId}/status`
+
+#### Purpose
+
+Update admin-managed product state.
+
+#### Request
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `status` | yes | string | Passed through map-style payload |
+
+#### Response
+
+- `data` is the updated product result returned by `AdminService.updateProductStatus(...)`.
+
+#### Error Cases
+
+- `400`: missing or unsupported status
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: product does not exist
+
+### `GET /api/admin/review-tasks`
+
+#### Purpose
+
+List product review tasks that require admin review.
+
+#### Request
+
+##### Query
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `keyword` | no | string | Default empty string |
+| `status` | no | string | Default empty string |
+| `page` | no | number | Default `1` |
+| `pageSize` | no | number | Default `10`, max `100` |
+
+#### Response
+
+- `data` is the paginated review-task list returned by `AdminService.listReviewTasks(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data.items` | array | Current page of review tasks |
+| `data.total` | number | Total matching records |
+| `data.page` | number | Current page number |
+| `data.pageSize` | number | Current page size |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `PUT /api/admin/review-tasks/{reviewTaskId}/review`
+
+#### Purpose
+
+Approve or reject a product review task.
+
+#### Request
+
+This endpoint currently accepts a map-style payload.
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `action` | yes | string | Expected values currently include `approve` and `reject` |
+| `rejectReason` | no | string | Required by business rules when rejecting |
+| `reviewNote` | no | string | Optional reviewer note |
+
+#### Response
+
+- `data` is the updated review-task result returned by `AdminService.reviewTask(...)`.
+
+#### Error Cases
+
+- `400`: unsupported action or missing reject reason when rejecting
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: review task does not exist
+
+### `GET /api/admin/shops`
+
+#### Purpose
+
+List shops from the admin governance view.
+
+#### Request
+
+##### Query
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `keyword` | no | string | Default empty string |
+| `status` | no | string | Default empty string |
+| `reviewStatus` | no | string | Default empty string |
+| `page` | no | number | Default `1` |
+| `pageSize` | no | number | Default `10`, max `100` |
+
+#### Response
+
+- `data` is the paginated shop-list result returned by `AdminService.listShops(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data.items` | array | Current page of shops |
+| `data.total` | number | Total matching records |
+| `data.page` | number | Current page number |
+| `data.pageSize` | number | Current page size |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `GET /api/admin/shops/{shopId}`
+
+#### Purpose
+
+Return admin-side detail for a specific shop.
+
+#### Request
+
+##### Path
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `shopId` | yes | number | Target shop ID |
+
+#### Response
+
+- `data` is the shop detail object returned by `AdminService.shopDetail(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data` | object | Detailed shop and governance context |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: shop does not exist
+
+### `PUT /api/admin/shops/{shopId}/status`
+
+#### Purpose
+
+Update admin-managed shop status and review outcome.
+
+#### Request
+
+This endpoint currently accepts a map-style payload.
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `status` | yes | string | Shop availability state |
+| `reviewStatus` | yes | string | Review outcome state |
+| `rejectReason` | no | string | Required by business rules in rejection flows |
+
+#### Response
+
+- `data` is the updated shop result returned by `AdminService.updateShopStatus(...)`.
+
+#### Error Cases
+
+- `400`: missing or invalid status / reviewStatus combination
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: shop does not exist
+
+### `GET /api/admin/reports`
+
+#### Purpose
+
+List user-submitted reports for governance processing.
+
+#### Request
+
+##### Query
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `keyword` | no | string | Default empty string |
+| `status` | no | string | Default empty string |
+| `targetType` | no | string | Default empty string |
+| `page` | no | number | Default `1` |
+| `pageSize` | no | number | Default `10`, max `100` |
+
+#### Response
+
+- `data` is the paginated report-list result returned by `AdminService.listReports(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data.items` | array | Current page of reports |
+| `data.total` | number | Total matching records |
+| `data.page` | number | Current page number |
+| `data.pageSize` | number | Current page size |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `PUT /api/admin/reports/{reportId}/process`
+
+#### Purpose
+
+Process a report and record a governance resolution.
+
+#### Request
+
+This endpoint currently accepts a map-style payload.
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `status` | yes | string | Processing outcome |
+| `resolution` | no | string | Resolution note |
+
+#### Response
+
+- `data` is the updated report result returned by `AdminService.processReport(...)`.
+
+#### Error Cases
+
+- `400`: missing or invalid processing status
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: report does not exist
+
+### `GET /api/admin/search/governance-rules`
+
+#### Purpose
+
+List current search governance rules.
+
+#### Request
+
+No query parameters, path parameters, or body.
+
+#### Response
+
+- `data` is a list returned by `AdminService.listSearchGovernanceRules()`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `data` | array | Governance-rule list |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `POST /api/admin/search/governance-rules`
+
+#### Purpose
+
+Create a search governance rule.
+
+#### Request
+
+This endpoint currently accepts a map-style payload.
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `ruleType` | yes | string | Example values used in current `.http`: `SENSITIVE_WORD`, `HIDE_KEYWORD` |
+| `keyword` | yes | string | Governance keyword target |
+| `isActive` | no | boolean | Optional activation flag if supported by service |
+
+#### Response
+
+- `data` is the created rule object returned by `AdminService.createSearchGovernanceRule(...)`.
+
+#### Error Cases
+
+- `400`: invalid rule type or invalid keyword
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `PUT /api/admin/search/governance-rules/{ruleId}`
+
+#### Purpose
+
+Update an existing search governance rule.
+
+#### Request
+
+##### Path
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `ruleId` | yes | number | Governance rule ID |
+
+##### Body
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `keyword` | no | string | Optional replacement keyword |
+| `isActive` | no | boolean | Optional activation toggle |
+| `ruleType` | no | string | Optional depending on service support |
+
+#### Response
+
+- `data` is the updated rule object returned by `AdminService.updateSearchGovernanceRule(...)`.
+
+#### Error Cases
+
+- `400`: invalid field values
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: rule does not exist
+
+### `DELETE /api/admin/search/governance-rules/{ruleId}`
+
+#### Purpose
+
+Delete a search governance rule.
+
+#### Request
+
+##### Path
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `ruleId` | yes | number | Governance rule ID |
+
+#### Response
+
+- `data.deleted`: boolean
+
+| Field | Type | Notes |
+|---|---|---|
+| `deleted` | boolean | Current controller returns `true` when deletion succeeds |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+- `404`: rule does not exist
+
+### `GET /api/admin/search/logs`
+
+#### Purpose
+
+Browse paginated search logs from the admin view.
+
+#### Request
+
+##### Query
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `page` | no | number | Default `1` |
+| `pageSize` | no | number | Default `10` |
+
+#### Response
+
+- `data` is the paginated search-log result returned by `AdminService.listSearchLogs(page, pageSize)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `items` | array | Current page of logs |
+| `total` | number | Total matched rows |
+| `page` | number | Current page number |
+| `pageSize` | number | Current page size |
+
+#### Error Cases
+
+- `400`: invalid pagination values
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+## Shared Types / Enumerations
+
+- Verification review `action`: current flow expects `approve` or `reject`
+- Review-task `action`: current flow expects `approve` or `reject`
+- Search governance `ruleType`: current examples use `SENSITIVE_WORD` and `HIDE_KEYWORD`
+- Several admin mutation endpoints still accept map-style payloads rather than dedicated DTOs
+
+## HTTP Asset Mapping
+
+- Primary validation file: `docs/06-http/admin.http`
+- Additional related files: `docs/06-http/search.http` for search-governance examples
+
+## Known Drift Or Follow-Up Notes
+
+- No known controller/spec drift is being left unresolved in this module as part of this iteration.
+- Admin order operations live in a separate controller and should be documented separately if the project later expands admin formal coverage beyond governance endpoints.

@@ -1,0 +1,85 @@
+### CampusMarket - Product & Shop Reviews
+### Prerequisite: backend started with -Dspring-boot.run.profiles=seed
+
+@baseUrl = http://localhost:8080
+@userToken = mock-1001-USER
+@adminToken = mock-9001-ADMIN
+
+# ──────────────────── Product Reviews ────────────────────
+
+### Submit product review (requires completed order — run order flow first)
+POST {{baseUrl}}/api/reviews/products
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "orderItemId": 1,
+  "score": 5,
+  "content": "Excellent quality, exactly as described."
+}
+
+### Submit product review - expect 401 (no token)
+POST {{baseUrl}}/api/reviews/products
+Content-Type: application/json
+
+{
+  "orderItemId": 1,
+  "score": 4
+}
+
+### Submit product review - expect BAD_REQUEST (invalid score)
+POST {{baseUrl}}/api/reviews/products
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "orderItemId": 1,
+  "score": 0
+}
+
+# ──────────────────── Shop Reviews ────────────────────
+
+### Submit shop review (requires completed order from that shop)
+POST {{baseUrl}}/api/reviews/shops
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "shopId": 4001,
+  "score": 4,
+  "content": "Good shop, fast shipping."
+}
+
+### Submit shop review - expect BUSINESS_ERROR (no completed order from shop)
+POST {{baseUrl}}/api/reviews/shops
+Authorization: Bearer mock-1007-USER
+Content-Type: application/json
+
+{
+  "shopId": 4001,
+  "score": 3
+}
+
+# ──────────────────── Pending & My Reviews ────────────────────
+
+### Get pending review items
+GET {{baseUrl}}/api/reviews/pending
+Authorization: Bearer {{userToken}}
+
+### Get my reviews (both product and shop)
+GET {{baseUrl}}/api/reviews/mine
+Authorization: Bearer {{userToken}}
+
+# ──────────────────── Public Endpoints ────────────────────
+
+### Public: product review list (no auth required)
+GET {{baseUrl}}/api/products/3002/reviews?page=1&pageSize=10
+
+### Public: product review summary (no auth required)
+GET {{baseUrl}}/api/products/3002/review-summary
+
+### Public: shop review list (no auth required)
+GET {{baseUrl}}/api/shops/4001/reviews?page=1&pageSize=10
+
+### Public: shop review summary (no auth required)
+GET {{baseUrl}}/api/shops/4001/review-summary

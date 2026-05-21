@@ -1,0 +1,159 @@
+### CampusMarket — Authentication & User
+### Run this file after every change to auth, user profile, or verification endpoints.
+
+@baseUrl = http://localhost:8080
+
+# ─────────────────────────────────────────────
+# AUTH
+# ─────────────────────────────────────────────
+
+### Register new user
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "httptest01",
+  "password": "pass123",
+  "nickname": "HTTP测试用户"
+}
+
+###
+
+### Login — regular user (seed data)
+# @name userLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "zhangsan",
+  "password": "user123"
+}
+
+###
+
+### Login — admin (seed data)
+# @name adminLogin
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "admin",
+  "password": "admin123"
+}
+
+###
+
+### Login — wrong password → expect 401
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "zhangsan",
+  "password": "wrongpassword"
+}
+
+###
+
+### Get current auth context (mock token)
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer mock-1001-USER
+
+###
+
+### Get current auth context — no token → expect 401 or empty user
+GET {{baseUrl}}/api/auth/me
+
+# ─────────────────────────────────────────────
+# USER PROFILE
+# ─────────────────────────────────────────────
+
+###
+
+### Get own profile (authenticated)
+GET {{baseUrl}}/api/users/profile
+Authorization: Bearer mock-1001-USER
+
+###
+
+### Get own profile — no token → expect 401
+GET {{baseUrl}}/api/users/profile
+
+###
+
+### Get privilege profile
+GET {{baseUrl}}/api/users/privileges
+Authorization: Bearer mock-1001-USER
+
+###
+
+### List own addresses
+GET {{baseUrl}}/api/users/addresses
+Authorization: Bearer mock-1001-USER
+
+###
+
+### Get own preference defaults/persisted settings
+GET {{baseUrl}}/api/users/me/preference
+Authorization: Bearer mock-1001-USER
+
+###
+
+### Update own preference settings
+PUT {{baseUrl}}/api/users/me/preference
+Authorization: Bearer mock-1001-USER
+Content-Type: application/json
+
+{
+  "themeMode": "dark",
+  "themeColor": "fresh_green",
+  "homeDisplayMode": "compact",
+  "defaultFulfillmentType": "offline",
+  "defaultPaymentMethod": "mock_payment",
+  "defaultSortType": "latest",
+  "notificationPreference": {
+    "orderReminder": false,
+    "reviewReminder": true
+  }
+}
+
+###
+
+### Add address
+POST {{baseUrl}}/api/users/addresses
+Authorization: Bearer mock-1001-USER
+Content-Type: application/json
+
+{
+  "receiverName": "张三",
+  "receiverPhone": "13800000001",
+  "addressType": "campus",
+  "campusArea": "北苑",
+  "detailAddress": "1号楼101室",
+  "isDefault": true
+}
+
+# ─────────────────────────────────────────────
+# STUDENT VERIFICATION
+# ─────────────────────────────────────────────
+
+###
+
+### Submit verification (user without approved verification)
+POST {{baseUrl}}/api/users/verification
+Authorization: Bearer mock-1002-USER
+Content-Type: application/json
+
+{
+  "studentNo": "20240002",
+  "realName": "李四",
+  "college": "外国语学院",
+  "major": "英语",
+  "grade": "2024级",
+  "campusEmail": "lisi@campus.edu.cn"
+}
+
+###
+
+### Get own verification status
+GET {{baseUrl}}/api/users/verification
+Authorization: Bearer mock-1001-USER

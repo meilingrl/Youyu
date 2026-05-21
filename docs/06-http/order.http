@@ -1,0 +1,228 @@
+### CampusMarket — Cart, Orders & Payment
+### Run this file after every change to cart, order, or payment endpoints.
+
+@baseUrl = http://localhost:8080
+@buyerToken = mock-1001-USER
+@sellerToken = mock-1004-USER
+
+# ─────────────────────────────────────────────
+# CART
+# ─────────────────────────────────────────────
+
+### Get cart items
+GET {{baseUrl}}/api/cart
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Add item to cart
+POST {{baseUrl}}/api/cart/items
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "productId": 3003,
+  "quantity": 1
+}
+
+###
+
+### Add item without auth → expect 401
+POST {{baseUrl}}/api/cart/items
+Content-Type: application/json
+
+{
+  "productId": 3003,
+  "quantity": 1
+}
+
+###
+
+### Update cart item quantity
+PATCH {{baseUrl}}/api/cart/items/1
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "quantity": 2
+}
+
+###
+
+### Remove item from cart
+DELETE {{baseUrl}}/api/cart/items/1
+Authorization: Bearer {{buyerToken}}
+
+# ─────────────────────────────────────────────
+# ORDERS
+# ─────────────────────────────────────────────
+
+###
+
+### List own orders
+GET {{baseUrl}}/api/orders
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### List own orders — filter by status
+GET {{baseUrl}}/api/orders?status=pending
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Get order detail
+GET {{baseUrl}}/api/orders/1
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Create order (checkout)
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "addressId": 1,
+  "cartItemIds": [1]
+}
+
+###
+
+### Cancel order
+POST {{baseUrl}}/api/orders/1/cancel
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Confirm receipt (logistics / digital)
+POST {{baseUrl}}/api/orders/1/confirm-receipt
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Buyer confirm offline delivery
+POST {{baseUrl}}/api/orders/1/offline/buyer-confirm
+Authorization: Bearer {{buyerToken}}
+
+# ─────────────────────────────────────────────
+# PAYMENT
+# ─────────────────────────────────────────────
+
+###
+
+### Get payment gateway info
+GET {{baseUrl}}/api/payments/gateway
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Initiate payment for an order
+POST {{baseUrl}}/api/payments/orders/1/initiate
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Mock payment success
+POST {{baseUrl}}/api/payments/MOCK-PAYMENT-NO/mock-success
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Request refund
+POST {{baseUrl}}/api/orders/1/refunds
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "refundReason": "商品与描述不符"
+}
+
+# ─────────────────────────────────────────────
+# ADMIN ORDER VIEW
+# ─────────────────────────────────────────────
+
+###
+
+### Admin list all orders
+GET {{baseUrl}}/api/admin/orders
+Authorization: Bearer mock-9001-ADMIN
+
+###
+
+### Admin list orders — filter by status
+GET {{baseUrl}}/api/admin/orders?status=pending
+Authorization: Bearer mock-9001-ADMIN
+
+###
+
+### Admin ship logistics order
+POST {{baseUrl}}/api/admin/orders/1/ship
+Authorization: Bearer mock-9001-ADMIN
+Content-Type: application/json
+
+{
+  "trackingNo": "SF1234567890",
+  "logisticsCompany": "SF Express"
+}
+
+###
+
+### Admin confirm offline seller delivery
+POST {{baseUrl}}/api/admin/orders/1/offline/seller-confirm
+Authorization: Bearer mock-9001-ADMIN
+
+###
+
+### Admin complete refund
+POST {{baseUrl}}/api/admin/orders/1/refunds/1/complete
+Authorization: Bearer mock-9001-ADMIN
+
+# ─────────────────────────────────────────────
+# DIGITAL ASSET ACCESS
+# ─────────────────────────────────────────────
+
+###
+
+### Access full digital asset (requires confirmed receipt)
+GET {{baseUrl}}/api/orders/1/assets/3203/access
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Access full asset without receipt → expect BUSINESS_ERROR
+GET {{baseUrl}}/api/orders/1/assets/3203/access
+Authorization: Bearer mock-1002-USER
+
+###
+
+### Non-buyer cannot access full asset → expect 403
+GET {{baseUrl}}/api/orders/1/assets/3203/access
+Authorization: Bearer mock-1004-USER
+
+# ─────────────────────────────────────────────
+# DUPLICATE-SUBMIT PROTECTION
+# ─────────────────────────────────────────────
+
+###
+
+### Duplicate refund — already refunding order → expect BUSINESS_ERROR
+POST {{baseUrl}}/api/orders/1/refunds
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "refundReason": "再次申请退款应被拒绝"
+}
+
+###
+
+### Duplicate payment — already paid order → expect BUSINESS_ERROR
+POST {{baseUrl}}/api/payments/orders/1/initiate
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Duplicate mock-success — already success → expect BUSINESS_ERROR
+POST {{baseUrl}}/api/payments/MOCK-PAYMENT-NO/mock-success
+Authorization: Bearer {{buyerToken}}
