@@ -590,3 +590,18 @@ Format per block:
 - Updated roadmap and engineering docs to align the current stage as MVP closure on H2 file database + JDBC, with MySQL/MyBatis kept as course and migration direction
 - Added `docs/http/report.http`
 - Updated `docs/http/auth.http` and `docs/http/order.http` for preference and digital asset access flows
+## [2026-05-21] - Repository bootstrap hardening for Youyu
+
+### docs
+- Rewrote the repository root `README.md` as a proper standalone project entry for `Youyu`, including stack overview, quick start, repository structure, documentation entry points, and migration notes from the older course workspace
+
+### ci
+- Hardened `.github/workflows/ci.yml` with manual trigger support, workflow concurrency control, explicit read-only permissions, job timeouts, healthier service readiness checks, and failure artifact uploads for Playwright runtime logs
+
+### chore
+- Expanded root `.gitignore` to cover common local build outputs, editor files, OS files, Vite artifacts, and local environment overrides
+- Added `.editorconfig` for cross-editor formatting consistency
+- Added `.gitattributes` for safer line-ending behavior across Windows and Linux
+- Added `.github/pull_request_template.md` to standardize summary, testing, and documentation expectations for protected-branch development
+
+---
