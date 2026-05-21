@@ -1,15 +1,15 @@
 # AGENTS.md
 
-This file provides repository-wide working guidance for Codex and other AI coding agents operating in `CampusMarket/`.
+This file provides repository-wide working guidance for Codex and other AI coding agents operating in this repository.
 
 `CLAUDE.md` remains in place as a project instruction source. This file does not replace it; it aligns cross-agent behavior around the current repository layout and document workflow.
 
 ## 1. Default Work Area
 
-- Treat `CampusMarket/` as the default project root.
+- Treat the repository root as the default project root.
 - Preserve the existing frontend / backend / database split.
 - Do not move, rename, or rewrite `CLAUDE.md` as part of normal task work.
-- Do not modify top-level non-project folders outside `CampusMarket/` unless the human explicitly asks.
+- Do not modify folders outside the current repository root unless the human explicitly asks.
 
 ## 2. Read Order Before Work
 

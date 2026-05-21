@@ -94,22 +94,65 @@ Frontend: Vue 3 SPA with Pinia state, Axios HTTP, Vue Router 4.
 ```
 backend/src/main/java/com/campusmarket/backend/
   controller/       HTTP endpoints, grouped by domain sub-package
+    advice/         GlobalExceptionHandler (@RestControllerAdvice)
+    admin/          AdminAuthController, AdminController + DTOs
+    auth/           AuthController + DTOs
+    order/          CartController, OrderController, AdminOrderController
+    payment/        PaymentController
+    product/        ProductController, RecommendController
+    report/         ReportController
+    review/         ReviewController
+    search/         SearchController
+    shop/           ShopController
+    user/           UserController + DTOs
   service/          Business logic (interface + impl per domain)
   mapper/           JDBC data access (interface + Jdbc*Mapper impl)
-  entity/           Plain POJOs, no ORM annotations
+    common/         MapperTypeConverters
+    order/          OrderMapper, DigitalAccessMapper + impls
+    payment/        PaymentRecordMapper
+    product/        ProductMapper, ProductReviewTaskMapper + impls
+    recommend/      RecommendMapper + impl
+    report/         ReportMapper + impl
+    review/         ReviewMapper + impl
+    search/         SearchGovernanceMapper, SearchLogMapper + impls
+    shop/           ShopMapper + impl
+    user/           UserMapper + impl
+  entity/           Plain POJOs, no ORM annotations (sub-packages by domain)
   filter/           AuthContextFilter, AuthInterceptor, RequestTraceFilter
-  common/           ApiResponse, ResultCode, AuthContextHolder, exceptions, enums
+  common/
+    api/            ApiResponse, ResultCode
+    auth/           AuthContextHolder, AuthUser, LoginRequired, UserRole
+    enums/          OrderStatus
+    exception/      BusinessException, ForbiddenException, UnauthorizedException
+    support/        JdbcGeneratedKey, RequestContext
   config/           WebMvcConfig, AuthProperties, PasswordConfig
+  listener/         ApplicationStartedListener
 
 frontend/src/
-  views/            Route-mapped pages (app/, admin/, auth/, system/)
-  components/       Reusable UI (layout/, common/, search/)
+  views/            Route-mapped pages
+    app/            19 user-facing views (see Routes section)
+    admin/          10 admin views (see Routes section)
+    auth/           LoginView, RegisterView
+  components/
+    common/         EmptyState, ErrorBlock, SkeletonCard, PageSection,
+                    RatingSummary, ReservedMetricCard, ReservedPanel,
+                    ReviewForm, ReviewList
+    explore/        ExploreProductCard, ExploreSearchShell, FeaturedShopsSection
+    layout/         AppHeader, AppFooter, MobileNav, MobileBottomNav,
+                    AdminSidebar, AdminTopbar
+    search/         HotSearchList, SearchSuggestInput
+    shell/          ListPageShell, FormPageShell
+    trade/          TradePageShell, TradeOrderCard, TradeReviewCard,
+                    TradeMetricStrip, TradeStatusTag
+  layouts/          AppLayout.vue, AdminLayout.vue
   stores/           Pinia stores (auth, market, search, recommend, review, app)
-  router/           Router config, guards, route modules
-  api/              Axios client + domain modules
-  utils/            Auth storage, localStorage helpers, data normalizers
-  constants/        Navigation menus, insight metric definitions
-  styles/           CSS custom properties + global styles
+  router/           Router config, guards, route modules (app.js, admin.js)
+  api/              Axios client + domain modules (11 modules)
+  utils/            auth.js, storage.js, market-normalizers.js, error-utils.js
+  constants/        navigation.js, insightMetrics.js
+  styles/           variables.css (CSS custom properties), index.css
+  plugins/          element-plus.js, element-plus-services.js
+  mocks/            market.js (dev/test mock data)
 ```
 
 ### Request Flow
@@ -156,10 +199,10 @@ Controller (validates input, calls service, returns `ApiResponse<T>`) -> Service
 
 **Routes**:
 - `/login`, `/register` — public
-- `/app/*` — 16 routes (home, products, cart, orders, reviews, favorites, profile, shop, seller, etc.)
-- `/admin/*` — 9 routes (dashboard, users, verifications, products, review-tasks, shops, orders, reports, hot-search)
+- `/app/*` — 19 views: home, explore/products (list), product detail, cart, checkout, payment, favorites, shop detail, seller products, seller publish, orders, trade center, reviews pending/mine, messages, profile/me, settings, preferences, verification
+- `/admin/*` — 10 views: dashboard, users, verifications, products, review-tasks, shops, orders, reports, hot-search, support
 
-**Route guards** (`guards.js`): `requiresAuth` redirects to `/login`, role mismatch redirects to appropriate root.
+**Route guards** (`guards.js`): `public: true` meta bypasses auth; `requiresAuth` redirects to `/login` with `?redirect=`; role mismatch redirects admin to `/admin`, others to `/app`.
 
 ### API Client Pattern
 
@@ -211,16 +254,23 @@ export async function getProductList(params) { return service.get('/products', {
 
 - Services are interfaces with `@Service` + `@Transactional` implementations
 - Constructor injection preferred
-- Throw `BusinessException(resultCode, message)` for domain errors
-- No DTO layer — controllers accept `Map<String, Object>` or request DTOs, data flows mapper -> service -> controller -> response
-- Mapper pattern: `XxxMapper` interface + `JdbcXxxMapper` implementation (no `@Repository`, pure JDBC)
+- Throw `BusinessException(resultCode, message)` for domain errors; `ForbiddenException` for access violations; `UnauthorizedException` for missing auth
+- No DTO layer — controllers accept `Map<String, Object>` or typed request DTOs, data flows mapper -> service -> controller -> response
+- Mapper pattern: `XxxMapper` interface + `JdbcXxxMapper` implementation (no `@Repository`, pure JDBC); mappers return `Map<String, Object>` or `List<Map<String, Object>>`
+- Adding a new domain module requires: entity class, mapper interface + JdbcImpl, service interface + impl, controller, and a corresponding `.http` smoke test in `docs/06-http/`
+- Protect endpoints with `@LoginRequired` (optionally `role = UserRole.ADMIN`); read current user via `AuthContextHolder.getUser()`
+- All controller methods return `ApiResponse<T>` — use `ApiResponse.success(data)` or `ApiResponse.error(resultCode, message)`
 
 ### Frontend
 
 - Store pattern: `ref()` state, `async function` actions, `computed` for derived state, try/catch/finally for loading flags
-- API modules: thin wrappers around the Axios client instance
-- Data normalization: `utils/market-normalizers.js` transforms snake_case API responses to camelCase client shape
-- Component convention: `ListPageShell.vue` for list views, `FormPageShell.vue` for forms, `EmptyState.vue`/`ErrorBlock.vue`/`SkeletonCard.vue` for loading/error states
+- API modules: thin wrappers around the Axios client instance in `api/modules/`; import via `api/index.js`
+- Data normalization: `utils/market-normalizers.js` transforms snake_case API responses to camelCase client shape; always normalize at the store boundary, not in components
+- Shell components: `ListPageShell.vue` for paginated list views, `FormPageShell.vue` for forms, `TradePageShell.vue` for order/review flows
+- State feedback: always use `EmptyState.vue` for empty lists, `ErrorBlock.vue` for fetch errors, `SkeletonCard.vue` for loading states — never leave a blank area
+- Error handling: use `utils/error-utils.js` to extract user-facing messages from API errors; do not display raw error objects
+- UI library: Element Plus — use existing component imports from `plugins/element-plus.js`; do not add new UI libraries
+- New views must be added to the appropriate route module (`router/modules/app.js` or `router/modules/admin.js`) and follow the existing `meta` shape (`title`, `requiresAuth`, `role`, `navKey`, `public`, `hiddenInNav`)
 
 ## Document System
 
@@ -232,9 +282,10 @@ docs/
   04-standards/        Development process, testing, contribution, course constraints
   05-roadmap/          Stage/feature roadmap, open questions (current/), MVP scope (archived/)
   06-http/             Executable smoke-test request collections (.http files)
+                       auth, admin, order, product, recommend, report, review, search
   07-decisions/        Architecture Decision Records (immutable)
   08-tasks/            Task specs: drafts/ -> active/ -> archived/
-  09-api-spec/         Formal API specs (auth, order, product) with template
+  09-api-spec/         Formal API specs: auth, admin, order, product, review, search, user
 ```
 
 Reading order for agents: `AGENTS.md` -> `CLAUDE.md` -> `docs/README.md` -> relevant roadmap/task docs.
@@ -259,11 +310,12 @@ Reading order for agents: `AGENTS.md` -> `CLAUDE.md` -> `docs/README.md` -> rele
 
 ### Post-task checklist
 
-1. `mvnw.cmd test` — zero failures, zero errors
-2. Prepend a block to `CHANGELOG.md`
-3. If an endpoint was added or its contract changed, update `docs/09-api-spec/`
-4. Update `docs/06-http/*.http` smoke tests to cover new or changed endpoints
-5. If a significant design decision was made, create an ADR in `docs/07-decisions/`
+1. `mvnw.cmd test` — zero failures, zero errors (backend)
+2. `npm test` (from `frontend/`) — zero failures (frontend unit tests)
+3. Prepend a block to `CHANGELOG.md`
+4. If an endpoint was added or its contract changed, update `docs/09-api-spec/`
+5. Update `docs/06-http/*.http` smoke tests to cover new or changed endpoints
+6. If a significant design decision was made, create an ADR in `docs/07-decisions/`
 
 ### Hard limits
 
