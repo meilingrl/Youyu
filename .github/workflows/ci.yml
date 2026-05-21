@@ -67,6 +67,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests]
     timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: campus_market
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
     steps:
       - uses: actions/checkout@v4
 
@@ -97,6 +110,8 @@ jobs:
 
       - name: Start backend with seed profile
         working-directory: backend
+        env:
+          MYSQL_PASSWORD: root
         run: |
           ./mvnw spring-boot:run -B -Dspring-boot.run.profiles=seed > backend-ci.log 2>&1 &
           for i in $(seq 1 90); do
@@ -136,7 +151,7 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://localhost:8080
 
       - name: Upload Playwright report on failure
-        if: failure()
+        if: failure() && hashFiles('frontend/playwright-report/**') != ''
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
