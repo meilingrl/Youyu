@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-const USER_TOKEN = 'Bearer mock-1001-USER'
+const USER_TOKEN = 'Bearer mock-1010-USER'
 const ADMIN_TOKEN = 'Bearer mock-9001-ADMIN'
 
 // ─────────────────────────────────────────────
