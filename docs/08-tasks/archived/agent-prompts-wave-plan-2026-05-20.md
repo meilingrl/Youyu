@@ -39,7 +39,7 @@ Before finishing, update the task record and archive it if complete.
 ### `registration-flow-contract-diagnosis.md`
 
 ```text
-Read AGENTS.md, CLAUDE.md, docs/README.md, frontend/README.md, backend/README.md, the auth HTTP assets, auth controller/service code, frontend auth/register views or forms, and docs/08-tasks/active/registration-flow-contract-diagnosis.md.
+Read AGENTS.md, CLAUDE.md, docs/README.md, frontend/README.md, backend/README.md, the auth HTTP assets, auth controller/service code, frontend auth/register views or forms, and docs/08-tasks/archived/registration-flow-contract-diagnosis.md.
 
 Goal: diagnose why registration can reach the backend with username=null and make the smallest fix that restores a valid contract. Tie the root cause to code or runtime behavior, not guesses. Do not broaden into general auth redesign.
 
@@ -49,7 +49,7 @@ Run the checks listed in the task doc, then update the task record and archive i
 ### `seller-publish-loading-diagnosis.md`
 
 ```text
-Read AGENTS.md, CLAUDE.md, docs/README.md, frontend/README.md, backend/README.md, seller publish/store/api/router files, and docs/08-tasks/active/seller-publish-loading-diagnosis.md.
+Read AGENTS.md, CLAUDE.md, docs/README.md, frontend/README.md, backend/README.md, seller publish/store/api/router files, and docs/08-tasks/archived/seller-publish-loading-diagnosis.md.
 
 Goal: find the real cause of the seller publish page hanging in loading state and apply the smallest reliable fix. Separate frontend-state bugs from backend/API failure modes with evidence.
 

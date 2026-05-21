@@ -355,7 +355,7 @@ test.describe('Hot Search & Search Filters', () => {
     expect(body.success).toBe(true)
     expect(body.data.items.length).toBeGreaterThan(0)
     expect(body.data.items[0].title).toMatch(/Math/i)
-    expect(body.data.items[0].categoryId).toBe(1)
+    expect(body.data.items[0].categoryName).toBe('Learning Materials')
     expect(body.data.items[0].productType).toBe('digital')
   })
 

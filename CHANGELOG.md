@@ -1,3 +1,23 @@
+## [2026-05-21] - Documentation cleanup and README overhaul post-migration
+
+### docs
+- `CLAUDE.md`: expanded backend directory tree to sub-package level; expanded frontend `components/` to reflect actual subdirectories (`explore/`, `shell/`, `trade/`); corrected `/app/*` route count from 16 to 19 and `/admin/*` from 9 to 10; added route guard detail (`public` meta, `?redirect=` behavior); expanded backend Key Conventions (exception types, new module checklist, `@LoginRequired` usage, `ApiResponse` return pattern); expanded frontend Key Conventions (normalization boundary, error-utils, Element Plus constraint, route meta shape); updated `docs/06-http/` and `docs/09-api-spec/` module lists to reflect actual files; added frontend unit test step to post-task checklist
+- `backend/README.md`: rewritten from early scaffold description to current state — MySQL setup, full command reference, seed data layout, auth/mock token usage
+- `frontend/README.md`: rewritten from scaffold stub to current directory structure, component inventory, and key conventions
+- `tests/README.md`: replaced placeholder with actual test distribution (backend `src/test/`, frontend `__tests__/`, E2E `tests/e2e/`)
+- `docs/README.md`: updated `09-api-spec` module list from 3 to 7 entries; removed deleted `ui-improvement-spec` from `03-architecture` description
+- `migration-notes/README.md`: added new file explaining the directory is pre-migration historical archive with broken paths — not current reference material
+
+### removed
+- `docs/03-architecture/ui-improvement-spec.md`: deleted — file encoding was corrupted (GBK/UTF-8 mismatch), content unreadable by agents; described UI improvements that have since been implemented
+
+### archived
+- `docs/08-tasks/drafts/issue.md` → `archived/`: raw bug/issue notes, already decomposed into concrete active tasks
+- `docs/08-tasks/active/execution-wave-plan-2026-05-20.md` → `archived/`: planning meta-task, wave breakdown already executed
+- `docs/08-tasks/active/agent-prompts-wave-plan-2026-05-20.md` → `archived/`: agent dispatch prompts for the same wave, no longer active
+
+---
+
 ## [2026-05-20] - Seller publish loading diagnosis and fix
 
 ### fix
@@ -590,3 +610,18 @@ Format per block:
 - Updated roadmap and engineering docs to align the current stage as MVP closure on H2 file database + JDBC, with MySQL/MyBatis kept as course and migration direction
 - Added `docs/http/report.http`
 - Updated `docs/http/auth.http` and `docs/http/order.http` for preference and digital asset access flows
+## [2026-05-21] - Repository bootstrap hardening for Youyu
+
+### docs
+- Rewrote the repository root `README.md` as a proper standalone project entry for `Youyu`, including stack overview, quick start, repository structure, documentation entry points, and migration notes from the older course workspace
+
+### ci
+- Hardened `.github/workflows/ci.yml` with manual trigger support, workflow concurrency control, explicit read-only permissions, job timeouts, healthier service readiness checks, and failure artifact uploads for Playwright runtime logs
+
+### chore
+- Expanded root `.gitignore` to cover common local build outputs, editor files, OS files, Vite artifacts, and local environment overrides
+- Added `.editorconfig` for cross-editor formatting consistency
+- Added `.gitattributes` for safer line-ending behavior across Windows and Linux
+- Added `.github/pull_request_template.md` to standardize summary, testing, and documentation expectations for protected-branch development
+
+---

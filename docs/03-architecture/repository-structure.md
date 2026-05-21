@@ -58,6 +58,6 @@ Recommended layered structure:
 
 ## Repository Rules
 
-- New formal code stays inside `CampusMarket/`.
+- New formal code stays inside this repository root.
 - Documents and code should stay aligned by module and responsibility.
 - Documentation restructuring should preserve discoverability and avoid duplicate ownership.

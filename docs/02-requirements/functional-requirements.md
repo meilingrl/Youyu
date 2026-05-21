@@ -215,8 +215,8 @@
 
 详细要求见：
 
-- [analytics-requirements.md](E:\NEU\大二下\web开发技术\CampusMarket\docs\03-requirements\analytics-requirements.md)
-- [user-preferences-and-profile-insights.md](E:\NEU\大二下\web开发技术\CampusMarket\docs\03-requirements\user-preferences-and-profile-insights.md)
+- [analytics-requirements.md](./analytics-requirements.md)
+- [user-preferences-and-profile-insights.md](./user-preferences-and-profile-insights.md)
 
 当前阶段要求如下。
 
