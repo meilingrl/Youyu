@@ -112,8 +112,9 @@ jobs:
         working-directory: backend
         env:
           MYSQL_PASSWORD: root
+          SPRING_PROFILES_ACTIVE: seed
         run: |
-          ./mvnw spring-boot:run -B -Dspring-boot.run.profiles=seed > backend-ci.log 2>&1 &
+          ./mvnw spring-boot:run -B > backend-ci.log 2>&1 &
           for i in $(seq 1 90); do
             code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/health || true)
             if [ "$code" = "200" ]; then
