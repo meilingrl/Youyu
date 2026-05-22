@@ -618,21 +618,19 @@ const currentProductTypeLabel = computed(
     height: 52px;
   }
 
+  /* condensed 时在窄屏保持单行胶囊，不堆叠 */
   .explore-search-shell.is-condensed .explore-search-shell__hero-pill {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 10px 12px;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) auto minmax(0, auto) auto;
+    padding: 2px 4px 2px 10px;
+    gap: 0;
   }
 
   .explore-search-shell.is-condensed .explore-search-shell__segment {
-    padding: 0;
+    padding: 4px 8px;
   }
 
   .explore-search-shell.is-condensed .explore-search-shell__chips {
-    max-height: none;
-    opacity: 1;
-    overflow: visible;
-    pointer-events: auto;
+    display: none;
   }
 }
 
@@ -683,12 +681,12 @@ const currentProductTypeLabel = computed(
   }
 
   .explore-search-shell.is-condensed {
-    padding: 10px;
+    padding: 6px 8px;
+    border-radius: 999px;
   }
 
   .explore-search-shell.is-condensed .explore-search-shell__hero-pill {
-    padding: 10px;
-    border-radius: 24px;
+    padding: 2px 4px 2px 8px;
   }
 }
 </style>

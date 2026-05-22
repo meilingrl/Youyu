@@ -5,6 +5,7 @@ import { ElMessage } from '@/plugins/element-plus-services'
 import { useMarketStore } from '@/stores/market'
 import { useSearchStore } from '@/stores/search'
 import { useRecommendStore } from '@/stores/recommend'
+import { useAppStore } from '@/stores/app'
 import SkeletonCard from '@/components/common/SkeletonCard.vue'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -21,6 +22,7 @@ const router = useRouter()
 const marketStore = useMarketStore()
 const searchStore = useSearchStore()
 const recommendStore = useRecommendStore()
+const appStore = useAppStore()
 
 const pageRootRef = ref(null)
 const sentinelRef = ref(null)
@@ -36,7 +38,7 @@ const pageSize = ref(12)
 const cards = ref([])
 const total = ref(0)
 const scrollProgress = ref(0)
-const isSearchShellCondensed = ref(false)
+const isSearchShellCondensed = computed(() => appStore.isHeaderCondensed)
 const bookmarks = ref(readStoredBookmarks())
 let syncingRoute = false
 let sentinelObserver = null
@@ -339,7 +341,6 @@ function updateScrollProgress() {
   if (typeof window === 'undefined') return
   const scrollRange = document.documentElement.scrollHeight - window.innerHeight
   scrollProgress.value = scrollRange > 0 ? Math.min(1, Math.max(0, window.scrollY / scrollRange)) : 0
-  isSearchShellCondensed.value = window.scrollY > 96
 
   if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 960) {
     loadNextPage()
@@ -531,6 +532,10 @@ watch(
   }
 )
 
+watch(keyword, (val) => {
+  appStore.setKeyword(val)
+})
+
 watch(sentinelRef, () => {
   nextTick(() => {
     refreshSentinelObserver()
@@ -689,7 +694,7 @@ watch(sentinelRef, () => {
 
 .explore-search-shell-sticky {
   position: sticky;
-  top: 82px;
+  top: 96px;
   z-index: 24;
   display: flex;
   justify-content: center;
@@ -713,6 +718,7 @@ watch(sentinelRef, () => {
 
 .explore-search-shell-sticky.is-condensed {
   padding-top: 0;
+  top: 88px;
 }
 
 .explore-search-shell-sticky.is-condensed::before {
@@ -721,16 +727,13 @@ watch(sentinelRef, () => {
 
 .explore-search-shell-sticky__shell {
   width: min(100%, 1180px);
-  transform-origin: top center;
   transition:
-    transform var(--cm-transition-feature),
     width var(--cm-transition-feature),
     margin var(--cm-transition-feature);
 }
 
 .explore-search-shell-sticky.is-condensed .explore-search-shell-sticky__shell {
-  width: min(100%, 920px);
-  transform: translateY(-1px) scale(0.93);
+  width: min(100%, 1180px);
 }
 
 .explore-bookmark-rail {
