@@ -1,6 +1,18 @@
-## [2026-05-21] - Documentation cleanup and README overhaul post-migration
+## [2026-05-22] - Post-migration task ledger reconciliation
 
 ### docs
+- Cross-referenced every file in `docs/08-tasks/active/` and `docs/08-tasks/drafts/` against `CHANGELOG.md` and the actual codebase to surface tasks that the migration left out of sync
+- Removed four pre-completion duplicates whose authoritative completed versions already lived in `archived/` (drafts/active copies were stale migration leftovers, not new work): `active/comment-completeness-sprint.md`, `active/order-after-sales-ux-hardening.md`, `drafts/test-foundation-expansion.md`, `drafts/ui-redesign-shell-navigation-foundation.md`
+- Moved `user-facing-enum-label-normalization.md` from `active/` to `archived/` after verifying delivery: `frontend/src/components/trade/trade-meta.js` provides `getOrderStatusMeta()` and `getPaymentStatusMeta()`, consumed by `OrdersView.vue` and `PaymentView.vue`; `SellerProductsView.vue` uses an inline `statusLabel()` covering its distinct seller-side statuses
+- Updated `docs/08-tasks/drafts/architecture-performance-hardening.md` to mark Slices A/B/C/E as delivered (children archived) and flag Slices D (product search path) and F (JWT secret default) as still open
+
+### verified-but-unchanged
+- Remaining `active/` tasks confirmed still incomplete (kept in place): `admin-governance-action-consistency`, `api-spec-report-module-standardization` (HTTP collection aligned, formal spec `docs/09-api-spec/report.md` still missing), `chat-mvp-scope-definition`, `frontend-bundle-second-pass-planning`, `platform-mediation-boundary-definition` (blocked on chat MVP), `preference-theme-capability-gap` (theme radio rendered but `styles/variables.css` has no dark-mode tokens), `review-entry-and-seed-flow-bridge` (no review entry on product detail; seed orders all `pending_payment`)
+- Remaining `drafts/` task `api-spec-standardization-follow-up` still relevant — `docs/09-api-spec/` is missing `report`, `recommend`, and `shop` module specs
+
+---
+
+
 - `CLAUDE.md`: expanded backend directory tree to sub-package level; expanded frontend `components/` to reflect actual subdirectories (`explore/`, `shell/`, `trade/`); corrected `/app/*` route count from 16 to 19 and `/admin/*` from 9 to 10; added route guard detail (`public` meta, `?redirect=` behavior); expanded backend Key Conventions (exception types, new module checklist, `@LoginRequired` usage, `ApiResponse` return pattern); expanded frontend Key Conventions (normalization boundary, error-utils, Element Plus constraint, route meta shape); updated `docs/06-http/` and `docs/09-api-spec/` module lists to reflect actual files; added frontend unit test step to post-task checklist
 - `backend/README.md`: rewritten from early scaffold description to current state — MySQL setup, full command reference, seed data layout, auth/mock token usage
 - `frontend/README.md`: rewritten from scaffold stub to current directory structure, component inventory, and key conventions

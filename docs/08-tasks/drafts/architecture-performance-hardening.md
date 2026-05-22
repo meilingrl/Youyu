@@ -3,13 +3,23 @@
 ## Metadata
 
 - ID: architecture-performance-hardening
-- Status: draft
+- Status: in-progress (Wave 1 delivered; Slices D and F still open)
 - Owner: meilingrl
 - Track: cross-cutting
 - Depends on: current marketplace transaction flow, admin governance baseline, hot-search P3, test foundation expansion
 - Priority: high
 - Planned date: 2026-05-17
 - Completed date:
+
+## Wave 1 Status (verified 2026-05-22)
+
+- [x] Slice A: Admin pagination and filtering baseline — delivered under archived child task `admin-query-pagination-hardening`
+- [x] Slice B: Review-path lookup hardening — delivered under archived child task `review-order-lookup-hardening`
+- [x] Slice C: Order / payment / refund / report index hardening — delivered under archived child task `runtime-index-hardening`
+- [ ] Slice D: Product search path improvement — **NOT STARTED**; `ProductServiceImpl.findPublicByFiltersPaged` still uses `LOWER(...) LIKE '%kw%'` against the products table with no specialized index strategy
+- [x] Slice E: Frontend product-list request cleanup — delivered under archived child task `product-list-request-flow-hardening`
+- [ ] Slice F: Configuration safety cleanup — **PARTIAL**; `application.yml` already gates DB password behind `${MYSQL_PASSWORD:...}` but the JWT secret default is still the literal `campusmarket-dev-secret-key-replace-in-production-min32` checked into the file with no env-var override path
+
 
 ## Objective
 
