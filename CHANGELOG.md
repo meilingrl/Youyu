@@ -1,3 +1,64 @@
+## [2026-05-23] - Explore sticky condensed search shell
+
+### feat
+- Reworked `frontend/src/components/explore/ExploreSearchShell.vue` into a segmented pill-style search and filter shell with a dedicated search action, inline category/type chips, and a stronger visual match to the browse-first discovery pattern
+- Added a sticky condensed state in `frontend/src/views/app/ProductListView.vue` so the explore search shell stays pinned under the app header and smoothly compresses while scrolling
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
+## [2026-05-22] - Home featured rail centered loop interaction
+
+### feat
+- Reworked `frontend/src/components/home/HomeFeaturedRail.vue` so wheel and arrow navigation now move the homepage featured rail directly between centered cards instead of allowing free intermediate horizontal scroll states
+- Converted the featured rail into a seamless loop using duplicated card buffers, keeping the active card in a centered presentation without visible start or end boundaries
+- Removed desktop drag-scroll behavior from the rail so the interaction stays in discrete centered states and preserves the existing motion styling between cards
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
+## [2026-05-22] - Explore infinite scroll and bookmark rail
+
+### feat
+- Reworked `frontend/src/views/app/ProductListView.vue` from explicit pagination into an infinite browse flow that accumulates paged API results locally, auto-loads additional items near the bottom, and keeps existing filter/query behavior intact
+- Added a desktop-side custom bookmark rail on the explore page with progress feedback, double-click save, and click-to-restore behavior so long browsing sessions can resume from a marked position
+
+### docs
+- Archived `docs/08-tasks/active/explore-infinite-scroll-bookmark-ux.md` as a completed task record after implementation
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
+## [2026-05-22] - Explore page UX redesign
+
+### feat
+- Reworked `frontend/src/views/app/ProductListView.vue` into a browse-first explore surface with a full-width results flow, compact filter summary bar, and conditional featured shops above the grid
+- Rebuilt `frontend/src/components/explore/ExploreSearchShell.vue` into a four-row discovery control with inline category/type chips, compact history and hot-search hints, and an active-filter bar without hero prose or nested cards
+
+### docs
+- Archived `docs/08-tasks/active/explore-page-ux-redesign.md` as a completed task record after implementation
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
+## [2026-05-22] - Home featured rail redesign
+
+### feat
+- Rebuilt `frontend/src/views/app/HomeView.vue` into a lighter three-part homepage with an editorial hero, inline hot-search chips, a horizontally scrolling featured rail, and a compact trust strip
+- Added `frontend/src/components/home/HomeFeaturedRail.vue` with variable-width lead/accent cards, full-bleed imagery, bottom gradient overlays, shimmer loading skeletons, and hover motion tuned to the existing design tokens
+- Simplified homepage data loading to use only `recommendStore.loadHomeRecommend(8)` and `searchStore.loadHotKeywords()`, while preserving the existing search suggestion flow and product/explore navigation contracts
+
+### docs
+- Archived `docs/08-tasks/active/home-featured-rail-redesign.md` as a completed task record after implementation
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
 ## [2026-05-22] - Non-UI/UX task spec refinement for sub-agent dispatch
 
 ### docs
