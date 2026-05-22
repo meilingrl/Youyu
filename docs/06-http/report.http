@@ -5,6 +5,10 @@
 @userToken = mock-1001-USER
 @adminToken = mock-9001-ADMIN
 
+### Probe report module skeleton (any logged-in role)
+GET {{baseUrl}}/api/reports/skeleton
+Authorization: Bearer {{userToken}}
+
 ### Submit product report as USER
 POST {{baseUrl}}/api/reports
 Authorization: Bearer {{userToken}}
@@ -29,7 +33,7 @@ Content-Type: application/json
   "content": "Anonymous reports are not accepted."
 }
 
-### Submit report with invalid targetType - expect business error
+### Submit report with invalid targetType - expect HTTP 400 (BAD_REQUEST)
 POST {{baseUrl}}/api/reports
 Authorization: Bearer {{userToken}}
 Content-Type: application/json

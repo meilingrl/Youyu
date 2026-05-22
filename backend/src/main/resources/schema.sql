@@ -176,6 +176,10 @@ CREATE INDEX idx_products_shop ON products(shop_id);
 CREATE INDEX idx_products_status ON products(status);
 CREATE INDEX idx_products_review_status ON products(review_status);
 CREATE INDEX idx_products_type ON products(product_type);
+-- Composite index for the public listing base path: findPublicByFiltersPaged / countPublicByFilters (status + is_deleted fixed filters + created_at ORDER BY)
+CREATE INDEX idx_products_public_base ON products(status, is_deleted, created_at);
+-- Composite index for filtered public listing: adds product_type + category_id optional filters over the public base path
+CREATE INDEX idx_products_public_type_cat ON products(status, is_deleted, product_type, category_id, created_at);
 
 CREATE TABLE IF NOT EXISTS product_media (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

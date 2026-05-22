@@ -1,93 +1,124 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage } from '@/plugins/element-plus-services'
 import { useRouter } from 'vue-router'
-import PageSection from '@/components/common/PageSection.vue'
-import EmptyState from '@/components/common/EmptyState.vue'
+import { ElMessage } from '@/plugins/element-plus-services'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
-import SearchSuggestInput from '@/components/search/SearchSuggestInput.vue'
-import HotSearchList from '@/components/search/HotSearchList.vue'
-import ExploreProductCard from '@/components/explore/ExploreProductCard.vue'
-import FeaturedShopsSection from '@/components/explore/FeaturedShopsSection.vue'
-import { buildFeaturedShops } from '@/components/explore/featured-shop-helpers'
-import { useMarketStore } from '@/stores/market'
-import { useSearchStore } from '@/stores/search'
+import HomeFeaturedRail from '@/components/home/HomeFeaturedRail.vue'
 import { useRecommendStore } from '@/stores/recommend'
 
 const router = useRouter()
-const marketStore = useMarketStore()
-const searchStore = useSearchStore()
 const recommendStore = useRecommendStore()
 
 const loading = ref(false)
 const loadError = ref(false)
-const homeKeyword = ref('')
 
-const spotlightProducts = computed(() => recommendStore.homeRecommendList.slice(0, 3))
-const heroMetrics = computed(() => [
-  {
-    label: '在售商品',
-    value: marketStore.products.length,
-    note: '学习资料、宿舍好物、数码配件…'
-  },
-  {
-    label: '商品分类',
-    value: marketStore.categories.length,
-    note: '快速定位你想找的类别'
-  },
-  {
-    label: '热门搜索',
-    value: searchStore.hotKeywords.length,
-    note: '看看最近大家都在找什么'
-  }
-])
+const shouldShowRail = computed(() => loading.value || recommendStore.homeRecommendList.length > 0)
 
-const trustItems = [
+const introHighlights = [
   {
-    title: '学生专属',
-    description: '通过校园身份认证后参与交易，买卖双方都有真实校园背景。'
+    eyebrow: 'FOR STUDENTS',
+    title: '不只是二手市场。',
+    desc: 'CampusMarket 把校园交易、认证、开店和售后放进一条更完整的链路里，让它更像一个可信的学生商业网络。'
   },
   {
-    title: '交易有保障',
-    description: '订单全程可追踪，支持退款售后与平台介入，安心买卖。'
+    eyebrow: 'FOR SELLERS',
+    title: '发布、认证、经营，在同一个起点完成。',
+    desc: '从宿舍闲置到长期经营的小店入口，我们让探索、交易和身份可信同时成立，而不是拆成零碎工具。'
   },
   {
-    title: '买卖都方便',
-    description: '想买就去逛探索，想卖就直接发布，认证后即可开店经营。'
+    eyebrow: 'FOR TRUST',
+    title: '不是匿名群消息，而是可追踪的交易体验。',
+    desc: '身份验证、订单状态和平台介入能力都被前置到体验里，让校园内交易真正更安心。'
   }
 ]
 
-const guideCards = [
+const statCards = [
   {
-    title: '我想买东西',
-    description: '逛热搜、按分类筛选、看精选店铺，找到心仪好物直接下单。',
-    action: '去逛逛',
+    value: '12K+',
+    label: '认证学生用户',
+    desc: '覆盖买家、卖家与校内个体经营者的可信身份网络。',
+    tilt: 'left'
+  },
+  {
+    value: '28K+',
+    label: '在架校园好物',
+    desc: '从教材、数码、宿舍到轻服务，持续形成内容供给。',
+    tilt: 'right'
+  },
+  {
+    value: '150+',
+    label: '校园服务范围',
+    desc: '围绕宿舍生活、学习交易和学生副业场景持续扩展。',
+    tilt: 'left'
+  }
+]
+
+const entryCards = [
+  {
+    title: '探索入口',
+    desc: '先从精选与全部商品出发，快速进入平台最有吸引力的内容面。',
+    action: '进入探索',
     handler: () => router.push('/app/explore')
   },
   {
-    title: '我想卖东西',
-    description: '完成学生认证后即可发布商品，经营自己的校园小店。',
-    action: '去发布',
-    handler: () => router.push('/app/seller/publish')
+    title: '认证入口',
+    desc: '完成学生认证后，才能获得更完整的交易权限与身份可信度。',
+    action: '开始认证',
+    handler: () => router.push('/app/verification')
+  },
+  {
+    title: '开店入口',
+    desc: '把一次性闲置发布，升级成一个可持续经营的校园小店。',
+    action: '去开店',
+    handler: () => router.push('/app/shop/manage/publish')
   }
 ]
 
-const featuredShops = computed(() =>
-  buildFeaturedShops([...marketStore.products, ...recommendStore.homeRecommendList], {
-    maxShops: 2
-  })
-)
+const footerGroups = [
+  {
+    title: '平台入口',
+    links: [
+      { label: '探索好物', handler: () => router.push('/app/explore') },
+      { label: '精选推荐', handler: () => document.getElementById('home-featured-rail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
+      { label: '学生认证', handler: () => router.push('/app/verification') },
+      { label: '开店经营', handler: () => router.push('/app/shop/manage/publish') }
+    ]
+  },
+  {
+    title: '交易场景',
+    links: [
+      { label: '教材资料', handler: () => router.push({ path: '/app/explore', query: { keyword: '教材' } }) },
+      { label: '数码设备', handler: () => router.push({ path: '/app/explore', query: { keyword: '数码' } }) },
+      { label: '宿舍生活', handler: () => router.push({ path: '/app/explore', query: { keyword: '宿舍' } }) },
+      { label: '校园服务', handler: () => router.push({ path: '/app/explore', query: { keyword: '服务' } }) }
+    ]
+  },
+  {
+    title: '卖家能力',
+    links: [
+      { label: '发布商品', handler: () => router.push('/app/shop/manage/publish') },
+      { label: '管理店铺', handler: () => router.push('/app/shop/manage') },
+      { label: '查看订单', handler: () => router.push('/app/orders') },
+      { label: '身份可信', handler: () => router.push('/app/verification') }
+    ]
+  },
+  {
+    title: '帮助与说明',
+    links: [
+      { label: '为什么要认证', handler: () => router.push('/app/verification') },
+      { label: '如何开始探索', handler: () => router.push('/app/explore') },
+      { label: '平台交易保障', handler: () => router.push('/app/orders') },
+      { label: '返回登录', handler: () => router.push('/login') }
+    ]
+  }
+]
 
 async function loadHomePage() {
   loading.value = true
   loadError.value = false
 
   try {
-    await Promise.all([
-      marketStore.loadProducts({ page: 1, pageSize: 8 }),
-      searchStore.loadHotKeywords().catch(() => []),
-      recommendStore.loadHomeRecommend(6).catch(() => [])
-    ])
+    await recommendStore.loadHomeRecommend(8)
   } catch (error) {
     loadError.value = true
     ElMessage.error(error?.response?.data?.message || error?.message || '首页数据加载失败')
@@ -96,192 +127,213 @@ async function loadHomePage() {
   }
 }
 
-function goToSearch(keyword) {
-  const finalKeyword = String(keyword || '').trim()
-  if (!finalKeyword) {
-    router.push('/app/explore')
-    return
-  }
-
-  searchStore.clearSuggestions()
-  searchStore.rememberKeyword(finalKeyword)
-  router.push({ name: 'app-explore', query: { keyword: finalKeyword } })
-}
-
-function handleHomeKeywordChange(value) {
-  homeKeyword.value = value
-  searchStore.loadSuggestions(value).catch(() => [])
-}
-
-function handleHomeSuggestionSelect(keyword) {
-  homeKeyword.value = keyword
-  goToSearch(keyword)
-}
-
 function openProduct(product) {
   router.push(`/app/products/${product.id}`)
-}
-
-function openShopByProduct(product) {
-  if (product.shopId) {
-    router.push(`/app/shops/${product.shopId}`)
-  }
-}
-
-function openShop(shop) {
-  if (shop.id) {
-    router.push(`/app/shops/${shop.id}`)
-  }
 }
 
 onMounted(loadHomePage)
 </script>
 
 <template>
-  <div class="page-stack">
-    <div class="shell-container page-stack">
-      <section class="home-hero shell-card">
-        <div class="home-hero__copy">
-          <span class="eyebrow">CampusMarket</span>
-          <h1>校园里的学习好物与生活好物，都在这里。</h1>
-          <p>
-            学生专属的交易平台——从教材笔记到宿舍神器，认证身份、放心交易、轻松开店。
-          </p>
-          <div class="home-hero__actions">
-            <el-button type="primary" size="large" @click="$router.push('/app/explore')">进入探索页</el-button>
-            <el-button plain size="large" @click="$router.push('/app/verification')">学生认证</el-button>
-            <el-button plain size="large" @click="$router.push('/app/seller/publish')">发布商品</el-button>
-          </div>
-          <div class="home-hero__search">
-            <SearchSuggestInput
-              v-model="homeKeyword"
-              placeholder="搜索热搜关键词或直接去探索"
-              button-label="去探索"
-              :suggestions="searchStore.suggestions"
-              :loading="searchStore.loadingSuggestions"
-              :error="searchStore.suggestionError"
-              @change="handleHomeKeywordChange"
-              @submit="goToSearch"
-              @select-suggestion="handleHomeSuggestionSelect"
-            />
-          </div>
+  <div class="home-view">
+    <section class="home-hero">
+      <div class="home-hero__inner shell-container">
+        <span class="eyebrow">CampusMarket</span>
+        <h1 class="home-hero__title">把校园里的交易、<br>信任与经营，放进同一个平台。</h1>
+        <p class="home-hero__desc">
+          CampusMarket 不是一个只会堆商品的首页。它更像学生自己的商业入口，让你在一个地方完成发现、交易、认证和开店。
+        </p>
+
+        <div class="home-hero__highlights">
+          <article
+            v-for="item in introHighlights"
+            :key="item.title"
+            class="home-hero__highlight"
+          >
+            <span class="home-hero__highlight-eyebrow">{{ item.eyebrow }}</span>
+            <strong>{{ item.title }}</strong>
+            <span>{{ item.desc }}</span>
+          </article>
         </div>
 
-        <div class="home-hero__visual">
-          <div class="home-hero__panel home-hero__panel--highlight">
-            <span>今日推荐</span>
-            <strong>搜索 / 分类 / 热门 / 精选店铺</strong>
-            <p>用关键词直达想要的商品，或按分类慢慢挑选——还有精选店铺等你发现。</p>
-          </div>
-          <div class="home-hero__metric-grid">
-            <article v-for="item in heroMetrics" :key="item.label" class="home-hero__metric">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-              <p>{{ item.note }}</p>
-            </article>
-          </div>
+        <div class="home-hero__actions">
+          <el-button type="primary" size="large" @click="router.push('/app/explore')">探索好物</el-button>
+          <el-button plain size="large" @click="router.push('/app/verification')">学生认证</el-button>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <ErrorBlock v-if="loadError" @retry="loadHomePage" />
+    <section class="home-stats shell-container">
+      <div class="home-stats__heading">
+        <span class="eyebrow">Platform Signals</span>
+        <h2>平台规模先建立信任，再让内容完成转化。</h2>
+      </div>
 
-      <EmptyState
-        v-else-if="!loading && !marketStore.products.length"
-        title="暂时还没有商品上架"
-        description="去探索页看看有没有新上架的好物，或者成为第一个发布商品的卖家！"
-      >
-        <el-button type="primary" @click="$router.push('/app/explore')">去探索</el-button>
-      </EmptyState>
+      <div class="home-stats__grid">
+        <article
+          v-for="item in statCards"
+          :key="item.label"
+          class="home-stats__card"
+          :class="item.tilt === 'left' ? 'home-stats__card--left' : 'home-stats__card--right'"
+        >
+          <strong>{{ item.value }}</strong>
+          <h3>{{ item.label }}</h3>
+          <p>{{ item.desc }}</p>
+        </article>
+      </div>
+    </section>
 
-      <template v-else>
-        <PageSection title="快速开始" description="不管你是想买还是想卖，这里是最快的起点。">
-          <div class="home-guides">
-            <article v-for="item in guideCards" :key="item.title" class="home-guide-card shell-card">
-              <h3>{{ item.title }}</h3>
-              <p>{{ item.description }}</p>
-              <el-button type="primary" plain @click="item.handler()">{{ item.action }}</el-button>
-            </article>
-          </div>
-        </PageSection>
-
-        <PageSection title="精选好物" description="每天都有同学在上新——先看看这些热门商品吧。">
-          <div v-if="spotlightProducts.length" class="home-spotlight-grid">
-            <ExploreProductCard
-              v-for="product in spotlightProducts"
-              :key="product.id"
-              :product="product"
-              @open-product="openProduct"
-              @open-shop="openShopByProduct"
-            />
-          </div>
-          <EmptyState
-            v-else
-            title="精选内容即将上线"
-            description="去探索页浏览更多商品吧。"
-          />
-        </PageSection>
-
-        <PageSection title="安心交易" description="校园身份认证 + 订单全程保障，让你放心买卖。">
-          <div class="home-trust-grid">
-            <article v-for="item in trustItems" :key="item.title" class="home-trust-card shell-card">
-              <h3>{{ item.title }}</h3>
-              <p>{{ item.description }}</p>
-            </article>
-          </div>
-        </PageSection>
-
-        <PageSection title="此刻热搜" description="看看同学们最近都在搜什么。">
-          <HotSearchList
-            :keywords="searchStore.hotKeywords.slice(0, 8)"
-            :loading="searchStore.loadingHotKeywords"
-            @select="goToSearch"
-          />
-        </PageSection>
-
-        <FeaturedShopsSection
-          :shops="featuredShops"
-          title="精选店铺"
-          description="校园里活跃的优质卖家，商品丰富、评价好。"
-          @open-shop="openShop"
-          @open-product="openProduct"
-        />
-      </template>
+    <div v-if="loadError" class="home-error shell-container">
+      <ErrorBlock @retry="loadHomePage" />
     </div>
+
+    <HomeFeaturedRail
+      id="home-featured-rail"
+      v-else-if="shouldShowRail"
+      :products="recommendStore.homeRecommendList"
+      :loading="loading"
+      @open-product="openProduct"
+    />
+
+    <section class="home-entries shell-container">
+      <div class="home-entries__heading">
+        <span class="eyebrow">Key Entrances</span>
+        <h2>从探索、认证到开店，首页把关键入口直接摊开。</h2>
+      </div>
+
+      <div class="home-entries__grid">
+        <article v-for="item in entryCards" :key="item.title" class="home-entry-card">
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.desc }}</p>
+          <button type="button" class="home-entry-card__action" @click="item.handler()">
+            {{ item.action }} →
+          </button>
+        </article>
+      </div>
+    </section>
+
+    <section class="home-footer shell-container">
+      <div class="home-footer__inner">
+        <div class="home-footer__top">
+          <span class="eyebrow">CampusMarket</span>
+          <button type="button" class="home-footer__login" @click="router.push('/login')">
+            登录 →
+          </button>
+        </div>
+
+        <div class="home-footer__grid">
+          <article
+            v-for="group in footerGroups"
+            :key="group.title"
+            class="home-footer__column"
+          >
+            <h3>{{ group.title }}</h3>
+            <button
+              v-for="link in group.links"
+              :key="link.label"
+              type="button"
+              class="home-footer__link"
+              @click="link.handler()"
+            >
+              {{ link.label }}
+            </button>
+          </article>
+        </div>
+
+        <div class="home-footer__bottom">
+          <span>CampusMarket</span>
+          <span>Vue 3 · Vue Router · Pinia · Element Plus</span>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
 <style scoped>
+.home-view {
+  display: flex;
+  flex-direction: column;
+  gap: 44px;
+  min-height: 100vh;
+  padding-bottom: 0;
+}
+
 .home-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: 24px;
-  padding: 28px;
+  padding: 72px 0 20px;
   background:
-    radial-gradient(circle at top left, rgba(255, 219, 179, 0.46), transparent 36%),
-    linear-gradient(180deg, rgba(255, 251, 246, 0.98), rgba(248, 241, 233, 0.96));
+    radial-gradient(circle at 18% 26%, rgba(182, 95, 59, 0.14), transparent 34%),
+    radial-gradient(circle at 82% 16%, rgba(196, 122, 44, 0.11), transparent 30%),
+    linear-gradient(180deg, #fffaf3 0%, #f8efe4 58%, #f1e3d3 100%);
 }
 
-.home-hero__copy,
-.home-hero__visual,
-.home-hero__metric-grid,
-.home-guides,
-.home-spotlight-grid,
-.home-trust-grid {
+.home-hero__inner {
   display: grid;
-  gap: 18px;
+  gap: 28px;
+  max-width: 1120px;
 }
 
-.home-hero__copy h1 {
-  margin: 0;
-  max-width: 12ch;
+.home-hero__title {
+  max-width: 10.8ch;
+  font-size: clamp(42px, 6vw, 78px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  font-weight: 800;
+  color: var(--cm-text);
 }
 
-.home-hero__copy p,
-.home-guide-card p,
-.home-trust-card p {
-  margin: 0;
+.home-hero__desc {
+  max-width: 760px;
   color: var(--cm-text-secondary);
-  line-height: 1.75;
+  font-size: clamp(17px, 1.5vw, 21px);
+  line-height: 1.8;
+}
+
+.home-hero__highlights {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.home-hero__highlight {
+  display: grid;
+  gap: 10px;
+  padding: 22px 22px 24px;
+  border-radius: 24px;
+  background: rgba(255, 252, 248, 0.74);
+  border: 1px solid rgba(88, 62, 43, 0.08);
+  box-shadow: 0 24px 60px rgba(88, 62, 43, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.home-hero__highlight:nth-child(1) {
+  transform: rotate(-3deg) translateY(8px);
+}
+
+.home-hero__highlight:nth-child(2) {
+  transform: rotate(2deg) translateY(-6px);
+}
+
+.home-hero__highlight:nth-child(3) {
+  transform: rotate(-2deg) translateY(12px);
+}
+
+.home-hero__highlight-eyebrow {
+  color: var(--cm-primary);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.home-hero__highlight strong {
+  font-size: 18px;
+  line-height: 1.35;
+  color: var(--cm-text);
+}
+
+.home-hero__highlight span:last-child {
+  color: var(--cm-text-secondary);
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .home-hero__actions {
@@ -290,105 +342,291 @@ onMounted(loadHomePage)
   gap: 12px;
 }
 
-.home-hero__search {
-  max-width: 620px;
+.home-hero__actions .el-button.is-plain {
+  box-shadow: none;
 }
 
-.home-hero__panel {
-  padding: 22px;
-  border-radius: 28px;
-  background: rgba(255, 253, 249, 0.8);
-  border: 1px solid rgba(156, 124, 94, 0.14);
-}
-
-.home-hero__panel--highlight {
+.home-stats,
+.home-entries,
+.home-footer {
   display: grid;
-  gap: 12px;
+  gap: 24px;
 }
 
-.home-hero__panel--highlight span {
-  color: #b45309;
-  font-size: 13px;
-  font-weight: 700;
+.home-stats,
+.home-entries {
+  margin-top: 8px;
 }
 
-.home-hero__panel--highlight strong {
-  font-size: 28px;
-  line-height: 1.3;
-}
-
-.home-hero__panel--highlight p,
-.home-hero__metric p {
-  margin: 0;
-  color: var(--cm-text-secondary);
-  line-height: 1.7;
-}
-
-.home-hero__metric-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.home-hero__metric,
-.home-guide-card,
-.home-trust-card {
+.home-stats__heading,
+.home-entries__heading {
   display: grid;
   gap: 10px;
-  padding: 20px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(156, 124, 94, 0.1);
+  max-width: 760px;
 }
 
-.home-hero__metric span {
-  color: var(--cm-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
+.home-stats__heading h2,
+.home-entries__heading h2 {
+  font-size: clamp(28px, 4vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
 }
 
-.home-hero__metric strong {
-  font-size: 28px;
-  line-height: 1;
-}
-
-.home-guides,
-.home-trust-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.home-spotlight-grid {
+.home-stats__grid,
+.home-entries__grid {
+  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
 }
 
-.home-guide-card h3,
-.home-trust-card h3 {
-  margin: 0;
+.home-stats__card,
+.home-entry-card {
+  display: grid;
+  gap: 12px;
+  padding: 30px;
 }
 
-@media (max-width: 1100px) {
-  .home-hero {
+.home-stats__card {
+  border-radius: 28px;
+  background: rgba(255, 252, 248, 0.78);
+  border: 1px solid rgba(88, 62, 43, 0.08);
+  box-shadow: 0 28px 72px rgba(88, 62, 43, 0.09);
+  backdrop-filter: blur(10px);
+}
+
+.home-entry-card {
+  border-radius: 22px;
+  background: var(--cm-bg-elevated);
+  border: 1px solid var(--cm-border);
+  box-shadow: var(--cm-shadow-soft);
+  transition: transform var(--cm-transition-micro), border-color var(--cm-transition-micro);
+}
+
+.home-entry-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(88, 62, 43, 0.18);
+}
+
+.home-stats__card--left {
+  transform: rotate(-3deg) translateY(8px);
+}
+
+.home-stats__card--right {
+  transform: rotate(3deg) translateY(-8px);
+}
+
+.home-stats__card strong {
+  font-size: clamp(42px, 5vw, 68px);
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+  color: var(--cm-text);
+}
+
+.home-stats__card h3,
+.home-entry-card h3 {
+  font-size: 20px;
+  line-height: 1.3;
+  color: var(--cm-text);
+}
+
+.home-stats__card p,
+.home-entry-card p {
+  color: var(--cm-text-secondary);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.home-entry-card__action {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cm-primary);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.home-error {
+  padding-top: 6px;
+}
+
+.home-footer {
+  position: relative;
+  margin-top: auto;
+  padding: 56px 0 0;
+  background: none;
+}
+
+.home-footer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #4a372f 0%, #3f2f28 58%, #392a24 100%);
+  border-top: 1px solid rgba(255, 250, 243, 0.08);
+  z-index: 0;
+}
+
+.home-footer__inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0;
+  padding: 0;
+  background: linear-gradient(180deg, #4a372f 0%, #3f2f28 58%, #392a24 100%);
+}
+
+.home-footer__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 28px;
+  border-bottom: 1px solid rgba(255, 250, 243, 0.12);
+}
+
+.home-footer__login {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 250, 243, 0.9);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color var(--cm-transition-micro);
+}
+
+.home-footer__login:hover {
+  color: #ffffff;
+}
+
+.home-footer__grid {
+  display: grid;
+  grid-template-columns: 1.35fr 1.25fr 1.25fr 0.95fr;
+  gap: 0;
+  padding-top: 20px;
+}
+
+.home-footer__column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 236px;
+  padding: 8px 24px 10px;
+  border-right: 1px solid rgba(255, 250, 243, 0.08);
+}
+
+.home-footer__column:last-child {
+  border-right: 0;
+}
+
+.home-footer__column h3 {
+  margin-bottom: 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff6ea;
+}
+
+.home-footer__link {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 244, 230, 0.72);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.55;
+  text-align: left;
+  cursor: pointer;
+  transition: color var(--cm-transition-micro);
+}
+
+.home-footer__link:hover {
+  color: #ffffff;
+}
+
+.home-footer__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 26px 0 0;
+  border-top: 1px solid rgba(255, 250, 243, 0.08);
+  color: rgba(255, 244, 230, 0.58);
+  font-size: 14px;
+}
+
+@media (max-width: 960px) {
+  .home-hero__highlights,
+  .home-stats__grid,
+  .home-entries__grid {
     grid-template-columns: 1fr;
   }
 
-  .home-hero__metric-grid,
-  .home-spotlight-grid {
+  .home-hero__highlight,
+  .home-stats__card--left,
+  .home-stats__card--right {
+    transform: none;
+  }
+
+  .home-footer__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 0;
+  }
+
+  .home-footer__column:nth-child(2n) {
+    border-right: 0;
   }
 }
 
 @media (max-width: 768px) {
+  .home-view {
+    gap: 34px;
+  }
+
   .home-hero {
-    padding: 20px;
+    padding-top: 52px;
   }
 
-  .home-hero__copy h1 {
-    max-width: none;
+  .home-hero__title {
+    font-size: clamp(34px, 9vw, 48px);
+    line-height: 1.04;
   }
 
-  .home-hero__metric-grid,
-  .home-guides,
-  .home-spotlight-grid,
-  .home-trust-grid {
+  .home-stats__card,
+  .home-entry-card,
+  .home-footer__inner {
+    padding: 24px;
+  }
+
+  .home-footer__top {
+    padding: 0 0 18px;
+  }
+
+  .home-footer__grid {
     grid-template-columns: 1fr;
+    border-top: 0;
+    padding-top: 18px;
+  }
+
+  .home-footer__column {
+    min-height: auto;
+    padding: 0 0 20px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 250, 243, 0.08);
+  }
+
+  .home-footer__column:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .home-footer__bottom {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

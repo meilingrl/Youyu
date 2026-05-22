@@ -1,6 +1,111 @@
-## [2026-05-21] - Documentation cleanup and README overhaul post-migration
+## [2026-05-23] - CI smoke alignment and JWT profile guard fix
+
+### fix
+- Tightened `backend/src/main/java/com/campusmarket/backend/config/JwtSecretGuard.java` so the development JWT secret is allowed only when all active profiles are from the safe set, preventing mixed profile combinations like `dev,prod` from bypassing the startup guard
+- Added a mixed-profile regression case in `backend/src/test/java/com/campusmarket/backend/config/JwtSecretGuardTest.java`
+- Added a stable `data-testid` to homepage featured product cards in `frontend/src/components/home/HomeFeaturedRail.vue` and aligned `frontend/e2e/smoke.spec.js` to assert against that stable hook instead of brittle presentational class names
+
+### test
+- Ran `backend\\mvnw.cmd test`
+- Ran `frontend\\npm test`
+- Ran `frontend\\npm run build`
+- Ran `npx playwright test e2e/smoke.spec.js --project=api-smoke -g "frontend home page loads and renders products"`
+
+## [2026-05-23] - Explore sticky condensed search shell
+
+### feat
+- Reworked `frontend/src/components/explore/ExploreSearchShell.vue` into a segmented pill-style search and filter shell with a dedicated search action, inline category/type chips, and a stronger visual match to the browse-first discovery pattern
+- Added a sticky condensed state in `frontend/src/views/app/ProductListView.vue` so the explore search shell stays pinned under the app header and smoothly compresses while scrolling
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
+## [2026-05-22] - Home featured rail centered loop interaction
+
+### feat
+- Reworked `frontend/src/components/home/HomeFeaturedRail.vue` so wheel and arrow navigation now move the homepage featured rail directly between centered cards instead of allowing free intermediate horizontal scroll states
+- Converted the featured rail into a seamless loop using duplicated card buffers, keeping the active card in a centered presentation without visible start or end boundaries
+- Removed desktop drag-scroll behavior from the rail so the interaction stays in discrete centered states and preserves the existing motion styling between cards
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
+## [2026-05-22] - Explore infinite scroll and bookmark rail
+
+### feat
+- Reworked `frontend/src/views/app/ProductListView.vue` from explicit pagination into an infinite browse flow that accumulates paged API results locally, auto-loads additional items near the bottom, and keeps existing filter/query behavior intact
+- Added a desktop-side custom bookmark rail on the explore page with progress feedback, double-click save, and click-to-restore behavior so long browsing sessions can resume from a marked position
 
 ### docs
+- Archived `docs/08-tasks/active/explore-infinite-scroll-bookmark-ux.md` as a completed task record after implementation
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
+## [2026-05-22] - Explore page UX redesign
+
+### feat
+- Reworked `frontend/src/views/app/ProductListView.vue` into a browse-first explore surface with a full-width results flow, compact filter summary bar, and conditional featured shops above the grid
+- Rebuilt `frontend/src/components/explore/ExploreSearchShell.vue` into a four-row discovery control with inline category/type chips, compact history and hot-search hints, and an active-filter bar without hero prose or nested cards
+
+### docs
+- Archived `docs/08-tasks/active/explore-page-ux-redesign.md` as a completed task record after implementation
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
+## [2026-05-22] - Home featured rail redesign
+
+### feat
+- Rebuilt `frontend/src/views/app/HomeView.vue` into a lighter three-part homepage with an editorial hero, inline hot-search chips, a horizontally scrolling featured rail, and a compact trust strip
+- Added `frontend/src/components/home/HomeFeaturedRail.vue` with variable-width lead/accent cards, full-bleed imagery, bottom gradient overlays, shimmer loading skeletons, and hover motion tuned to the existing design tokens
+- Simplified homepage data loading to use only `recommendStore.loadHomeRecommend(8)` and `searchStore.loadHotKeywords()`, while preserving the existing search suggestion flow and product/explore navigation contracts
+
+### docs
+- Archived `docs/08-tasks/active/home-featured-rail-redesign.md` as a completed task record after implementation
+
+### test
+- Ran `npm test`
+- Ran `npm run build`
+
+## [2026-05-22] - Non-UI/UX task spec refinement for sub-agent dispatch
+
+### docs
+- Rewrote 5 existing non-UI/UX task specs to a stricter dispatch-ready structure adding **Pre-flight Verification**, **Hard Limits**, concrete numbered **Implementation Steps**, exact **Test Plan commands**, and a mandatory **Final Report Format** the sub-agent must produce verbatim. Verification is now checkable from the agent's return report alone.
+  - `active/api-spec-report-module-standardization.md`
+  - `active/chat-mvp-scope-definition.md`
+  - `active/frontend-bundle-second-pass-planning.md`
+  - `active/platform-mediation-boundary-definition.md` (kept blocked on chat-mvp; pre-flight step 1 fails-fast if dependency unsatisfied)
+  - `drafts/api-spec-standardization-follow-up.md` (narrowed scope to `recommend` + `shop` modules; `report` carved out to its own task)
+- Split `architecture-performance-hardening` Wave 2 into two dispatchable child active tasks following the wave-1 pattern:
+  - `active/product-search-path-hardening.md` (Slice D — composite indexes + ADR for substring-search tradeoff; SQL bodies must stay byte-identical)
+  - `active/configuration-safety-hardening.md` (Slice F — env-var-first JWT secret + profile-aware startup guard; dev default preserved)
+- Added a "Children Tasks" pointer block to the parent draft so dispatch order stays traceable
+
+### task-doc convention introduced
+- Every refined/new task now ends with a "Final Report Format" block. The sub-agent must paste this back filled-in with: branch+commit, pre-flight findings, per-step evidence, test command exit codes, acceptance-criteria check, deviations, out-of-scope findings, and open questions/blockers. Reviewer can verify each acceptance bullet against the report without re-running everything.
+
+---
+
+
+
+### docs
+- Cross-referenced every file in `docs/08-tasks/active/` and `docs/08-tasks/drafts/` against `CHANGELOG.md` and the actual codebase to surface tasks that the migration left out of sync
+- Removed four pre-completion duplicates whose authoritative completed versions already lived in `archived/` (drafts/active copies were stale migration leftovers, not new work): `active/comment-completeness-sprint.md`, `active/order-after-sales-ux-hardening.md`, `drafts/test-foundation-expansion.md`, `drafts/ui-redesign-shell-navigation-foundation.md`
+- Moved `user-facing-enum-label-normalization.md` from `active/` to `archived/` after verifying delivery: `frontend/src/components/trade/trade-meta.js` provides `getOrderStatusMeta()` and `getPaymentStatusMeta()`, consumed by `OrdersView.vue` and `PaymentView.vue`; `SellerProductsView.vue` uses an inline `statusLabel()` covering its distinct seller-side statuses
+- Updated `docs/08-tasks/drafts/architecture-performance-hardening.md` to mark Slices A/B/C/E as delivered (children archived) and flag Slices D (product search path) and F (JWT secret default) as still open
+
+### verified-but-unchanged
+- Remaining `active/` tasks confirmed still incomplete (kept in place): `admin-governance-action-consistency`, `api-spec-report-module-standardization` (HTTP collection aligned, formal spec `docs/09-api-spec/report.md` still missing), `chat-mvp-scope-definition`, `frontend-bundle-second-pass-planning`, `platform-mediation-boundary-definition` (blocked on chat MVP), `preference-theme-capability-gap` (theme radio rendered but `styles/variables.css` has no dark-mode tokens), `review-entry-and-seed-flow-bridge` (no review entry on product detail; seed orders all `pending_payment`)
+- Remaining `drafts/` task `api-spec-standardization-follow-up` still relevant — `docs/09-api-spec/` is missing `report`, `recommend`, and `shop` module specs
+
+---
+
+
 - `CLAUDE.md`: expanded backend directory tree to sub-package level; expanded frontend `components/` to reflect actual subdirectories (`explore/`, `shell/`, `trade/`); corrected `/app/*` route count from 16 to 19 and `/admin/*` from 9 to 10; added route guard detail (`public` meta, `?redirect=` behavior); expanded backend Key Conventions (exception types, new module checklist, `@LoginRequired` usage, `ApiResponse` return pattern); expanded frontend Key Conventions (normalization boundary, error-utils, Element Plus constraint, route meta shape); updated `docs/06-http/` and `docs/09-api-spec/` module lists to reflect actual files; added frontend unit test step to post-task checklist
 - `backend/README.md`: rewritten from early scaffold description to current state — MySQL setup, full command reference, seed data layout, auth/mock token usage
 - `frontend/README.md`: rewritten from scaffold stub to current directory structure, component inventory, and key conventions

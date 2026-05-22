@@ -40,5 +40,5 @@ logging:
 
 app:
   jwt:
-    secret: "campusmarket-dev-secret-key-replace-in-production-min32"
+    secret: ${APP_JWT_SECRET:campusmarket-dev-secret-key-replace-in-production-min32}
     expiration-hours: 72
