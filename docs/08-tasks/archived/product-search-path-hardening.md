@@ -3,14 +3,14 @@
 ## Metadata
 
 - ID: product-search-path-hardening
-- Status: active
+- Status: archived
 - Owner: unassigned
 - Track: cross-cutting
 - Depends on: archived `runtime-index-hardening` (baseline schema indexes) + archived `admin-query-pagination-hardening` (paginated response contract)
 - Parent: `docs/08-tasks/drafts/architecture-performance-hardening.md` Slice D
 - Priority: medium
 - Planned date: 2026-05-22
-- Completed date:
+- Completed date: 2026-05-22
 
 ## Objective
 
@@ -208,3 +208,13 @@ Substring `LIKE '%kw%'` is index-skipping by nature, so the goal here is **not**
 ## Completion Notes
 
 (Filled in by sub-agent.)
+
+## Delivered
+
+- Two composite indexes added to `backend/src/main/resources/schema.sql`:
+  - `idx_products_public_base ON products(status, is_deleted, created_at)` — supports the always-present fixed filters + ORDER BY on the public listing path
+  - `idx_products_public_type_cat ON products(status, is_deleted, product_type, category_id, created_at)` — supports the full optional-filter combination when `product_type` and/or `category_id` are supplied
+- ADR created at `docs/07-decisions/2026-05-22-product-search-keyword-strategy.md` explaining why `LIKE '%kw%'` is retained and documenting FULLTEXT, trigram, app-level search, and prefix-anchored alternatives with rejection rationale and revisit triggers
+- All 80 backend tests pass before and after the change (exit code 0 both runs)
+- `JdbcProductMapper` SQL bodies left byte-identical (confirmed via `git diff` — empty)
+- No ALTER TABLE, no DROP INDEX, no mapper changes
