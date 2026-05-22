@@ -20,6 +20,16 @@
 - [x] Slice E: Frontend product-list request cleanup — delivered under archived child task `product-list-request-flow-hardening`
 - [ ] Slice F: Configuration safety cleanup — **PARTIAL**; `application.yml` already gates DB password behind `${MYSQL_PASSWORD:...}` but the JWT secret default is still the literal `campusmarket-dev-secret-key-replace-in-production-min32` checked into the file with no env-var override path
 
+## Children Tasks
+
+Wave 2 splits Slices D and F into dispatchable child tasks following the wave-1 pattern:
+
+- Slice D → `docs/08-tasks/active/product-search-path-hardening.md`
+- Slice F → `docs/08-tasks/active/configuration-safety-hardening.md`
+
+Once both children archive, this parent task can also be archived (or kept as draft if Wave 3 is planned).
+
+
 
 ## Objective
 

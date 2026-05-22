@@ -1,4 +1,23 @@
-## [2026-05-22] - Post-migration task ledger reconciliation
+## [2026-05-22] - Non-UI/UX task spec refinement for sub-agent dispatch
+
+### docs
+- Rewrote 5 existing non-UI/UX task specs to a stricter dispatch-ready structure adding **Pre-flight Verification**, **Hard Limits**, concrete numbered **Implementation Steps**, exact **Test Plan commands**, and a mandatory **Final Report Format** the sub-agent must produce verbatim. Verification is now checkable from the agent's return report alone.
+  - `active/api-spec-report-module-standardization.md`
+  - `active/chat-mvp-scope-definition.md`
+  - `active/frontend-bundle-second-pass-planning.md`
+  - `active/platform-mediation-boundary-definition.md` (kept blocked on chat-mvp; pre-flight step 1 fails-fast if dependency unsatisfied)
+  - `drafts/api-spec-standardization-follow-up.md` (narrowed scope to `recommend` + `shop` modules; `report` carved out to its own task)
+- Split `architecture-performance-hardening` Wave 2 into two dispatchable child active tasks following the wave-1 pattern:
+  - `active/product-search-path-hardening.md` (Slice D — composite indexes + ADR for substring-search tradeoff; SQL bodies must stay byte-identical)
+  - `active/configuration-safety-hardening.md` (Slice F — env-var-first JWT secret + profile-aware startup guard; dev default preserved)
+- Added a "Children Tasks" pointer block to the parent draft so dispatch order stays traceable
+
+### task-doc convention introduced
+- Every refined/new task now ends with a "Final Report Format" block. The sub-agent must paste this back filled-in with: branch+commit, pre-flight findings, per-step evidence, test command exit codes, acceptance-criteria check, deviations, out-of-scope findings, and open questions/blockers. Reviewer can verify each acceptance bullet against the report without re-running everything.
+
+---
+
+
 
 ### docs
 - Cross-referenced every file in `docs/08-tasks/active/` and `docs/08-tasks/drafts/` against `CHANGELOG.md` and the actual codebase to surface tasks that the migration left out of sync
