@@ -7,7 +7,7 @@ This directory stores the formal API contract documents for `CampusMarket`.
 - `auth.md`: authentication and current-user context
 - `product.md`: product browse, detail, publish, and seller operations
 - `order.md`: buyer order flow and admin order operations
-- `report.md`: user report submission and admin report governance endpoints
+- `report.md`: user-side report submission and admin-side report processing
 - `search.md`: hot ranking, suggestions, governance rules, and search logs
 - `user.md`: authenticated user profile, preference, verification, address, and insight endpoints
 - `admin.md`: admin-side governance, review, and operational endpoints
