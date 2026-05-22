@@ -16,18 +16,18 @@
 - [x] Slice A: Admin pagination and filtering baseline — delivered under archived child task `admin-query-pagination-hardening`
 - [x] Slice B: Review-path lookup hardening — delivered under archived child task `review-order-lookup-hardening`
 - [x] Slice C: Order / payment / refund / report index hardening — delivered under archived child task `runtime-index-hardening`
-- [ ] Slice D: Product search path improvement — **NOT STARTED**; `ProductServiceImpl.findPublicByFiltersPaged` still uses `LOWER(...) LIKE '%kw%'` against the products table with no specialized index strategy
+- [x] Slice D: Product search path improvement — delivered under archived child task `product-search-path-hardening`; added `idx_products_public_base` and `idx_products_public_type_cat` composite indexes; ADR at `docs/07-decisions/2026-05-22-product-search-keyword-strategy.md` explains why substring `LIKE` is kept and what would trigger revisiting (catalog > 50k products and search p95 > 500ms)
 - [x] Slice E: Frontend product-list request cleanup — delivered under archived child task `product-list-request-flow-hardening`
-- [ ] Slice F: Configuration safety cleanup — **PARTIAL**; `application.yml` already gates DB password behind `${MYSQL_PASSWORD:...}` but the JWT secret default is still the literal `campusmarket-dev-secret-key-replace-in-production-min32` checked into the file with no env-var override path
+- [x] Slice F: Configuration safety cleanup — delivered under archived child task `configuration-safety-hardening`; `application.yml` JWT secret now uses `${APP_JWT_SECRET:<dev default>}` form (default value preserved); `JwtSecretGuard` fails fast under any active profile outside `{dev, seed, test, default}` and logs WARN otherwise; 5 new tests cover all guard branches
 
 ## Children Tasks
 
-Wave 2 splits Slices D and F into dispatchable child tasks following the wave-1 pattern:
+Wave 2 split Slices D and F into dispatchable child tasks following the wave-1 pattern. Both children archived 2026-05-22:
 
-- Slice D → `docs/08-tasks/active/product-search-path-hardening.md`
-- Slice F → `docs/08-tasks/active/configuration-safety-hardening.md`
+- Slice D → `docs/08-tasks/archived/product-search-path-hardening.md`
+- Slice F → `docs/08-tasks/archived/configuration-safety-hardening.md`
 
-Once both children archive, this parent task can also be archived (or kept as draft if Wave 3 is planned).
+All six slices (A–F) are now delivered. This parent draft can be archived or repurposed for a Wave 3 if any future hardening dimension surfaces; current concrete follow-up candidates are recorded as out-of-scope notes inside the two Wave 2 archived children (e.g., `JwtProperties` consolidation, `review_status` predicate canonicalization).
 
 
 

@@ -245,7 +245,7 @@ export async function getProductList(params) { return service.get('/products', {
 **Password hashing**: bcrypt via `spring-security-crypto` (`PasswordConfig.java` provides `BCryptPasswordEncoder`).
 
 **JWT config** (`application.yml`):
-- Secret: `app.jwt.secret` (dev default: `campusmarket-dev-secret-key-replace-in-production-min32`)
+- Secret: `app.jwt.secret`, env-overridable via `${APP_JWT_SECRET}`; dev default `campusmarket-dev-secret-key-replace-in-production-min32` is kept for local dev (`dev`/`seed`/`test`/`default` profiles only — `JwtSecretGuard` fails fast under any other active profile)
 - Expiration: `app.jwt.expiration-hours` (72h)
 
 ## Key Conventions
