@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: frontend-bundle-second-pass-planning
-- Status: active
+- Status: archived
 - Owner: unassigned
 - Track: cross-cutting
 - Depends on: archived `frontend-bundle-optimization` first pass
 - Priority: medium
 - Planned date: 2026-05-22
-- Completed date:
+- Completed date: 2026-05-22
 
 ## Objective
 
@@ -196,4 +196,20 @@ Also:
 
 ## Completion Notes
 
-(Filled in by sub-agent.)
+Completed 2026-05-22 by sub-agent. See `Delivered` section below.
+
+## Delivered
+
+- `docs/08-tasks/active/frontend-bundle-second-pass.md` created — execution-ready task spec for slice (c): lazy admin component registration
+- `docs/05-roadmap/current/feature-roadmap.md` updated — "前端包体积治理" row now points to `frontend-bundle-second-pass.md` with concrete target
+- `CHANGELOG.md` updated — `docs` block prepended
+- This file moved from `active/` to `archived/` with `Status: archived` and `Completed date: 2026-05-22`
+
+**Measured baseline (2026-05-22 build, commit aa02527 base):**
+- Total JS: 816,405 bytes | Total CSS: 243,118 bytes
+- element-plus chunk: 296,856 bytes (largest, eagerly preloaded)
+- vendor chunk: 224,062 bytes (axios + element-plus transitive deps, eagerly preloaded)
+- vue-core chunk: 29,469 bytes
+- Initial preloaded JS: 566,115 bytes
+
+**Chosen slice:** (c) — Move `ElTable` + `ElTableColumn` to lazy admin-only plugin; target `element-plus-*.js` ≤ 240,000 bytes
