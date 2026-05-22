@@ -417,10 +417,10 @@ test.describe('Browser Happy Path', () => {
     const page = await browser.newPage()
     try {
       await page.goto('http://localhost:5173/app/home', { timeout: 15000 })
-      await page.waitForLoadState('networkidle')
       await expect(page).toHaveTitle(/CampusMarket/)
-      const productCards = page.locator('.el-card, [class*="product"], [class*="shell-card"]').first()
-      await expect(productCards).toBeVisible({ timeout: 10000 })
+      const productCards = page.locator('[data-testid="home-featured-product-card"]')
+      await expect(productCards.first()).toBeVisible({ timeout: 10000 })
+      await expect(productCards).toHaveCount(18, { timeout: 10000 })
     } finally {
       await browser.close()
     }

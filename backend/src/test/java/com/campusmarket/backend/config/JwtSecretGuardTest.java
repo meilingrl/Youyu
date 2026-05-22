@@ -61,6 +61,25 @@ class JwtSecretGuardTest {
     }
 
     @Test
+    void jwtSecretGuardRejectsMixedDevAndProdProfiles() {
+        contextRunner
+                .withInitializer(
+                        ctx ->
+                                ((ConfigurableApplicationContext) ctx)
+                                        .getEnvironment()
+                                        .setActiveProfiles("dev", "prod"))
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context)
+                            .getFailure()
+                            .rootCause()
+                            .isInstanceOf(IllegalStateException.class)
+                            .hasMessageContaining("APP_JWT_SECRET")
+                            .hasMessageContaining("dev,prod");
+                });
+    }
+
+    @Test
     void jwtSecretGuardAcceptsCustomSecretUnderProdProfile() {
         contextRunner
                 .withInitializer(

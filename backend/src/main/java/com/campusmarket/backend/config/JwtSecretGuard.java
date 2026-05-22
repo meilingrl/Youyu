@@ -59,8 +59,7 @@ public class JwtSecretGuard {
         String[] activeProfiles = environment.getActiveProfiles();
         Set<String> profiles = new LinkedHashSet<>(Arrays.asList(activeProfiles));
 
-        boolean safe =
-                profiles.isEmpty() || profiles.stream().anyMatch(SAFE_PROFILES::contains);
+        boolean safe = profiles.isEmpty() || SAFE_PROFILES.containsAll(profiles);
 
         if (safe) {
             log.warn(

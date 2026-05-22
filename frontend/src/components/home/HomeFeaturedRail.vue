@@ -245,6 +245,7 @@ onBeforeUnmount(() => {
             v-for="(product, index) in loopedProducts"
             :key="`${product.id}-${index}`"
             class="featured-stage__card"
+            data-testid="home-featured-product-card"
             :class="{ 'is-active': index === activeVirtualIndex }"
             tabindex="0"
             @click="emit('open-product', product)"

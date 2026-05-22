@@ -1,3 +1,16 @@
+## [2026-05-23] - CI smoke alignment and JWT profile guard fix
+
+### fix
+- Tightened `backend/src/main/java/com/campusmarket/backend/config/JwtSecretGuard.java` so the development JWT secret is allowed only when all active profiles are from the safe set, preventing mixed profile combinations like `dev,prod` from bypassing the startup guard
+- Added a mixed-profile regression case in `backend/src/test/java/com/campusmarket/backend/config/JwtSecretGuardTest.java`
+- Added a stable `data-testid` to homepage featured product cards in `frontend/src/components/home/HomeFeaturedRail.vue` and aligned `frontend/e2e/smoke.spec.js` to assert against that stable hook instead of brittle presentational class names
+
+### test
+- Ran `backend\\mvnw.cmd test`
+- Ran `frontend\\npm test`
+- Ran `frontend\\npm run build`
+- Ran `npx playwright test e2e/smoke.spec.js --project=api-smoke -g "frontend home page loads and renders products"`
+
 ## [2026-05-23] - Explore sticky condensed search shell
 
 ### feat
