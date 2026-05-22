@@ -3,14 +3,14 @@
 ## Metadata
 
 - ID: configuration-safety-hardening
-- Status: active
+- Status: archived
 - Owner: unassigned
 - Track: cross-cutting
 - Depends on: none (configuration baseline)
 - Parent: `docs/08-tasks/drafts/architecture-performance-hardening.md` Slice F
 - Priority: medium
 - Planned date: 2026-05-22
-- Completed date:
+- Completed date: 2026-05-22
 
 ## Objective
 
@@ -215,3 +215,23 @@ This is a small, surgical change. The dev experience must remain unchanged: runn
 ## Completion Notes
 
 (Filled in by sub-agent.)
+
+## Delivered
+
+Completed 2026-05-22 on branch `chore/ux-polish-and-task-cleanup`.
+
+### Changes
+- `backend/src/main/resources/application.yml` — wrapped `app.jwt.secret` with `${APP_JWT_SECRET:<dev default>}`. Dev default value unchanged.
+- `backend/src/main/java/com/campusmarket/backend/config/JwtSecretGuard.java` — new component. `@PostConstruct` validate() compares the resolved secret against the committed dev default; logs WARN under safe profiles ({dev, seed, test, default}) or empty profile, throws `IllegalStateException` otherwise.
+- `backend/src/test/java/com/campusmarket/backend/config/JwtSecretGuardTest.java` — five `ApplicationContextRunner`-based tests covering: dev profile allow, seed profile allow, no-profile allow, prod profile reject, prod-with-override allow.
+- `backend/README.md` — added env var table including `APP_JWT_SECRET` and a one-line production checklist.
+
+### Delegated (per orchestrator overrides)
+- `CHANGELOG.md` block — proposed in Final Report section C, not committed.
+- `CLAUDE.md` Authentication section — before/after proposed in Final Report section C, not committed.
+- `docs/08-tasks/drafts/architecture-performance-hardening.md` Slice F checkbox — proposed before/after in Final Report section C, not committed.
+
+### Verification
+- `./mvnw test -B` before changes: 80 passed / 0 failed.
+- `./mvnw test -B` after changes: 85 passed / 0 failed (5 new in `JwtSecretGuardTest`).
+- Boot smoke step: skipped per orchestrator allowance (long-lived `spring-boot:run` not exercised in this environment); however, the production-side tests boot the full Spring context with the dev default secret and the WARN line `JWT secret is using the development default; set APP_JWT_SECRET in production` is observed in test logs, confirming the guard runs at startup.
