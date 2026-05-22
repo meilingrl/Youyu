@@ -4,11 +4,11 @@
 
 - Status: active
 - Source of truth:
-  - controller: `backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java`
-  - request DTO: `backend/src/main/java/com/campusmarket/backend/controller/admin/dto/UpdateUserStatusRequest.java`
-  - request DTO: `backend/src/main/java/com/campusmarket/backend/controller/admin/dto/ReviewVerificationRequest.java`
-  - shared response / error handling: `backend/src/main/java/com/campusmarket/backend/common/api/ApiResponse.java`
-  - shared response / error handling: `backend/src/main/java/com/campusmarket/backend/controller/advice/GlobalExceptionHandler.java`
+  - controller: `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java`
+  - request DTO: `backend/src/main/java/com/youyu/backend/controller/admin/dto/UpdateUserStatusRequest.java`
+  - request DTO: `backend/src/main/java/com/youyu/backend/controller/admin/dto/ReviewVerificationRequest.java`
+  - shared response / error handling: `backend/src/main/java/com/youyu/backend/common/api/ApiResponse.java`
+  - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - request sample: `docs/06-http/admin.http`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
 - Last updated: 2026-05-17

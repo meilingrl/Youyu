@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from '@/plugins/element-plus-services'
@@ -13,7 +13,7 @@ import ExploreProductCard from '@/components/explore/ExploreProductCard.vue'
 import FeaturedShopsSection from '@/components/explore/FeaturedShopsSection.vue'
 import { buildFeaturedShops } from '@/components/explore/featured-shop-helpers'
 
-const BOOKMARK_STORAGE_KEY = 'campus-market-explore-bookmark-v2'
+const BOOKMARK_STORAGE_KEY = 'youyu-explore-bookmark-v2'
 const BOOKMARK_TOGGLE_THRESHOLD = 0.03
 
 const route = useRoute()

@@ -1,6 +1,6 @@
 # Youyu
 
-Youyu is a campus marketplace project extracted into its own standalone repository from the earlier `CampusMarket` course workspace.
+Youyu is a campus marketplace project extracted into its own standalone repository from an earlier course workspace.
 
 It keeps the original product scope and engineering structure, while giving the project a cleaner home for continued development, documentation, and release management.
 
@@ -15,13 +15,13 @@ Youyu is a full-stack web application for a student-focused marketplace experien
 
 ## Project Status
 
-This repository is the current development baseline copied from the latest usable local version of `CampusMarket`.
+This repository is the current development baseline copied from the latest usable local project snapshot before the standalone repository was created.
 
 Important context:
 
 - the repository name is now `Youyu`
-- many internal docs, package names, and code paths still use the historical name `CampusMarket`
-- this is expected for now and does not affect development
+- internal docs, package names, and code paths are now aligned to `Youyu`
+- historical migration notes remain under `migration-notes/` for reference only
 
 ## Tech Stack
 
@@ -152,7 +152,7 @@ This repository was created as a clean continuation path from a larger course wo
 
 Because of that:
 
-- some historical notes still refer to `CampusMarket`
+- some historical notes still refer to `Youyu`
 - `migration-notes/` contains reference files copied from the old repository root
 - the old course repository is being kept separately as backup and is not part of this repository's active workflow
 

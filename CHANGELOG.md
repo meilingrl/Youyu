@@ -1,8 +1,18 @@
+## [2026-05-23] - Repository-wide project rename to Youyu
+
+### chore
+- Renamed the project identity across repository docs, frontend app branding, backend metadata, environment titles, migration notes, and archived task/history references so the repo consistently uses `Youyu`
+- Renamed the backend Java package/application entry points to `com.youyu.backend.YouyuBackendApplication`, including Maven main-class configuration and Spring test references
+- Updated runtime naming defaults such as datasource/schema names, Spring application identifiers, JWT dev secret labels, local storage keys, and CI database configuration to the `youyu` naming scheme
+
+### test
+- Ran repository-wide search verification for legacy project-name variants with zero remaining hits
+
 ## [2026-05-23] - CI smoke alignment and JWT profile guard fix
 
 ### fix
-- Tightened `backend/src/main/java/com/campusmarket/backend/config/JwtSecretGuard.java` so the development JWT secret is allowed only when all active profiles are from the safe set, preventing mixed profile combinations like `dev,prod` from bypassing the startup guard
-- Added a mixed-profile regression case in `backend/src/test/java/com/campusmarket/backend/config/JwtSecretGuardTest.java`
+- Tightened `backend/src/main/java/com/youyu/backend/config/JwtSecretGuard.java` so the development JWT secret is allowed only when all active profiles are from the safe set, preventing mixed profile combinations like `dev,prod` from bypassing the startup guard
+- Added a mixed-profile regression case in `backend/src/test/java/com/youyu/backend/config/JwtSecretGuardTest.java`
 - Added a stable `data-testid` to homepage featured product cards in `frontend/src/components/home/HomeFeaturedRail.vue` and aligned `frontend/e2e/smoke.spec.js` to assert against that stable hook instead of brittle presentational class names
 
 ### test
@@ -297,7 +307,7 @@ All notable changes to this project are documented here. AI agents prepend a new
 ## [2026-05-17] - UI redesign shell navigation foundation
 
 ### changed
-- Added the warm CampusMarket design-token baseline with terracotta/orange primary colors, warm paper surfaces, glass, shadow, radius, and motion variables
+- Added the warm Youyu design-token baseline with terracotta/orange primary colors, warm paper surfaces, glass, shadow, radius, and motion variables
 - Updated the app shell header, mobile drawer, and mobile bottom navigation to match the 首页 / 探索 / 消息 / 交易 / 我的 information architecture
 - Preserved legacy app route compatibility while introducing `/app/explore`, `/app/trade`, `/app/messages`, `/app/me`, and `/app/settings`
 
@@ -399,7 +409,7 @@ All notable changes to this project are documented here. AI agents prepend a new
 ## [2026-05-17] - UI/UX constitution draft
 
 ### docs
-- Added `docs/03-architecture/ui-ux-constitution.md` to capture the redesigned CampusMarket visual direction, interaction rules, motion system, responsive principles, and AI execution constraints
+- Added `docs/03-architecture/ui-ux-constitution.md` to capture the redesigned Youyu visual direction, interaction rules, motion system, responsive principles, and AI execution constraints
 - Added `docs/03-architecture/frontend-information-architecture.md` to define the new front-office page structure, route distribution, navigation principles, shop-owner identity model, messages entry, trade entry, and admin support area
 - Added parallel UI redesign draft tasks for shell/navigation, home/explore, product/shop detail, trade/reviews, messages/support, and profile/settings/shop identity work
 - Updated `docs/README.md` so the architecture document area explicitly includes UI/UX constitution guidance
@@ -417,7 +427,7 @@ All notable changes to this project are documented here. AI agents prepend a new
 - Updated `playwright.config.js` with three new project entries for new E2E specs
 
 ### refactor
-- Extracted common test helpers from `CampusMarketBackendApplicationTests` into `BackendTestBase` to reduce duplication
+- Extracted common test helpers from `YouyuBackendApplicationTests` into `BackendTestBase` to reduce duplication
 
 ### test
 - Backend: 58 -> 78 tests (+20 new test methods, 0 failures)
@@ -534,7 +544,7 @@ Format per block:
 ### docs
 - Reorganized `docs/` into `01-product` through `08-tasks`, separating product, requirements, architecture, standards, roadmap, API, decisions, and task records
 - Replaced the old `docs/ROADMAP.md` semantics with `docs/04-standards/development-process.md` and added `docs/05-roadmap/stage-roadmap.md` plus `feature-roadmap.md`
-- Added `CampusMarket/AGENTS.md` as the repository-wide AI execution guide without moving `CLAUDE.md`
+- Added `Youyu/AGENTS.md` as the repository-wide AI execution guide without moving `CLAUDE.md`
 - Introduced `docs/08-tasks/README.md`, `TASK_TEMPLATE.md`, archived task records, and draft-task storage for ongoing work such as hot-search P3
 - Updated `CLAUDE.md`, `README.md`, `docs/README.md`, and related references to the new document paths
 

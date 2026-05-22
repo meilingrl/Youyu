@@ -4,11 +4,11 @@
 
 - Status: active
 - Source of truth:
-  - controller: `backend/src/main/java/com/campusmarket/backend/controller/user/UserController.java`
-  - request DTO: `backend/src/main/java/com/campusmarket/backend/controller/user/dto/SubmitStudentVerificationRequest.java`
-  - request DTO: `backend/src/main/java/com/campusmarket/backend/controller/user/dto/CreateUserAddressRequest.java`
-  - shared response / error handling: `backend/src/main/java/com/campusmarket/backend/common/api/ApiResponse.java`
-  - shared response / error handling: `backend/src/main/java/com/campusmarket/backend/controller/advice/GlobalExceptionHandler.java`
+  - controller: `backend/src/main/java/com/youyu/backend/controller/user/UserController.java`
+  - request DTO: `backend/src/main/java/com/youyu/backend/controller/user/dto/SubmitStudentVerificationRequest.java`
+  - request DTO: `backend/src/main/java/com/youyu/backend/controller/user/dto/CreateUserAddressRequest.java`
+  - shared response / error handling: `backend/src/main/java/com/youyu/backend/common/api/ApiResponse.java`
+  - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - request sample: `docs/06-http/auth.http`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
 - Last updated: 2026-05-16

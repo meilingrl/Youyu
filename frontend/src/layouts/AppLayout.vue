@@ -1,12 +1,21 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppFooter from '@/components/layout/AppFooter.vue'
 import MobileBottomNav from '@/components/layout/MobileBottomNav.vue'
+import { useAppStore } from '@/stores/app'
 
 const route = useRoute()
+const appStore = useAppStore()
 const isHome = computed(() => route.meta?.navKey === '/app/home')
+
+function onScroll() {
+  appStore.setScrollY(window.scrollY)
+}
+
+onMounted(() => window.addEventListener('scroll', onScroll, { passive: true }))
+onUnmounted(() => window.removeEventListener('scroll', onScroll))
 </script>
 
 <template>

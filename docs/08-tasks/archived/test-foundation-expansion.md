@@ -123,7 +123,7 @@ Added 41 new backend test methods across 5 new test classes, 5 new frontend stor
 - `cart-edge-cases.spec.js` — cart quantity merge, update, remove, auth
 
 ### Decision: Monolith not split
-The existing 1293-line `CampusMarketBackendApplicationTests.java` was left intact. Only shared helpers were extracted into `BackendTestBase`. Splitting the monolith is deferred to avoid cross-test state issues.
+The existing 1293-line `YouyuBackendApplicationTests.java` was left intact. Only shared helpers were extracted into `BackendTestBase`. Splitting the monolith is deferred to avoid cross-test state issues.
 
 ### Known limitations
 - No component tests (`@vue/test-utils` not installed; out of scope)

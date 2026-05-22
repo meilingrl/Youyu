@@ -33,7 +33,7 @@ This task answers those three questions and writes them down concretely.
 2. Read `docs/02-requirements/chat-mvp-scope.md` — capture the entities and API surface chat MVP will own
 3. Read `docs/02-requirements/communication-and-after-sales-boundary.md`
 4. Read `docs/05-roadmap/current/open-questions.md` item 2 in full
-5. `grep -n "report\|Report" backend/src/main/java/com/campusmarket/backend/controller/report/ReportController.java backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java` — list current report endpoints and their statuses
+5. `grep -n "report\|Report" backend/src/main/java/com/youyu/backend/controller/report/ReportController.java backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java` — list current report endpoints and their statuses
 6. Read `backend/src/main/resources/schema.sql` `reports` table — capture column set (especially status enum values)
 7. `ls frontend/src/views/admin/` and identify the current report admin view (`ReportManageView.vue` or similar). Read it to understand the existing action set.
 
@@ -47,8 +47,8 @@ This task answers those three questions and writes them down concretely.
 - `docs/08-tasks/archived/chat-mvp-scope-definition.md`
 - `docs/08-tasks/archived/order-after-sales-ux-hardening.md`
 - `docs/08-tasks/archived/ui-redesign-messages-support.md`
-- `backend/src/main/java/com/campusmarket/backend/controller/report/ReportController.java`
-- `backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java` (report-related methods only)
+- `backend/src/main/java/com/youyu/backend/controller/report/ReportController.java`
+- `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java` (report-related methods only)
 - `backend/src/main/resources/schema.sql` (search for `reports`)
 - existing admin report view in `frontend/src/views/admin/`
 

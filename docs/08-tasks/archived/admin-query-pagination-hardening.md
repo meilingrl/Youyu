@@ -34,7 +34,7 @@ This was acceptable during small-data MVP delivery, but it is now a structural b
 
 Representative current evidence includes:
 
-- `backend/src/main/java/com/campusmarket/backend/service/admin/impl/AdminServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/service/admin/impl/AdminServiceImpl.java`
 - dashboard metric assembly through repeated full-list reads
 - list endpoints for users, verifications, products, review tasks, shops, and reports
 - admin frontend list pages that currently consume whole arrays without a shared pagination contract
@@ -76,9 +76,9 @@ Representative current evidence includes:
 - `docs/05-roadmap/current/stage-roadmap.md`
 - `backend/README.md`
 - `frontend/README.md`
-- `backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java`
-- `backend/src/main/java/com/campusmarket/backend/service/admin/AdminService.java`
-- `backend/src/main/java/com/campusmarket/backend/service/admin/impl/AdminServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java`
+- `backend/src/main/java/com/youyu/backend/service/admin/AdminService.java`
+- `backend/src/main/java/com/youyu/backend/service/admin/impl/AdminServiceImpl.java`
 - relevant mapper interfaces and JDBC implementations:
   - `UserMapper`
   - `StudentVerificationMapper`
@@ -92,8 +92,8 @@ Representative current evidence includes:
 
 ## Allowed Changes
 
-- `backend/src/main/java/com/campusmarket/backend/controller/admin/**`
-- `backend/src/main/java/com/campusmarket/backend/service/admin/**`
+- `backend/src/main/java/com/youyu/backend/controller/admin/**`
+- `backend/src/main/java/com/youyu/backend/service/admin/**`
 - admin-related mapper interfaces and JDBC implementations
 - `frontend/src/views/admin/**`
 - admin-related API client modules under `frontend/src/api/`
@@ -112,9 +112,9 @@ This task is designed to be parallel-safe with:
 ### Do Not Touch In This Task
 
 - `backend/src/main/resources/schema.sql`
-- `backend/src/main/java/com/campusmarket/backend/service/review/**`
-- `backend/src/main/java/com/campusmarket/backend/service/transaction/**`
-- `backend/src/main/java/com/campusmarket/backend/mapper/product/impl/JdbcProductMapper.java` except where strictly required for admin-only product listing support
+- `backend/src/main/java/com/youyu/backend/service/review/**`
+- `backend/src/main/java/com/youyu/backend/service/transaction/**`
+- `backend/src/main/java/com/youyu/backend/mapper/product/impl/JdbcProductMapper.java` except where strictly required for admin-only product listing support
 - `frontend/src/views/app/**`
 - `frontend/src/stores/market.js`
 

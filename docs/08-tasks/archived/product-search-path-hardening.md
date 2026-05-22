@@ -30,7 +30,7 @@ Substring `LIKE '%kw%'` is index-skipping by nature, so the goal here is **not**
 
 ## Pre-flight Verification (must complete before any edit)
 
-1. Read `backend/src/main/java/com/campusmarket/backend/mapper/product/impl/JdbcProductMapper.java` — capture the exact WHERE clauses in `findPublicByFiltersPaged` and `countPublicByFilters`. Paste the SQL strings into Final Report section B.
+1. Read `backend/src/main/java/com/youyu/backend/mapper/product/impl/JdbcProductMapper.java` — capture the exact WHERE clauses in `findPublicByFiltersPaged` and `countPublicByFilters`. Paste the SQL strings into Final Report section B.
 2. Read `backend/src/main/resources/schema.sql` `products` table definition AND every `CREATE INDEX ... ON products`. Paste current index list.
 3. Run a quick reasoning check: the filter combinations the public route uses are which 2-3 of {status, product_type, category_id, keyword}? Confirm by reading `ProductServiceImpl.listPublic` (or equivalent).
 4. **Capture before-numbers**:
@@ -45,10 +45,10 @@ Substring `LIKE '%kw%'` is index-skipping by nature, so the goal here is **not**
 ## Files to Read
 
 - `AGENTS.md`, `CLAUDE.md`
-- `backend/src/main/java/com/campusmarket/backend/mapper/product/impl/JdbcProductMapper.java`
-- `backend/src/main/java/com/campusmarket/backend/mapper/product/ProductMapper.java`
-- `backend/src/main/java/com/campusmarket/backend/service/product/impl/ProductServiceImpl.java`
-- `backend/src/main/java/com/campusmarket/backend/controller/product/ProductController.java`
+- `backend/src/main/java/com/youyu/backend/mapper/product/impl/JdbcProductMapper.java`
+- `backend/src/main/java/com/youyu/backend/mapper/product/ProductMapper.java`
+- `backend/src/main/java/com/youyu/backend/service/product/impl/ProductServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/controller/product/ProductController.java`
 - `backend/src/main/resources/schema.sql`
 - `docs/08-tasks/archived/runtime-index-hardening.md` (for the additive-index pattern)
 - `docs/08-tasks/drafts/architecture-performance-hardening.md` Slice D section

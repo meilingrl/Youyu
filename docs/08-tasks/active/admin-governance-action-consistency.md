@@ -41,7 +41,7 @@ The issue backlog reports that different objects expose different action sets in
 - `frontend/src/views/admin/ShopManageView.vue`
 - `frontend/src/views/admin/ReviewTaskManageView.vue`
 - report and verification related admin views/routes if different files own them
-- `backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java`
+- `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java`
 - related admin/report/shop service files
 
 ## Allowed Changes

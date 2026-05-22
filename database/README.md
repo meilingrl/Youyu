@@ -1,6 +1,6 @@
 # Database
 
-This directory stores the database design assets for `CampusMarket`.
+This directory stores the database design assets for `Youyu`.
 
 ## Current contents
 
@@ -14,7 +14,7 @@ The current application runtime does **not** start from `database/001_mvp_init.s
 
 Current runtime baseline:
 
-- Default local/dev database: H2 file database at `~/.campusmarket/h2/campusmarket`
+- Default local/dev database: H2 file database at `~/.youyu/h2/youyu`
 - Default backend schema source: `backend/src/main/resources/schema.sql`
 - Default data access style: JDBC through `JdbcTemplate` and mapper implementations
 - Test database: H2 in-memory

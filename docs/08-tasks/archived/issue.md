@@ -2,7 +2,7 @@
 2为什么举报处理每个对象的操作都不同？有的有驳回，有的有标记处理中，有的为啥没有。店铺管理也有类似的
 3
 
-Validation failed for argument [0] in public com.campusmarket.backend.common.api.ApiResponse<java.util.Map<java.lang.String, java.lang.Object>> com.campusmarket.backend.controller.auth.AuthController.register(com.campusmarket.backend.controller.auth.dto.RegisterRequest,jakarta.servlet.http.HttpServletRequest): [Field error in object 'registerRequest' on field 'username': rejected value [null]; codes [NotBlank.registerRequest.username,NotBlank.username,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [registerRequest.username,username]; arguments []; default message [username]]; default message [用户名不能为空]]
+Validation failed for argument [0] in public com.youyu.backend.common.api.ApiResponse<java.util.Map<java.lang.String, java.lang.Object>> com.youyu.backend.controller.auth.AuthController.register(com.youyu.backend.controller.auth.dto.RegisterRequest,jakarta.servlet.http.HttpServletRequest): [Field error in object 'registerRequest' on field 'username': rejected value [null]; codes [NotBlank.registerRequest.username,NotBlank.username,NotBlank.java.lang.String,NotBlank]; arguments [org.springframework.context.support.DefaultMessageSourceResolvable: codes [registerRequest.username,username]; arguments []; default message [username]]; default message [用户名不能为空]]
 为啥不能注册
 
 4UI优化，问题很多

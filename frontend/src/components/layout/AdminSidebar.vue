@@ -10,7 +10,7 @@ const route = useRoute()
     <div class="admin-sidebar__brand">
       <div class="admin-sidebar__logo">CM</div>
       <div>
-        <div class="admin-sidebar__title">CampusMarket</div>
+        <div class="admin-sidebar__title">Youyu</div>
         <div class="admin-sidebar__subtitle">后台管理控制台</div>
       </div>
     </div>

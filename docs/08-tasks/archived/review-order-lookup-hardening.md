@@ -61,9 +61,9 @@ This task exists to replace that placeholder with a direct, bounded query path w
 
 - `docs/04-standards/development-process.md`
 - `backend/README.md`
-- `backend/src/main/java/com/campusmarket/backend/service/review/ReviewService.java`
-- `backend/src/main/java/com/campusmarket/backend/service/review/impl/ReviewServiceImpl.java`
-- `backend/src/main/java/com/campusmarket/backend/service/transaction/support/TransactionDataStore.java`
+- `backend/src/main/java/com/youyu/backend/service/review/ReviewService.java`
+- `backend/src/main/java/com/youyu/backend/service/review/impl/ReviewServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/service/transaction/support/TransactionDataStore.java`
 - review-related mapper interfaces and implementations
 - order-related mapper or support files if needed for direct lookup
 - current backend tests covering reviews or order-linked behavior
@@ -71,7 +71,7 @@ This task exists to replace that placeholder with a direct, bounded query path w
 
 ## Allowed Changes
 
-- `backend/src/main/java/com/campusmarket/backend/service/review/**`
+- `backend/src/main/java/com/youyu/backend/service/review/**`
 - review-related mapper interfaces and implementations
 - order-item/order lookup support classes required for direct query resolution
 - focused backend tests for review submission and lookup validation
@@ -89,7 +89,7 @@ This task is designed to be parallel-safe with:
 ### Do Not Touch In This Task
 
 - `backend/src/main/resources/schema.sql`
-- `backend/src/main/java/com/campusmarket/backend/service/admin/**`
+- `backend/src/main/java/com/youyu/backend/service/admin/**`
 - `frontend/**`
 - product search query code
 

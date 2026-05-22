@@ -17,7 +17,7 @@ export function setupRouterGuards(router) {
     const authStore = useAuthStore()
 
     if (to.meta?.title) {
-      document.title = `${to.meta.title} - ${import.meta.env.VITE_APP_TITLE || 'CampusMarket'}`
+      document.title = `${to.meta.title} - ${import.meta.env.VITE_APP_TITLE || 'Youyu'}`
     }
 
     if (to.meta?.public) {

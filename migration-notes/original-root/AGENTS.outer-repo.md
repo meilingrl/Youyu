@@ -4,9 +4,9 @@ This file gives working guidance to AI coding agents operating in this repositor
 
 ## Repository Scope
 
-- Repository root contains the active project `CampusMarket/`, course materials such as `Final/` and `课件/`, plus requirement documents.
-- The active software project is `CampusMarket/`.
-- Unless the human explicitly asks otherwise, treat `CampusMarket/` as the default work area and do not modify other top-level folders.
+- Repository root contains the active project `Youyu/`, course materials such as `Final/` and `课件/`, plus requirement documents.
+- The active software project is `Youyu/`.
+- Unless the human explicitly asks otherwise, treat `Youyu/` as the default work area and do not modify other top-level folders.
 
 ## Default Working Rules
 
@@ -18,32 +18,32 @@ This file gives working guidance to AI coding agents operating in this repositor
 
 ## Project Entry Points
 
-If working in `CampusMarket/`, read these first:
+If working in `Youyu/`, read these first:
 
-1. `CampusMarket/CLAUDE.md`
-2. `CampusMarket/README.md`
+1. `Youyu/CLAUDE.md`
+2. `Youyu/README.md`
 3. The relevant subproject README:
-   - `CampusMarket/frontend/README.md`
-   - `CampusMarket/backend/README.md`
-   - `CampusMarket/database/README.md`
+   - `Youyu/frontend/README.md`
+   - `Youyu/backend/README.md`
+   - `Youyu/database/README.md`
 
-## CampusMarket Overview
+## Youyu Overview
 
 - Monorepo for a campus marketplace system.
 - Frontend: Vue 3 + Vite + Pinia + Element Plus
 - Backend: Spring Boot 3.3 + JDBC
 - Runtime database: H2
-- Target migration direction: MySQL design assets live under `CampusMarket/database/`
+- Target migration direction: MySQL design assets live under `Youyu/database/`
 
-## CampusMarket Directory Map
+## Youyu Directory Map
 
-- `CampusMarket/frontend/`: Vue application
-- `CampusMarket/backend/`: Spring Boot application
-- `CampusMarket/database/`: database design and migration reference material
-- `CampusMarket/docs/`: project docs, ADRs, task specs, HTTP request files
-- `CampusMarket/resources/`: static references and supporting materials
-- `CampusMarket/scripts/`: helper scripts
-- `CampusMarket/tests/`: test records or test assets
+- `Youyu/frontend/`: Vue application
+- `Youyu/backend/`: Spring Boot application
+- `Youyu/database/`: database design and migration reference material
+- `Youyu/docs/`: project docs, ADRs, task specs, HTTP request files
+- `Youyu/resources/`: static references and supporting materials
+- `Youyu/scripts/`: helper scripts
+- `Youyu/tests/`: test records or test assets
 
 ## Commands
 
@@ -64,10 +64,10 @@ Run commands from the corresponding subdirectory.
 - Tests: `mvnw.cmd test`
 - Package: `mvnw.cmd clean package`
 
-## Editing Conventions For CampusMarket
+## Editing Conventions For Youyu
 
 - Preserve the existing frontend/backend split.
-- For backend changes, follow the controller -> service -> mapper -> entity layering already documented in `CampusMarket/CLAUDE.md`.
+- For backend changes, follow the controller -> service -> mapper -> entity layering already documented in `Youyu/CLAUDE.md`.
 - Prefer JDBC mapper-based patterns already used in the backend; do not introduce a new ORM layer casually.
 - New frontend API calls should go through `frontend/src/api/`.
 - Shared frontend state belongs in Pinia stores, not ad hoc globals.
@@ -75,17 +75,17 @@ Run commands from the corresponding subdirectory.
 
 ## Database Safety
 
-- Treat `CampusMarket/backend/src/main/resources/schema.sql` as the runtime schema source.
-- Treat files in `CampusMarket/database/` as design and migration references, not the default live runtime source.
+- Treat `Youyu/backend/src/main/resources/schema.sql` as the runtime schema source.
+- Treat files in `Youyu/database/` as design and migration references, not the default live runtime source.
 - Do not make destructive schema changes without explicit human approval.
 - Avoid touching seed SQL unless the task clearly requires it.
 
 ## Task And Documentation Hygiene
 
-- If a task spec exists under `CampusMarket/docs/dev/tasks/`, follow it strictly.
-- If an endpoint changes, update the matching file under `CampusMarket/docs/http/` when appropriate.
-- If a meaningful architecture decision is introduced, add an ADR under `CampusMarket/docs/decisions/` instead of burying rationale in code comments.
-- Keep `CampusMarket/CHANGELOG.md` updated when completing a substantive task in that project.
+- If a task spec exists under `Youyu/docs/dev/tasks/`, follow it strictly.
+- If an endpoint changes, update the matching file under `Youyu/docs/http/` when appropriate.
+- If a meaningful architecture decision is introduced, add an ADR under `Youyu/docs/decisions/` instead of burying rationale in code comments.
+- Keep `Youyu/CHANGELOG.md` updated when completing a substantive task in that project.
 
 ## Out Of Scope By Default
 
@@ -95,5 +95,5 @@ Run commands from the corresponding subdirectory.
 
 ## When In Doubt
 
-- Ask which top-level project to work on if the request does not clearly point to `CampusMarket/`.
+- Ask which top-level project to work on if the request does not clearly point to `Youyu/`.
 - If instructions in a deeper directory conflict with this file, the deeper and more specific instructions win.

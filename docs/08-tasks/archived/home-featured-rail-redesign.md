@@ -379,7 +379,7 @@ defineEmits(['open-product'])
 ```html
 <section class="home-hero">
   <div class="home-hero__inner shell-container">
-    <span class="eyebrow">CampusMarket</span>
+    <span class="eyebrow">Youyu</span>
     <h1 class="home-hero__title">校园里的好物，<br>都在这里。</h1>
     <p class="home-hero__desc">
       学生专属的二手与新品交易平台——认证身份、轻松发布、安心买卖。

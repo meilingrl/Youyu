@@ -1,6 +1,6 @@
-# CampusMarket Documentation
+# Youyu Documentation
 
-This directory is the single structured documentation workspace for `CampusMarket`.
+This directory is the single structured documentation workspace for `Youyu`.
 
 The goal of this system is not to collect notes indefinitely. It is to keep product intent, engineering rules, roadmaps, API contracts, and executable tasks separated clearly enough that both humans and AI agents can work without guessing.
 

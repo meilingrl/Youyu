@@ -417,7 +417,7 @@ test.describe('Browser Happy Path', () => {
     const page = await browser.newPage()
     try {
       await page.goto('http://localhost:5173/app/home', { timeout: 15000 })
-      await expect(page).toHaveTitle(/CampusMarket/)
+      await expect(page).toHaveTitle(/Youyu/)
       const productCards = page.locator('[data-testid="home-featured-product-card"]')
       await expect(productCards.first()).toBeVisible({ timeout: 10000 })
       await expect(productCards).toHaveCount(18, { timeout: 10000 })

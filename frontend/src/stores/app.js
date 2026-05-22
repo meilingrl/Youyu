@@ -4,8 +4,10 @@ import { defineStore } from 'pinia'
 export const useAppStore = defineStore('app', () => {
   const keyword = ref('')
   const collapsed = ref(false)
+  const scrollY = ref(0)
 
   const hasKeyword = computed(() => keyword.value.trim().length > 0)
+  const isHeaderCondensed = computed(() => scrollY.value > 96)
 
   function setKeyword(value) {
     keyword.value = value
@@ -15,11 +17,18 @@ export const useAppStore = defineStore('app', () => {
     collapsed.value = !collapsed.value
   }
 
+  function setScrollY(value) {
+    scrollY.value = value
+  }
+
   return {
     keyword,
     collapsed,
+    scrollY,
     hasKeyword,
+    isHeaderCondensed,
     setKeyword,
-    toggleCollapsed
+    toggleCollapsed,
+    setScrollY
   }
 })

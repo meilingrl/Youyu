@@ -40,8 +40,8 @@ The repository already has formal specs for auth, product, order, user, admin, a
 - `docs/09-api-spec/README.md`
 - `docs/09-api-spec/API_SPEC_TEMPLATE.md`
 - `docs/06-http/review.http`
-- `backend/src/main/java/com/campusmarket/backend/controller/review/ReviewController.java`
-- `backend/src/main/java/com/campusmarket/backend/service/review/impl/ReviewServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/controller/review/ReviewController.java`
+- `backend/src/main/java/com/youyu/backend/service/review/impl/ReviewServiceImpl.java`
 - related request/response types if present
 
 ## Allowed Changes

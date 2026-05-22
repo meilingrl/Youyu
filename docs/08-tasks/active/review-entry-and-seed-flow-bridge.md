@@ -44,7 +44,7 @@ The issue backlog points out two real gaps:
 - `frontend/src/views/app/ProductDetailView.vue`
 - `frontend/src/views/app/PendingReviewsView.vue`
 - `frontend/src/stores/review.js`
-- `backend/src/main/java/com/campusmarket/backend/controller/review/ReviewController.java`
+- `backend/src/main/java/com/youyu/backend/controller/review/ReviewController.java`
 - relevant order/review seed or local validation assets
 
 ## Allowed Changes

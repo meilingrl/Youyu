@@ -487,14 +487,14 @@ const currentProductTypeLabel = computed(
   background: rgba(255, 252, 247, 0.98);
 }
 
+/* ── condensed：真实布局收缩，不用 scale ── */
+
 .explore-search-shell.is-condensed {
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 26px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 249, 243, 0.9)),
-    rgba(255, 255, 255, 0.72);
-  box-shadow: 0 14px 36px rgba(88, 62, 43, 0.1);
+  gap: 0;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 32px rgba(88, 62, 43, 0.12);
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__mode-row,
@@ -503,7 +503,7 @@ const currentProductTypeLabel = computed(
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  transform: translateY(-8px);
+  transform: translateY(-6px);
   padding-top: 0;
   margin: 0;
   border-color: transparent;
@@ -511,66 +511,75 @@ const currentProductTypeLabel = computed(
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__hero-pill {
-  grid-template-columns: minmax(0, 1.2fr) auto minmax(145px, 0.58fr) auto minmax(145px, 0.58fr) auto;
+  /* 搜索段自然伸展，分类/类型段固定宽度，不换行 */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) auto minmax(0, auto) auto;
   align-items: center;
-  padding: 4px 6px 4px 12px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 6px 18px rgba(88, 62, 43, 0.08);
+  padding: 2px 4px 2px 10px;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  border: none;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__segment {
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 14px;
-}
-
-.explore-search-shell.is-condensed .explore-search-shell__segment-copy {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 4px 10px;
   min-width: 0;
+}
+
+.explore-search-shell.is-condensed .explore-search-shell__segment--search {
+  padding-left: 0;
+}
+
+.explore-search-shell.is-condensed .explore-search-shell__segment-copy {
+  display: none;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__segment-label {
   display: none;
 }
 
-.explore-search-shell.is-condensed .explore-search-shell__segment-value {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* 分类/类型段：只显示当前选中值，不截断，不省略 */
+.explore-search-shell.is-condensed .explore-search-shell__segment:not(.explore-search-shell__segment--search) .explore-search-shell__segment-copy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   white-space: nowrap;
-  font-size: 14px;
+}
+
+.explore-search-shell.is-condensed .explore-search-shell__segment:not(.explore-search-shell__segment--search) .explore-search-shell__segment-value {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--cm-text);
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__chips {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  pointer-events: none;
+  display: none;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__divider {
-  height: 26px;
+  height: 22px;
   margin-block: 0;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__action {
-  width: 48px;
-  height: 48px;
-  box-shadow: 0 12px 24px rgba(220, 11, 73, 0.2);
+  width: 44px;
+  height: 44px;
+  box-shadow: 0 8px 20px rgba(220, 11, 73, 0.22);
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__action svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .explore-search-shell.is-condensed :deep(.search-suggest .el-input__wrapper) {
-  min-height: 38px;
+  min-height: 36px;
   border-radius: 999px;
   background: transparent !important;
   box-shadow: none !important;
@@ -578,20 +587,12 @@ const currentProductTypeLabel = computed(
 
 .explore-search-shell.is-condensed :deep(.search-suggest .el-input__inner) {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .explore-search-shell.is-condensed :deep(.search-suggest .el-input__wrapper:hover),
 .explore-search-shell.is-condensed :deep(.search-suggest .el-input__wrapper.is-focus) {
   box-shadow: none !important;
-}
-
-.explore-search-shell.is-condensed .explore-search-shell__segment--search {
-  padding-left: 0;
-}
-
-.explore-search-shell.is-condensed .explore-search-shell__segment--search .explore-search-shell__segment-copy {
-  display: none;
 }
 
 @media (max-width: 1180px) {

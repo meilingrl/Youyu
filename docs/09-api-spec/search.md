@@ -5,8 +5,8 @@
 - Status: active
 - Source of truth:
   - controllers:
-    - `backend/src/main/java/com/campusmarket/backend/controller/search/SearchController.java`
-    - `backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java`
+    - `backend/src/main/java/com/youyu/backend/controller/search/SearchController.java`
+    - `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java`
   - request sample: `docs/06-http/search.http`
 - Last updated: 2026-05-16
 

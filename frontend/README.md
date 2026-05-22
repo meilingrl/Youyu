@@ -1,6 +1,6 @@
 # Frontend
 
-Vue 3 + Vite frontend for CampusMarket. Uses Pinia for state, Axios for HTTP, Vue Router 4 for routing, Element Plus for UI components.
+Vue 3 + Vite frontend for Youyu. Uses Pinia for state, Axios for HTTP, Vue Router 4 for routing, Element Plus for UI components.
 
 ## Commands
 

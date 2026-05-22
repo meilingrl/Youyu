@@ -18,7 +18,7 @@ const introHighlights = [
   {
     eyebrow: 'FOR STUDENTS',
     title: '不只是二手市场。',
-    desc: 'CampusMarket 把校园交易、认证、开店和售后放进一条更完整的链路里，让它更像一个可信的学生商业网络。'
+    desc: 'Youyu 把校园交易、认证、开店和售后放进一条更完整的链路里，让它更像一个可信的学生商业网络。'
   },
   {
     eyebrow: 'FOR SELLERS',
@@ -138,10 +138,10 @@ onMounted(loadHomePage)
   <div class="home-view">
     <section class="home-hero">
       <div class="home-hero__inner shell-container">
-        <span class="eyebrow">CampusMarket</span>
+        <span class="eyebrow">Youyu</span>
         <h1 class="home-hero__title">把校园里的交易、<br>信任与经营，放进同一个平台。</h1>
         <p class="home-hero__desc">
-          CampusMarket 不是一个只会堆商品的首页。它更像学生自己的商业入口，让你在一个地方完成发现、交易、认证和开店。
+          Youyu 不是一个只会堆商品的首页。它更像学生自己的商业入口，让你在一个地方完成发现、交易、认证和开店。
         </p>
 
         <div class="home-hero__highlights">
@@ -215,7 +215,7 @@ onMounted(loadHomePage)
     <section class="home-footer shell-container">
       <div class="home-footer__inner">
         <div class="home-footer__top">
-          <span class="eyebrow">CampusMarket</span>
+          <span class="eyebrow">Youyu</span>
           <button type="button" class="home-footer__login" @click="router.push('/login')">
             登录 →
           </button>
@@ -241,7 +241,7 @@ onMounted(loadHomePage)
         </div>
 
         <div class="home-footer__bottom">
-          <span>CampusMarket</span>
+          <span>Youyu</span>
           <span>Vue 3 · Vue Router · Pinia · Element Plus</span>
         </div>
       </div>

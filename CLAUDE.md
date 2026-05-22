@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-CampusMarket is a campus-focused vertical shopping platform. Monorepo: Vue 3 frontend + Spring Boot 3.3 backend + MySQL database.
+Youyu is a campus-focused vertical shopping platform. Monorepo: Vue 3 frontend + Spring Boot 3.3 backend + MySQL database.
 
 **Product positioning**: A student-only marketplace emphasizing learning and dorm life products, with seller growth, campus credit tracking, identity verification, and transaction traceability.
 
@@ -14,7 +14,7 @@ CampusMarket is a campus-focused vertical shopping platform. Monorepo: Vue 3 fro
 
 All commands run from `backend/`.
 
-**Prerequisite**: MySQL 8+ running on `localhost:3306` with database `campus_market` created. Configure credentials via `MYSQL_PASSWORD` env var or edit `application.yml`.
+**Prerequisite**: MySQL 8+ running on `localhost:3306` with database `youyu` created. Configure credentials via `MYSQL_PASSWORD` env var or edit `application.yml`.
 
 **First-time setup** (create schema + seed demo data):
 ```bash
@@ -37,12 +37,12 @@ mvnw.cmd test
 
 **Run a single test class**:
 ```bash
-mvnw.cmd test -Dtest=CampusMarketBackendApplicationTests
+mvnw.cmd test -Dtest=YouyuBackendApplicationTests
 ```
 
 **Run a single test method**:
 ```bash
-mvnw.cmd test -Dtest=CampusMarketBackendApplicationTests#contextLoads
+mvnw.cmd test -Dtest=YouyuBackendApplicationTests#contextLoads
 ```
 
 **Build JAR**:
@@ -92,7 +92,7 @@ Backend: Spring Boot REST API, layered by domain (controller -> service -> mappe
 Frontend: Vue 3 SPA with Pinia state, Axios HTTP, Vue Router 4.
 
 ```
-backend/src/main/java/com/campusmarket/backend/
+backend/src/main/java/com/youyu/backend/
   controller/       HTTP endpoints, grouped by domain sub-package
     advice/         GlobalExceptionHandler (@RestControllerAdvice)
     admin/          AdminAuthController, AdminController + DTOs
@@ -215,7 +215,7 @@ export async function getProductList(params) { return service.get('/products', {
 
 ## Database
 
-**Production/Dev**: MySQL 8+ at `localhost:3306/campus_market`. Schema in `schema.sql` uses `CREATE TABLE IF NOT EXISTS` (idempotent, no migration tool).
+**Production/Dev**: MySQL 8+ at `localhost:3306/youyu`. Schema in `schema.sql` uses `CREATE TABLE IF NOT EXISTS` (idempotent, no migration tool).
 
 **Test**: H2 in-memory with MySQL compatibility mode. No MySQL required for tests.
 
@@ -245,7 +245,7 @@ export async function getProductList(params) { return service.get('/products', {
 **Password hashing**: bcrypt via `spring-security-crypto` (`PasswordConfig.java` provides `BCryptPasswordEncoder`).
 
 **JWT config** (`application.yml`):
-- Secret: `app.jwt.secret`, env-overridable via `${APP_JWT_SECRET}`; dev default `campusmarket-dev-secret-key-replace-in-production-min32` is kept for local dev (`dev`/`seed`/`test`/`default` profiles only — `JwtSecretGuard` fails fast under any other active profile)
+- Secret: `app.jwt.secret`, env-overridable via `${APP_JWT_SECRET}`; dev default `youyu-dev-secret-key-replace-in-production-min32` is kept for local dev (`dev`/`seed`/`test`/`default` profiles only — `JwtSecretGuard` fails fast under any other active profile)
 - Expiration: `app.jwt.expiration-hours` (72h)
 
 ## Key Conventions

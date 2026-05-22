@@ -37,7 +37,7 @@
 
 ### 2.3 数据库
 
-- 当前默认运行数据库：H2 file，路径为 `~/.campusmarket/h2/campusmarket`
+- 当前默认运行数据库：H2 file，路径为 `~/.youyu/h2/youyu`
 - 当前测试数据库：H2 in-memory
 - 当前 H2 配置使用 MySQL compatibility mode，便于后续迁移审计
 - 目标数据库方向：`MySQL`

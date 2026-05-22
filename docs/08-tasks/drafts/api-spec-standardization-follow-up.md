@@ -25,11 +25,11 @@ Add formal API specs for the two modules still missing from `docs/09-api-spec/`:
 2. `ls docs/06-http/` — confirm `recommend.http` is present and check whether `shop.http` exists (it likely does not)
 3. Read `docs/09-api-spec/API_SPEC_TEMPLATE.md`
 4. Read `docs/09-api-spec/product.md` and `docs/09-api-spec/search.md` as the closest style references (similar in being public-leaning modules)
-5. `grep -n "^\s*@\(Get\|Post\|Put\|Delete\|Patch\)Mapping\|@LoginRequired" backend/src/main/java/com/campusmarket/backend/controller/product/RecommendController.java`
-6. `grep -n "^\s*@\(Get\|Post\|Put\|Delete\|Patch\)Mapping\|@LoginRequired" backend/src/main/java/com/campusmarket/backend/controller/shop/ShopController.java`
+5. `grep -n "^\s*@\(Get\|Post\|Put\|Delete\|Patch\)Mapping\|@LoginRequired" backend/src/main/java/com/youyu/backend/controller/product/RecommendController.java`
+6. `grep -n "^\s*@\(Get\|Post\|Put\|Delete\|Patch\)Mapping\|@LoginRequired" backend/src/main/java/com/youyu/backend/controller/shop/ShopController.java`
 7. Read each service implementation to capture response field shapes:
-   - `backend/src/main/java/com/campusmarket/backend/service/recommend/impl/RecommendServiceImpl.java`
-   - `backend/src/main/java/com/campusmarket/backend/service/shop/impl/ShopServiceImpl.java`
+   - `backend/src/main/java/com/youyu/backend/service/recommend/impl/RecommendServiceImpl.java`
+   - `backend/src/main/java/com/youyu/backend/service/shop/impl/ShopServiceImpl.java`
 
 ## Files to Read
 
@@ -41,7 +41,7 @@ Add formal API specs for the two modules still missing from `docs/09-api-spec/`:
 - `docs/06-http/recommend.http`
 - `docs/06-http/shop.http` (if present; create from scratch if not)
 - Controllers, services, and mappers for `recommend` and `shop` (read only; no edits)
-- `backend/src/main/java/com/campusmarket/backend/common/api/ResultCode.java`
+- `backend/src/main/java/com/youyu/backend/common/api/ResultCode.java`
 
 ## In Scope
 

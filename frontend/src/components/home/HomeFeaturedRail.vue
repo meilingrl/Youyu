@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
             <div class="featured-stage__vignette" />
 
             <div class="featured-stage__topline">
-              <span class="featured-stage__brand">CampusMarket</span>
+              <span class="featured-stage__brand">Youyu</span>
               <span class="featured-stage__category">{{ product.categoryName || '校园精选' }}</span>
             </div>
 

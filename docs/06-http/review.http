@@ -1,4 +1,4 @@
-### CampusMarket - Product & Shop Reviews
+### Youyu - Product & Shop Reviews
 ### Prerequisite: backend started with -Dspring-boot.run.profiles=seed
 
 @baseUrl = http://localhost:8080

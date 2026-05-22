@@ -1,8 +1,8 @@
 spring:
   application:
-    name: campusmarket-backend
+    name: youyu-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/campus_market?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
+    url: jdbc:mysql://localhost:3306/youyu?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=UTF-8
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: ${MYSQL_PASSWORD:yinkaixin123}
@@ -20,7 +20,7 @@ server:
       enabled: true
       force: true
 
-campus-market:
+youyu:
   auth:
     enabled: true
     ignored-paths:
@@ -36,9 +36,9 @@ campus-market:
 logging:
   level:
     root: INFO
-    com.campusmarket.backend: INFO
+    com.youyu.backend: INFO
 
 app:
   jwt:
-    secret: ${APP_JWT_SECRET:campusmarket-dev-secret-key-replace-in-production-min32}
+    secret: ${APP_JWT_SECRET:youyu-dev-secret-key-replace-in-production-min32}
     expiration-hours: 72
