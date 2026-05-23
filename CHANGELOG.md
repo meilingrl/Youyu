@@ -1,3 +1,12 @@
+## [2026-05-23] - CI pull request checkout hardening
+
+### fix
+- Updated CI checkout steps to use the pull request head SHA explicitly, avoiding a Playwright smoke job failure when GitHub Actions could not fetch the temporary PR merge ref
+
+### test
+- Inspected failed GitHub Actions run `26327502015`
+- Ran `git diff --check`
+
 ## [2026-05-23] - Home platform data visual polish
 
 ### fix
