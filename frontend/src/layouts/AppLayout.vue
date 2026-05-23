@@ -10,12 +10,21 @@ const route = useRoute()
 const appStore = useAppStore()
 const isHome = computed(() => route.meta?.navKey === '/app/home')
 
+let rafId = null
+
 function onScroll() {
-  appStore.setScrollY(window.scrollY)
+  if (rafId) return
+  rafId = requestAnimationFrame(() => {
+    appStore.setScrollY(window.scrollY)
+    rafId = null
+  })
 }
 
 onMounted(() => window.addEventListener('scroll', onScroll, { passive: true }))
-onUnmounted(() => window.removeEventListener('scroll', onScroll))
+onUnmounted(() => {
+  window.removeEventListener('scroll', onScroll)
+  if (rafId) cancelAnimationFrame(rafId)
+})
 </script>
 
 <template>

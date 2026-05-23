@@ -1,52 +1,19 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import SearchSuggestInput from '@/components/search/SearchSuggestInput.vue'
 
 const props = defineProps({
-  modelValue: {
-    type: String,
-    default: ''
-  },
-  categories: {
-    type: Array,
-    default: () => []
-  },
-  productTypes: {
-    type: Array,
-    default: () => []
-  },
-  selectedCategoryId: {
-    type: String,
-    default: ''
-  },
-  selectedProductType: {
-    type: String,
-    default: ''
-  },
-  suggestions: {
-    type: Array,
-    default: () => []
-  },
-  loadingSuggestions: {
-    type: Boolean,
-    default: false
-  },
-  suggestionError: {
-    type: String,
-    default: ''
-  },
-  searchHistory: {
-    type: Array,
-    default: () => []
-  },
-  hotKeywords: {
-    type: Array,
-    default: () => []
-  },
-  loadingHotKeywords: {
-    type: Boolean,
-    default: false
-  }
+  modelValue: { type: String, default: '' },
+  categories: { type: Array, default: () => [] },
+  productTypes: { type: Array, default: () => [] },
+  selectedCategoryId: { type: String, default: '' },
+  selectedProductType: { type: String, default: '' },
+  suggestions: { type: Array, default: () => [] },
+  loadingSuggestions: { type: Boolean, default: false },
+  suggestionError: { type: String, default: '' },
+  searchHistory: { type: Array, default: () => [] },
+  hotKeywords: { type: Array, default: () => [] },
+  loadingHotKeywords: { type: Boolean, default: false }
 })
 
 const emit = defineEmits([
@@ -61,6 +28,8 @@ const emit = defineEmits([
   'clear'
 ])
 
+const openPanel = ref(null)
+
 const activeCount = computed(() => {
   let count = 0
   if (String(props.modelValue || '').trim()) count += 1
@@ -70,36 +39,57 @@ const activeCount = computed(() => {
 })
 
 const hasDiscovery = computed(() => props.searchHistory.length || props.hotKeywords.length)
+
 const currentCategoryLabel = computed(
-  () =>
-    props.categories.find((category) => String(category.id || '') === props.selectedCategoryId)?.name ||
-    '全部分类'
+  () => props.categories.find((c) => String(c.id || '') === props.selectedCategoryId)?.name || '全部分类'
 )
+
 const currentProductTypeLabel = computed(
-  () =>
-    props.productTypes.find((productType) => String(productType.id || '') === props.selectedProductType)
-      ?.name || '全部类型'
+  () => props.productTypes.find((t) => String(t.id || '') === props.selectedProductType)?.name || '全部类型'
 )
+
+function togglePanel(name) {
+  openPanel.value = openPanel.value === name ? null : name
+}
+
+function closePanel() {
+  openPanel.value = null
+}
+
+function selectCategory(id) {
+  emit('select-category', id)
+  closePanel()
+}
+
+function selectProductType(id) {
+  emit('select-product-type', id)
+  closePanel()
+}
+
+function onClickOutside(e) {
+  if (!e.target.closest('.explore-search-shell')) closePanel()
+}
+
+onMounted(() => document.addEventListener('click', onClickOutside))
+onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 
 <template>
-  <section class="explore-search-shell shell-card" aria-label="搜索与筛选">
-    <div class="explore-search-shell__mode-row" aria-hidden="true">
-      <span class="explore-search-shell__mode-pill is-active">搜索商品</span>
-      <span class="explore-search-shell__mode-pill">按分类细分</span>
-      <span class="explore-search-shell__mode-pill">按类型收窄</span>
-    </div>
-
-    <div class="explore-search-shell__hero-pill">
-      <div class="explore-search-shell__segment explore-search-shell__segment--search">
-        <div class="explore-search-shell__segment-copy">
-          <span class="explore-search-shell__segment-label">搜什么</span>
-          <strong class="explore-search-shell__segment-value">关键词、商品、服务</strong>
-        </div>
+  <!-- 单层胶囊：展开时是圆角卡片，condensed 时是胶囊 -->
+  <section
+    class="explore-search-shell"
+    :class="{ 'has-panel': openPanel }"
+    aria-label="搜索与筛选"
+  >
+    <!-- 搜索栏主体 -->
+    <div class="explore-search-shell__bar">
+      <!-- 搜索段 -->
+      <div class="explore-search-shell__seg explore-search-shell__seg--search">
+        <span class="explore-search-shell__seg-label">搜什么</span>
         <SearchSuggestInput
-          class="explore-search-shell__search-control"
+          class="explore-search-shell__search-input"
           :model-value="modelValue"
-          placeholder="搜索耳机、教材、宿舍好物或校园服务"
+          placeholder="搜索耳机、教材、宿舍好物…"
           button-label="搜索"
           :suggestions="suggestions"
           :loading="loadingSuggestions"
@@ -113,46 +103,31 @@ const currentProductTypeLabel = computed(
 
       <span class="explore-search-shell__divider" aria-hidden="true" />
 
-      <div class="explore-search-shell__segment">
-        <div class="explore-search-shell__segment-copy">
-          <span class="explore-search-shell__segment-label">分类</span>
-          <strong class="explore-search-shell__segment-value">{{ currentCategoryLabel }}</strong>
-        </div>
-        <div class="explore-search-shell__chips" role="group" aria-label="分类筛选">
-          <button
-            v-for="category in categories"
-            :key="category.id || 'all-category'"
-            type="button"
-            class="explore-search-shell__chip"
-            :class="{ 'is-active': selectedCategoryId === category.id }"
-            @click="emit('select-category', category.id)"
-          >
-            {{ category.name }}
-          </button>
-        </div>
-      </div>
+      <!-- 分类段 -->
+      <button
+        type="button"
+        class="explore-search-shell__seg explore-search-shell__seg--btn"
+        :class="{ 'is-open': openPanel === 'category', 'is-active': selectedCategoryId }"
+        @click.stop="togglePanel('category')"
+      >
+        <span class="explore-search-shell__seg-label">分类</span>
+        <strong class="explore-search-shell__seg-value">{{ currentCategoryLabel }}</strong>
+      </button>
 
       <span class="explore-search-shell__divider" aria-hidden="true" />
 
-      <div class="explore-search-shell__segment">
-        <div class="explore-search-shell__segment-copy">
-          <span class="explore-search-shell__segment-label">类型</span>
-          <strong class="explore-search-shell__segment-value">{{ currentProductTypeLabel }}</strong>
-        </div>
-        <div class="explore-search-shell__chips" role="group" aria-label="类型筛选">
-          <button
-            v-for="productType in productTypes"
-            :key="productType.id || 'all-type'"
-            type="button"
-            class="explore-search-shell__chip"
-            :class="{ 'is-active': selectedProductType === productType.id }"
-            @click="emit('select-product-type', productType.id)"
-          >
-            {{ productType.name }}
-          </button>
-        </div>
-      </div>
+      <!-- 类型段 -->
+      <button
+        type="button"
+        class="explore-search-shell__seg explore-search-shell__seg--btn"
+        :class="{ 'is-open': openPanel === 'type', 'is-active': selectedProductType }"
+        @click.stop="togglePanel('type')"
+      >
+        <span class="explore-search-shell__seg-label">类型</span>
+        <strong class="explore-search-shell__seg-value">{{ currentProductTypeLabel }}</strong>
+      </button>
 
+      <!-- 搜索按钮 -->
       <button
         type="button"
         class="explore-search-shell__action"
@@ -168,39 +143,92 @@ const currentProductTypeLabel = computed(
       </button>
     </div>
 
-    <div v-if="hasDiscovery" class="explore-search-shell__discovery">
-      <div v-if="searchHistory.length" class="explore-search-shell__discovery-group">
-        <span class="explore-search-shell__meta-label">最近搜过</span>
-        <div class="explore-search-shell__chips explore-search-shell__chips--compact">
+    <!-- 分类 dropdown -->
+    <Transition name="panel">
+      <div
+        v-if="openPanel === 'category'"
+        class="explore-search-shell__panel"
+        role="dialog"
+        aria-label="选择分类"
+        @click.stop
+      >
+        <p class="explore-search-shell__panel-title">选择分类</p>
+        <div class="explore-search-shell__panel-chips" role="group">
           <button
-            v-for="item in searchHistory"
-            :key="item"
+            v-for="category in categories"
+            :key="category.id || 'all'"
             type="button"
-            class="explore-search-shell__chip explore-search-shell__chip--soft"
-            @click="emit('apply-history', item)"
+            class="explore-search-shell__chip"
+            :class="{ 'is-active': selectedCategoryId === category.id }"
+            @click="selectCategory(category.id)"
           >
-            {{ item }}
+            {{ category.name }}
           </button>
         </div>
       </div>
+    </Transition>
 
-      <div v-if="hotKeywords.length" class="explore-search-shell__discovery-group">
-        <span class="explore-search-shell__meta-label">热门搜索</span>
-        <div class="explore-search-shell__chips explore-search-shell__chips--compact">
+    <!-- 类型 dropdown -->
+    <Transition name="panel">
+      <div
+        v-if="openPanel === 'type'"
+        class="explore-search-shell__panel explore-search-shell__panel--type"
+        role="dialog"
+        aria-label="选择类型"
+        @click.stop
+      >
+        <p class="explore-search-shell__panel-title">选择类型</p>
+        <div class="explore-search-shell__panel-chips" role="group">
           <button
-            v-for="keywordItem in hotKeywords.slice(0, 6)"
-            :key="keywordItem.normalizedKeyword || keywordItem.keyword"
+            v-for="productType in productTypes"
+            :key="productType.id || 'all'"
             type="button"
-            class="explore-search-shell__chip explore-search-shell__chip--soft"
-            @click="emit('apply-hot', keywordItem.keyword)"
+            class="explore-search-shell__chip"
+            :class="{ 'is-active': selectedProductType === productType.id }"
+            @click="selectProductType(productType.id)"
           >
-            {{ keywordItem.keyword }}
+            {{ productType.name }}
           </button>
         </div>
       </div>
-    </div>
+    </Transition>
 
-    <div v-if="activeCount > 0" class="explore-search-shell__active-bar">
+    <!-- 热门/历史发现区（无 panel 时显示） -->
+    <Transition name="discovery">
+      <div v-if="hasDiscovery && !openPanel" class="explore-search-shell__discovery">
+        <div v-if="searchHistory.length" class="explore-search-shell__discovery-group">
+          <span class="explore-search-shell__meta-label">最近搜过</span>
+          <div class="explore-search-shell__chips">
+            <button
+              v-for="item in searchHistory"
+              :key="item"
+              type="button"
+              class="explore-search-shell__chip explore-search-shell__chip--soft"
+              @click="emit('apply-history', item)"
+            >
+              {{ item }}
+            </button>
+          </div>
+        </div>
+        <div v-if="hotKeywords.length" class="explore-search-shell__discovery-group">
+          <span class="explore-search-shell__meta-label">热门搜索</span>
+          <div class="explore-search-shell__chips">
+            <button
+              v-for="kw in hotKeywords.slice(0, 6)"
+              :key="kw.normalizedKeyword || kw.keyword"
+              type="button"
+              class="explore-search-shell__chip explore-search-shell__chip--soft"
+              @click="emit('apply-hot', kw.keyword)"
+            >
+              {{ kw.keyword }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 激活筛选条 -->
+    <div v-if="activeCount > 0 && !openPanel" class="explore-search-shell__active-bar">
       <span class="explore-search-shell__active-count">{{ activeCount }} 个条件生效</span>
       <button type="button" class="explore-search-shell__clear-btn" @click="emit('clear')">
         清空全部
@@ -210,162 +238,254 @@ const currentProductTypeLabel = computed(
 </template>
 
 <style scoped>
+/* ── 单层容器：展开态是圆角卡片，condensed 是胶囊 ── */
 .explore-search-shell {
+  position: relative;
   display: grid;
-  gap: 16px;
-  padding: 18px;
-  border-radius: 36px;
-  background:
-    radial-gradient(circle at 16% -8%, rgba(var(--cm-primary-rgb), 0.12), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 249, 241, 0.92));
-  box-shadow: 0 18px 48px rgba(88, 62, 43, 0.11);
-  transition:
-    padding var(--cm-transition-feature),
-    border-radius var(--cm-transition-feature),
-    gap var(--cm-transition-feature),
-    box-shadow var(--cm-transition-feature),
-    background var(--cm-transition-feature),
-    transform var(--cm-transition-feature);
-}
-
-.explore-search-shell__mode-row,
-.explore-search-shell__discovery,
-.explore-search-shell__active-bar {
-  transition:
-    opacity var(--cm-transition-feature),
-    transform var(--cm-transition-feature),
-    max-height var(--cm-transition-feature),
-    padding var(--cm-transition-feature),
-    margin var(--cm-transition-feature),
-    border-color var(--cm-transition-feature);
-}
-
-.explore-search-shell__mode-row {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.explore-search-shell__mode-pill {
-  padding: 7px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.62);
-  color: var(--cm-text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.explore-search-shell__mode-pill.is-active {
-  background: rgba(var(--cm-primary-rgb), 0.1);
-  color: var(--cm-primary-deep);
-}
-
-.explore-search-shell__hero-pill {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) auto minmax(240px, 0.86fr) auto minmax(240px, 0.86fr) auto;
-  align-items: stretch;
   gap: 0;
-  padding: 10px 10px 10px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(88, 62, 43, 0.08);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55), 0 8px 26px rgba(88, 62, 43, 0.08);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(88, 62, 43, 0.1);
+  box-shadow: 0 8px 40px rgba(88, 62, 43, 0.1);
+  overflow: visible;
   transition:
-    padding var(--cm-transition-feature),
+    border-radius var(--cm-transition-feature),
     box-shadow var(--cm-transition-feature),
     background var(--cm-transition-feature);
 }
 
-.explore-search-shell__segment {
-  min-width: 0;
+/* ── 搜索栏主体行 ── */
+.explore-search-shell__bar {
   display: grid;
-  align-content: center;
-  gap: 10px;
-  padding: 10px 22px;
-  transition:
-    padding var(--cm-transition-feature),
-    gap var(--cm-transition-feature),
-    opacity var(--cm-transition-feature);
+  grid-template-columns: minmax(0, 1.4fr) auto minmax(140px, 0.65fr) auto minmax(140px, 0.65fr) auto;
+  align-items: center;
+  padding: 8px 8px 8px 24px;
 }
 
-.explore-search-shell__segment--search {
+/* ── 段落 ── */
+.explore-search-shell__seg {
+  display: grid;
+  gap: 2px;
+  padding: 10px 20px;
+  min-width: 0;
+}
+
+.explore-search-shell__seg--search {
   padding-left: 0;
 }
 
-.explore-search-shell__segment-copy {
-  display: grid;
-  gap: 3px;
+.explore-search-shell__seg--btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 20px;
+  padding: 10px 20px;
+  transition: background var(--cm-transition-micro);
 }
 
-.explore-search-shell__segment-label {
-  color: var(--cm-text);
-  font-size: 12px;
+.explore-search-shell__seg--btn:hover {
+  background: rgba(var(--cm-primary-rgb), 0.05);
+}
+
+.explore-search-shell__seg--btn.is-open {
+  background: rgba(var(--cm-primary-rgb), 0.07);
+}
+
+.explore-search-shell__seg-label {
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cm-text);
 }
 
-.explore-search-shell__segment-value {
+.explore-search-shell__seg-value {
+  font-size: 14px;
+  font-weight: 400;
   color: var(--cm-text-secondary);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+.explore-search-shell__seg--btn.is-active .explore-search-shell__seg-value {
+  color: var(--cm-primary-deep);
+  font-weight: 600;
+}
+
+/* ── 分隔线 ── */
 .explore-search-shell__divider {
   width: 1px;
-  margin-block: 12px;
-  background: rgba(88, 62, 43, 0.12);
+  height: 32px;
+  background: rgba(88, 62, 43, 0.1);
+  flex-shrink: 0;
 }
 
+/* ── 搜索按钮 ── */
 .explore-search-shell__action {
   align-self: center;
   justify-self: end;
-  width: 60px;
-  height: 60px;
+  width: 52px;
+  height: 52px;
   border: 0;
   border-radius: 999px;
   background: linear-gradient(135deg, #ff0f5b 0%, #dc0b49 100%);
   color: #fff;
   display: grid;
   place-items: center;
-  box-shadow: 0 18px 30px rgba(220, 11, 73, 0.26);
+  box-shadow: 0 10px 24px rgba(220, 11, 73, 0.3);
   cursor: pointer;
   transition:
     transform var(--cm-transition),
-    box-shadow var(--cm-transition),
-    filter var(--cm-transition);
+    box-shadow var(--cm-transition);
 }
 
 .explore-search-shell__action svg {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .explore-search-shell__action:hover {
-  transform: scale(1.03);
-  box-shadow: 0 22px 34px rgba(220, 11, 73, 0.3);
-  filter: saturate(1.02);
+  transform: scale(1.06);
+  box-shadow: 0 14px 30px rgba(220, 11, 73, 0.38);
 }
 
+/* ── Dropdown panel（绝对定位，向下延伸） ── */
+.explore-search-shell__panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 28px 32px;
+  border-radius: 24px;
+  background: rgba(255, 252, 249, 0.99);
+  border: 1px solid rgba(88, 62, 43, 0.08);
+  box-shadow: 0 20px 60px rgba(88, 62, 43, 0.14);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.explore-search-shell__panel--type {
+  left: auto;
+  min-width: 300px;
+}
+
+.explore-search-shell__panel-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cm-text-secondary);
+  margin-bottom: 18px;
+}
+
+.explore-search-shell__panel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* ── Panel 进出动画 ── */
+.panel-enter-active {
+  transition: opacity 200ms var(--cm-ease-enter), transform 200ms var(--cm-ease-enter);
+}
+.panel-leave-active {
+  transition: opacity 160ms var(--cm-ease-exit), transform 160ms var(--cm-ease-exit);
+}
+.panel-enter-from,
+.panel-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.98);
+}
+
+/* ── Discovery 进出动画 ── */
+.discovery-enter-active {
+  transition: opacity 200ms var(--cm-ease-enter);
+}
+.discovery-leave-active {
+  transition: opacity 140ms var(--cm-ease-exit);
+}
+.discovery-enter-from,
+.discovery-leave-to {
+  opacity: 0;
+}
+
+/* ── 发现区 ── */
+.explore-search-shell__discovery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid rgba(88, 62, 43, 0.07);
+}
+
+.explore-search-shell__discovery-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.explore-search-shell__meta-label {
+  color: var(--cm-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── 激活筛选条 ── */
+.explore-search-shell__active-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 24px 16px;
+  border-top: 1px solid rgba(88, 62, 43, 0.07);
+}
+
+.explore-search-shell__active-count {
+  color: var(--cm-primary-deep);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.explore-search-shell__clear-btn {
+  appearance: none;
+  padding: 6px 14px;
+  border: 1px solid rgba(88, 62, 43, 0.1);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--cm-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    color var(--cm-transition-micro),
+    border-color var(--cm-transition-micro);
+}
+
+.explore-search-shell__clear-btn:hover {
+  color: var(--cm-text);
+  border-color: rgba(var(--cm-primary-rgb), 0.26);
+}
+
+/* ── Chips ── */
 .explore-search-shell__chips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.explore-search-shell__chips--compact {
-  gap: 6px;
-}
-
 .explore-search-shell__chip {
   appearance: none;
-  min-height: 34px;
-  padding: 6px 12px;
+  min-height: 36px;
+  padding: 6px 14px;
   border: 1px solid rgba(88, 62, 43, 0.12);
   border-radius: 999px;
-  background: rgba(248, 242, 234, 0.82);
+  background: rgba(248, 242, 234, 0.8);
   color: var(--cm-text-secondary);
   font-size: 13px;
   font-weight: 600;
@@ -392,70 +512,10 @@ const currentProductTypeLabel = computed(
 }
 
 .explore-search-shell__chip--soft {
-  min-height: 30px;
-  padding: 5px 11px;
   background: rgba(255, 255, 255, 0.78);
 }
 
-.explore-search-shell__discovery {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 22px;
-  padding-top: 14px;
-  border-top: 1px solid var(--cm-border);
-}
-
-.explore-search-shell__discovery-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.explore-search-shell__meta-label {
-  color: var(--cm-text-secondary);
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.explore-search-shell__active-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 14px;
-  border-top: 1px solid var(--cm-border);
-}
-
-.explore-search-shell__active-count {
-  color: var(--cm-primary-deep);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.explore-search-shell__clear-btn {
-  appearance: none;
-  padding: 7px 14px;
-  border: 1px solid var(--cm-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
-  color: var(--cm-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition:
-    color var(--cm-transition-micro),
-    border-color var(--cm-transition-micro),
-    background var(--cm-transition-micro);
-}
-
-.explore-search-shell__clear-btn:hover {
-  color: var(--cm-text);
-  border-color: rgba(var(--cm-primary-rgb), 0.26);
-  background: rgba(255, 255, 255, 0.96);
-}
-
+/* ── 搜索输入框覆盖 ── */
 .explore-search-shell :deep(.search-suggest) {
   width: 100%;
 }
@@ -465,193 +525,138 @@ const currentProductTypeLabel = computed(
 }
 
 .explore-search-shell :deep(.search-suggest .el-input__wrapper) {
-  min-height: 54px;
-  border-radius: 18px;
-  background: rgba(246, 240, 232, 0.78) !important;
+  min-height: 46px;
+  border-radius: 14px;
+  background: rgba(246, 240, 232, 0.65) !important;
   box-shadow: none !important;
 }
 
 .explore-search-shell :deep(.search-suggest .el-input__inner) {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .explore-search-shell :deep(.search-suggest--active .el-input__wrapper) {
-  transform: none;
   background: rgba(255, 255, 255, 0.96) !important;
 }
 
 .explore-search-shell :deep(.search-suggest__panel) {
   top: calc(100% + 8px);
-  padding-top: 12px;
-  border-radius: 22px;
+  border-radius: 20px;
   background: rgba(255, 252, 247, 0.98);
 }
 
-/* ── condensed：真实布局收缩，不用 scale ── */
-
+/* ── condensed 状态：单层胶囊，无内容区 ── */
 .explore-search-shell.is-condensed {
-  gap: 0;
-  padding: 8px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 8px 32px rgba(88, 62, 43, 0.12);
+  box-shadow: 0 4px 20px rgba(88, 62, 43, 0.09);
 }
 
-.explore-search-shell.is-condensed .explore-search-shell__mode-row,
-.explore-search-shell.is-condensed .explore-search-shell__discovery,
-.explore-search-shell.is-condensed .explore-search-shell__active-bar {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transform: translateY(-6px);
-  padding-top: 0;
-  margin: 0;
-  border-color: transparent;
-  pointer-events: none;
-}
-
-.explore-search-shell.is-condensed .explore-search-shell__hero-pill {
-  /* 搜索段自然伸展，分类/类型段固定宽度，不换行 */
+.explore-search-shell.is-condensed .explore-search-shell__bar {
+  padding: 4px 4px 4px 18px;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) auto minmax(0, auto) auto;
-  align-items: center;
-  padding: 2px 4px 2px 10px;
-  border-radius: 999px;
-  background: transparent;
-  box-shadow: none;
-  border: none;
 }
 
-.explore-search-shell.is-condensed .explore-search-shell__segment {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  min-width: 0;
+.explore-search-shell.is-condensed .explore-search-shell__seg {
+  padding: 4px 14px;
+  gap: 1px;
 }
 
-.explore-search-shell.is-condensed .explore-search-shell__segment--search {
+.explore-search-shell.is-condensed .explore-search-shell__seg--search {
   padding-left: 0;
 }
 
-.explore-search-shell.is-condensed .explore-search-shell__segment-copy {
+.explore-search-shell.is-condensed .explore-search-shell__seg-label {
   display: none;
 }
 
-.explore-search-shell.is-condensed .explore-search-shell__segment-label {
-  display: none;
-}
-
-/* 分类/类型段：只显示当前选中值，不截断，不省略 */
-.explore-search-shell.is-condensed .explore-search-shell__segment:not(.explore-search-shell__segment--search) .explore-search-shell__segment-copy {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-.explore-search-shell.is-condensed .explore-search-shell__segment:not(.explore-search-shell__segment--search) .explore-search-shell__segment-value {
+.explore-search-shell.is-condensed .explore-search-shell__seg-value {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--cm-text);
   white-space: nowrap;
-  overflow: visible;
-  text-overflow: unset;
-}
-
-.explore-search-shell.is-condensed .explore-search-shell__chips {
-  display: none;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__divider {
-  height: 22px;
-  margin-block: 0;
+  height: 20px;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__action {
-  width: 44px;
-  height: 44px;
-  box-shadow: 0 8px 20px rgba(220, 11, 73, 0.22);
+  width: 42px;
+  height: 42px;
+  box-shadow: 0 6px 18px rgba(220, 11, 73, 0.24);
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__action svg {
-  width: 18px;
-  height: 18px;
+  width: 17px;
+  height: 17px;
+}
+
+.explore-search-shell.is-condensed .explore-search-shell__discovery,
+.explore-search-shell.is-condensed .explore-search-shell__active-bar {
+  display: none;
 }
 
 .explore-search-shell.is-condensed :deep(.search-suggest .el-input__wrapper) {
-  min-height: 36px;
+  min-height: 34px;
   border-radius: 999px;
   background: transparent !important;
   box-shadow: none !important;
 }
 
 .explore-search-shell.is-condensed :deep(.search-suggest .el-input__inner) {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
 }
 
-.explore-search-shell.is-condensed :deep(.search-suggest .el-input__wrapper:hover),
-.explore-search-shell.is-condensed :deep(.search-suggest .el-input__wrapper.is-focus) {
-  box-shadow: none !important;
-}
-
-@media (max-width: 1180px) {
-  .explore-search-shell__hero-pill {
+/* ── 响应式 ── */
+@media (max-width: 1100px) {
+  .explore-search-shell__bar {
     grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
-    padding: 14px;
-    border-radius: 28px;
+    gap: 8px;
+    padding: 14px 16px;
   }
 
   .explore-search-shell__divider {
     display: none;
   }
 
-  .explore-search-shell__segment,
-  .explore-search-shell__segment--search {
+  .explore-search-shell__seg,
+  .explore-search-shell__seg--search,
+  .explore-search-shell__seg--btn {
     padding: 0;
+    border-radius: 14px;
   }
 
   .explore-search-shell__action {
     justify-self: stretch;
     width: 100%;
-    height: 52px;
+    height: 50px;
   }
 
-  /* condensed 时在窄屏保持单行胶囊，不堆叠 */
-  .explore-search-shell.is-condensed .explore-search-shell__hero-pill {
+  /* condensed 在窄屏保持单行 */
+  .explore-search-shell.is-condensed .explore-search-shell__bar {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) auto minmax(0, auto) auto;
-    padding: 2px 4px 2px 10px;
+    padding: 4px 4px 4px 14px;
     gap: 0;
   }
 
-  .explore-search-shell.is-condensed .explore-search-shell__segment {
-    padding: 4px 8px;
+  .explore-search-shell.is-condensed .explore-search-shell__seg {
+    padding: 4px 10px;
   }
 
-  .explore-search-shell.is-condensed .explore-search-shell__chips {
-    display: none;
+  .explore-search-shell.is-condensed .explore-search-shell__action {
+    width: 42px;
+    height: 42px;
+    justify-self: end;
   }
 }
 
 @media (max-width: 768px) {
   .explore-search-shell {
-    padding: 14px;
-    border-radius: 28px;
-  }
-
-  .explore-search-shell__mode-row {
-    justify-content: flex-start;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .explore-search-shell__mode-row::-webkit-scrollbar {
-    display: none;
+    border-radius: 22px;
   }
 
   .explore-search-shell__discovery {
-    gap: 10px 14px;
+    padding: 14px 16px 18px;
   }
 
   .explore-search-shell__discovery-group {
@@ -676,17 +681,14 @@ const currentProductTypeLabel = computed(
     display: none;
   }
 
-  .explore-search-shell__active-bar {
-    flex-wrap: wrap;
+  .explore-search-shell__panel {
+    left: -16px;
+    right: -16px;
+    border-radius: 20px;
   }
 
   .explore-search-shell.is-condensed {
-    padding: 6px 8px;
     border-radius: 999px;
-  }
-
-  .explore-search-shell.is-condensed .explore-search-shell__hero-pill {
-    padding: 2px 4px 2px 8px;
   }
 }
 </style>

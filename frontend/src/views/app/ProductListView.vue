@@ -510,17 +510,26 @@ function refreshSentinelObserver() {
   sentinelObserver.observe(sentinelRef.value)
 }
 
+let scrollRafId = null
+
+function onScroll() {
+  if (scrollRafId) return
+  scrollRafId = requestAnimationFrame(() => {
+    updateScrollProgress()
+    scrollRafId = null
+  })
+}
+
 onMounted(() => {
   updateScrollProgress()
-  window.addEventListener('scroll', updateScrollProgress, { passive: true })
+  window.addEventListener('scroll', onScroll, { passive: true })
   bootstrapExplorePage()
 })
 
 onBeforeUnmount(() => {
   disconnectSentinelObserver()
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('scroll', updateScrollProgress)
-  }
+  window.removeEventListener('scroll', onScroll)
+  if (scrollRafId) cancelAnimationFrame(scrollRafId)
 })
 
 watch(

@@ -16,99 +16,99 @@ const shouldShowRail = computed(() => loading.value || recommendStore.homeRecomm
 
 const introHighlights = [
   {
-    eyebrow: 'FOR STUDENTS',
-    title: '不只是二手市场。',
-    desc: 'Youyu 把校园交易、认证、开店和售后放进一条更完整的链路里，让它更像一个可信的学生商业网络。'
+    eyebrow: '买家',
+    title: '逛、买、收货，一条线走完。',
+    desc: '认证身份后解锁完整权限，每笔交易都有状态可查、有平台兜底。'
   },
   {
-    eyebrow: 'FOR SELLERS',
-    title: '发布、认证、经营，在同一个起点完成。',
-    desc: '从宿舍闲置到长期经营的小店入口，我们让探索、交易和身份可信同时成立，而不是拆成零碎工具。'
+    eyebrow: '卖家',
+    title: '从发布到经营，门槛极低。',
+    desc: '宿舍闲置可以发，长期开店也可以——同一个入口，按需升级。'
   },
   {
-    eyebrow: 'FOR TRUST',
-    title: '不是匿名群消息，而是可追踪的交易体验。',
-    desc: '身份验证、订单状态和平台介入能力都被前置到体验里，让校园内交易真正更安心。'
+    eyebrow: '信任',
+    title: '实名认证，交易有据可查。',
+    desc: '订单状态、退款流程和平台介入都在平台内完成，不依赖群聊截图。'
   }
 ]
 
 const statCards = [
   {
     value: '12K+',
-    label: '认证学生用户',
-    desc: '覆盖买家、卖家与校内个体经营者的可信身份网络。',
+    label: '认证学生',
+    desc: '买家、卖家和校内小店主，都在同一张可信网络里。',
     tilt: 'left'
   },
   {
     value: '28K+',
-    label: '在架校园好物',
-    desc: '从教材、数码、宿舍到轻服务，持续形成内容供给。',
+    label: '在售商品',
+    desc: '教材、数码、宿舍用品、轻服务，持续上新。',
     tilt: 'right'
   },
   {
     value: '150+',
-    label: '校园服务范围',
-    desc: '围绕宿舍生活、学习交易和学生副业场景持续扩展。',
+    label: '覆盖场景',
+    desc: '学习、生活、副业——校园里的交易需求基本都在这里。',
     tilt: 'left'
   }
 ]
 
 const entryCards = [
   {
-    title: '探索入口',
-    desc: '先从精选与全部商品出发，快速进入平台最有吸引力的内容面。',
+    title: '去逛逛',
+    desc: '精选推荐 + 全量商品，随时可以开始。',
     action: '进入探索',
     handler: () => router.push('/app/explore')
   },
   {
-    title: '认证入口',
-    desc: '完成学生认证后，才能获得更完整的交易权限与身份可信度。',
-    action: '开始认证',
+    title: '学生认证',
+    desc: '完成认证，解锁完整交易权限和身份标识。',
+    action: '立即认证',
     handler: () => router.push('/app/verification')
   },
   {
-    title: '开店入口',
-    desc: '把一次性闲置发布，升级成一个可持续经营的校园小店。',
-    action: '去开店',
+    title: '开店',
+    desc: '发布第一件商品，就算开始了。',
+    action: '去发布',
     handler: () => router.push('/app/shop/manage/publish')
   }
 ]
 
 const footerGroups = [
   {
-    title: '平台入口',
+    title: '逛',
     links: [
       { label: '探索好物', handler: () => router.push('/app/explore') },
       { label: '精选推荐', handler: () => document.getElementById('home-featured-rail')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) },
-      { label: '学生认证', handler: () => router.push('/app/verification') },
-      { label: '开店经营', handler: () => router.push('/app/shop/manage/publish') }
+      { label: '收藏夹', handler: () => router.push('/app/favorites') },
+      { label: '我的订单', handler: () => router.push('/app/orders') }
     ]
   },
   {
-    title: '交易场景',
+    title: '买',
     links: [
       { label: '教材资料', handler: () => router.push({ path: '/app/explore', query: { keyword: '教材' } }) },
       { label: '数码设备', handler: () => router.push({ path: '/app/explore', query: { keyword: '数码' } }) },
-      { label: '宿舍生活', handler: () => router.push({ path: '/app/explore', query: { keyword: '宿舍' } }) },
+      { label: '宿舍用品', handler: () => router.push({ path: '/app/explore', query: { keyword: '宿舍' } }) },
       { label: '校园服务', handler: () => router.push({ path: '/app/explore', query: { keyword: '服务' } }) }
     ]
   },
   {
-    title: '卖家能力',
+    title: '卖',
     links: [
       { label: '发布商品', handler: () => router.push('/app/shop/manage/publish') },
       { label: '管理店铺', handler: () => router.push('/app/shop/manage') },
       { label: '查看订单', handler: () => router.push('/app/orders') },
-      { label: '身份可信', handler: () => router.push('/app/verification') }
+      { label: '学生认证', handler: () => router.push('/app/verification') }
     ]
   },
   {
-    title: '帮助与说明',
+    title: '帮助',
     links: [
-      { label: '为什么要认证', handler: () => router.push('/app/verification') },
-      { label: '如何开始探索', handler: () => router.push('/app/explore') },
-      { label: '平台交易保障', handler: () => router.push('/app/orders') },
-      { label: '返回登录', handler: () => router.push('/login') }
+      { label: '如何认证', handler: () => router.push('/app/verification') },
+      { label: '交易保障', handler: () => router.push('/app/orders') },
+      { label: '开始探索', handler: () => router.push('/app/explore') },
+      { label: '登录', handler: () => router.push('/login') }
     ]
   }
 ]
@@ -138,10 +138,10 @@ onMounted(loadHomePage)
   <div class="home-view">
     <section class="home-hero">
       <div class="home-hero__inner shell-container">
-        <span class="eyebrow">Youyu</span>
-        <h1 class="home-hero__title">把校园里的交易、<br>信任与经营，放进同一个平台。</h1>
+        <span class="eyebrow">Youyu · 校园交易平台</span>
+        <h1 class="home-hero__title">校园里的<br>买卖，更可信。</h1>
         <p class="home-hero__desc">
-          Youyu 不是一个只会堆商品的首页。它更像学生自己的商业入口，让你在一个地方完成发现、交易、认证和开店。
+          发现好物、完成交易、认证身份、开店经营——都在这里。
         </p>
 
         <div class="home-hero__highlights">
@@ -165,8 +165,8 @@ onMounted(loadHomePage)
 
     <section class="home-stats shell-container">
       <div class="home-stats__heading">
-        <span class="eyebrow">Platform Signals</span>
-        <h2>平台规模先建立信任，再让内容完成转化。</h2>
+        <span class="eyebrow">平台数据</span>
+        <h2>已经有很多同学在这里了。</h2>
       </div>
 
       <div class="home-stats__grid">
@@ -197,8 +197,8 @@ onMounted(loadHomePage)
 
     <section class="home-entries shell-container">
       <div class="home-entries__heading">
-        <span class="eyebrow">Key Entrances</span>
-        <h2>从探索、认证到开店，首页把关键入口直接摊开。</h2>
+        <span class="eyebrow">快速入口</span>
+        <h2>从哪里开始都行。</h2>
       </div>
 
       <div class="home-entries__grid">
@@ -214,13 +214,6 @@ onMounted(loadHomePage)
 
     <section class="home-footer shell-container">
       <div class="home-footer__inner">
-        <div class="home-footer__top">
-          <span class="eyebrow">Youyu</span>
-          <button type="button" class="home-footer__login" @click="router.push('/login')">
-            登录 →
-          </button>
-        </div>
-
         <div class="home-footer__grid">
           <article
             v-for="group in footerGroups"
@@ -242,7 +235,7 @@ onMounted(loadHomePage)
 
         <div class="home-footer__bottom">
           <span>Youyu</span>
-          <span>Vue 3 · Vue Router · Pinia · Element Plus</span>
+          <span>© 2026</span>
         </div>
       </div>
     </section>
@@ -273,19 +266,18 @@ onMounted(loadHomePage)
 }
 
 .home-hero__title {
-  max-width: 10.8ch;
-  font-size: clamp(42px, 6vw, 78px);
-  line-height: 0.98;
-  letter-spacing: -0.045em;
+  font-size: clamp(44px, 6.4vw, 80px);
+  line-height: 1.0;
+  letter-spacing: -0.04em;
   font-weight: 800;
   color: var(--cm-text);
 }
 
 .home-hero__desc {
-  max-width: 760px;
+  max-width: 480px;
   color: var(--cm-text-secondary);
-  font-size: clamp(17px, 1.5vw, 21px);
-  line-height: 1.8;
+  font-size: clamp(16px, 1.4vw, 19px);
+  line-height: 1.75;
 }
 
 .home-hero__highlights {
@@ -454,7 +446,7 @@ onMounted(loadHomePage)
 .home-footer {
   position: relative;
   margin-top: auto;
-  padding: 56px 0 0;
+  padding: 0;
   background: none;
 }
 
@@ -465,8 +457,8 @@ onMounted(loadHomePage)
   left: 50%;
   width: 100vw;
   transform: translateX(-50%);
-  background: linear-gradient(180deg, #4a372f 0%, #3f2f28 58%, #392a24 100%);
-  border-top: 1px solid rgba(255, 250, 243, 0.08);
+  background: #ede0d4;
+  border-top: 1px solid rgba(88, 62, 43, 0.1);
   z-index: 0;
 }
 
@@ -475,59 +467,34 @@ onMounted(loadHomePage)
   z-index: 1;
   display: grid;
   gap: 0;
-  padding: 0;
-  background: linear-gradient(180deg, #4a372f 0%, #3f2f28 58%, #392a24 100%);
-}
-
-.home-footer__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 0 28px;
-  border-bottom: 1px solid rgba(255, 250, 243, 0.12);
-}
-
-.home-footer__login {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: rgba(255, 250, 243, 0.9);
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: color var(--cm-transition-micro);
-}
-
-.home-footer__login:hover {
-  color: #ffffff;
+  padding: 40px 0 0;
 }
 
 .home-footer__grid {
   display: grid;
-  grid-template-columns: 1.35fr 1.25fr 1.25fr 0.95fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  padding-top: 20px;
+  padding-bottom: 32px;
 }
 
 .home-footer__column {
   display: grid;
   align-content: start;
-  gap: 12px;
-  min-height: 236px;
-  padding: 8px 24px 10px;
-  border-right: 1px solid rgba(255, 250, 243, 0.08);
+  gap: 8px;
+  padding: 0 24px 0 0;
 }
 
 .home-footer__column:last-child {
-  border-right: 0;
+  padding-right: 0;
 }
 
 .home-footer__column h3 {
-  margin-bottom: 4px;
-  font-size: 17px;
+  margin-bottom: 6px;
+  font-size: 11px;
   font-weight: 700;
-  color: #fff6ea;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cm-text-tertiary);
 }
 
 .home-footer__link {
@@ -535,17 +502,17 @@ onMounted(loadHomePage)
   padding: 0;
   border: 0;
   background: transparent;
-  color: rgba(255, 244, 230, 0.72);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.55;
+  color: var(--cm-text-secondary);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
   text-align: left;
   cursor: pointer;
   transition: color var(--cm-transition-micro);
 }
 
 .home-footer__link:hover {
-  color: #ffffff;
+  color: var(--cm-text);
 }
 
 .home-footer__bottom {
@@ -553,10 +520,10 @@ onMounted(loadHomePage)
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 26px 0 0;
-  border-top: 1px solid rgba(255, 250, 243, 0.08);
-  color: rgba(255, 244, 230, 0.58);
-  font-size: 14px;
+  padding: 16px 0 32px;
+  border-top: 1px solid rgba(88, 62, 43, 0.08);
+  color: var(--cm-text-tertiary);
+  font-size: 12px;
 }
 
 @media (max-width: 960px) {
@@ -574,11 +541,16 @@ onMounted(loadHomePage)
 
   .home-footer__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px 0;
+    gap: 32px 0;
+    padding-bottom: 32px;
+  }
+
+  .home-footer__column {
+    padding-right: 16px;
   }
 
   .home-footer__column:nth-child(2n) {
-    border-right: 0;
+    padding-right: 0;
   }
 }
 
@@ -597,36 +569,27 @@ onMounted(loadHomePage)
   }
 
   .home-stats__card,
-  .home-entry-card,
-  .home-footer__inner {
+  .home-entry-card {
     padding: 24px;
   }
 
-  .home-footer__top {
-    padding: 0 0 18px;
+  .home-footer__inner {
+    padding-top: 28px;
   }
 
   .home-footer__grid {
-    grid-template-columns: 1fr;
-    border-top: 0;
-    padding-top: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 0;
+    padding-bottom: 20px;
   }
 
-  .home-footer__column {
-    min-height: auto;
-    padding: 0 0 20px;
-    border-right: 0;
-    border-bottom: 1px solid rgba(255, 250, 243, 0.08);
-  }
-
-  .home-footer__column:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
+  .home-footer__column:nth-child(2n) {
+    padding-right: 0;
   }
 
   .home-footer__bottom {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    padding-bottom: 24px;
   }
 }
 </style>
