@@ -1,9 +1,10 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from '@/plugins/element-plus-services'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
 import HomeFeaturedRail from '@/components/home/HomeFeaturedRail.vue'
+import HomeStatsNetwork from '@/components/home/HomeStatsNetwork.vue'
 import { useRecommendStore } from '@/stores/recommend'
 
 const router = useRouter()
@@ -11,8 +12,13 @@ const recommendStore = useRecommendStore()
 
 const loading = ref(false)
 const loadError = ref(false)
+const activeMetricId = ref('students')
+const reducedMotion = ref(false)
 
 const shouldShowRail = computed(() => loading.value || recommendStore.homeRecommendList.length > 0)
+
+let statsRotationTimer = null
+let reducedMotionQuery = null
 
 const introHighlights = [
   {
@@ -32,26 +38,39 @@ const introHighlights = [
   }
 ]
 
-const statCards = [
+const statsMetrics = [
   {
+    id: 'students',
     value: '12K+',
     label: '认证学生',
-    desc: '买家、卖家和校内小店主，都在同一张可信网络里。',
-    tilt: 'left'
+    desc: '买家、卖家和校园店主都在同一张可信网络里'
   },
   {
+    id: 'shops',
+    value: '860+',
+    label: '校园店铺',
+    desc: '长期经营的小店、社团摊位和个人卖家持续入驻'
+  },
+  {
+    id: 'products',
     value: '28K+',
-    label: '在售商品',
-    desc: '教材、数码、宿舍用品、轻服务，持续上新。',
-    tilt: 'right'
+    label: '上架商品',
+    desc: '教材、数码、宿舍用品和校园服务持续更新'
   },
   {
+    id: 'regions',
     value: '150+',
-    label: '覆盖场景',
-    desc: '学习、生活、副业——校园里的交易需求基本都在这里。',
-    tilt: 'left'
+    label: '覆盖地区',
+    desc: '学习、生活、副业和社群场景逐步连接起来'
   }
 ]
+
+const activeMetricIndex = computed(() => {
+  const index = statsMetrics.findIndex((metric) => metric.id === activeMetricId.value)
+  return index >= 0 ? index : 0
+})
+const activeMetricColumn = computed(() => activeMetricIndex.value % 2)
+const activeMetricRow = computed(() => Math.floor(activeMetricIndex.value / 2))
 
 const entryCards = [
   {
@@ -131,7 +150,86 @@ function openProduct(product) {
   router.push(`/app/products/${product.id}`)
 }
 
-onMounted(loadHomePage)
+function clearStatsRotation() {
+  if (statsRotationTimer) {
+    window.clearTimeout(statsRotationTimer)
+    statsRotationTimer = null
+  }
+}
+
+function advanceMetric() {
+  const currentIndex = statsMetrics.findIndex((metric) => metric.id === activeMetricId.value)
+  const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % statsMetrics.length : 0
+  activeMetricId.value = statsMetrics[nextIndex].id
+}
+
+function scheduleStatsRotation() {
+  clearStatsRotation()
+
+  if (reducedMotion.value) {
+    return
+  }
+
+  statsRotationTimer = window.setTimeout(() => {
+    advanceMetric()
+    scheduleStatsRotation()
+  }, 10000)
+}
+
+function selectStatsMetric(metricId) {
+  activeMetricId.value = metricId
+  scheduleStatsRotation()
+}
+
+function updateReducedMotionState(event) {
+  reducedMotion.value = event.matches
+}
+
+function bindReducedMotionQuery() {
+  if (!window.matchMedia) {
+    scheduleStatsRotation()
+    return
+  }
+
+  reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  updateReducedMotionState(reducedMotionQuery)
+
+  if (reducedMotionQuery.addEventListener) {
+    reducedMotionQuery.addEventListener('change', updateReducedMotionState)
+  } else {
+    reducedMotionQuery.addListener(updateReducedMotionState)
+  }
+
+  scheduleStatsRotation()
+}
+
+function unbindReducedMotionQuery() {
+  if (!reducedMotionQuery) {
+    return
+  }
+
+  if (reducedMotionQuery.removeEventListener) {
+    reducedMotionQuery.removeEventListener('change', updateReducedMotionState)
+  } else {
+    reducedMotionQuery.removeListener(updateReducedMotionState)
+  }
+
+  reducedMotionQuery = null
+}
+
+watch(reducedMotion, () => {
+  scheduleStatsRotation()
+})
+
+onMounted(() => {
+  loadHomePage()
+  bindReducedMotionQuery()
+})
+
+onBeforeUnmount(() => {
+  clearStatsRotation()
+  unbindReducedMotionQuery()
+})
 </script>
 
 <template>
@@ -163,23 +261,53 @@ onMounted(loadHomePage)
       </div>
     </section>
 
-    <section class="home-stats shell-container">
-      <div class="home-stats__heading">
-        <span class="eyebrow">平台数据</span>
-        <h2>已经有很多同学在这里了。</h2>
+    <section class="home-stats">
+      <div class="home-stats__inner shell-container">
+        <div class="home-stats__heading">
+          <span class="eyebrow">平台数据</span>
+          <h2>校园交易网络正在变密。</h2>
+        </div>
+
+        <div
+          class="home-stats__metrics"
+          :class="{ 'is-reduced-motion': reducedMotion }"
+          role="tablist"
+          aria-label="平台数据指标"
+          :style="{
+            '--active-stat-index': activeMetricIndex,
+            '--active-stat-column': activeMetricColumn,
+            '--active-stat-row': activeMetricRow,
+            '--stat-count': statsMetrics.length
+          }"
+        >
+          <button
+            v-for="item in statsMetrics"
+            :id="`home-stat-tab-${item.id}`"
+            :key="item.id"
+            type="button"
+            class="home-stats__metric"
+            :class="{ 'is-active': item.id === activeMetricId }"
+            role="tab"
+            :aria-selected="item.id === activeMetricId"
+            :aria-controls="'home-stats-network'"
+            @click="selectStatsMetric(item.id)"
+          >
+            <strong>{{ item.value }}</strong>
+            <span class="home-stats__metric-label">{{ item.label }}</span>
+            <span class="home-stats__metric-desc">{{ item.desc }}</span>
+            <span class="home-stats__metric-flow" />
+          </button>
+        </div>
       </div>
 
-      <div class="home-stats__grid">
-        <article
-          v-for="item in statCards"
-          :key="item.label"
-          class="home-stats__card"
-          :class="item.tilt === 'left' ? 'home-stats__card--left' : 'home-stats__card--right'"
-        >
-          <strong>{{ item.value }}</strong>
-          <h3>{{ item.label }}</h3>
-          <p>{{ item.desc }}</p>
-        </article>
+      <div id="home-stats-network" class="home-stats__stage-band" role="tabpanel" :aria-labelledby="`home-stat-tab-${activeMetricId}`">
+        <div class="home-stats__stage">
+          <HomeStatsNetwork
+            :metrics="statsMetrics"
+            :active-metric-id="activeMetricId"
+            :reduced-motion="reducedMotion"
+          />
+        </div>
       </div>
     </section>
 
@@ -338,14 +466,31 @@ onMounted(loadHomePage)
   box-shadow: none;
 }
 
-.home-stats,
 .home-entries,
 .home-footer {
   display: grid;
   gap: 24px;
 }
 
-.home-stats,
+.home-stats {
+  position: relative;
+  display: grid;
+  gap: 0;
+  margin-top: 8px;
+  padding-top: 12px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 64%, rgba(var(--cm-primary-rgb), 0.08), transparent 56%),
+    linear-gradient(180deg, rgba(255, 250, 243, 0) 0%, rgba(255, 250, 243, 0.78) 12%, #fffaf3 32%, #f8efe4 74%, rgba(255, 250, 243, 0.72) 100%);
+}
+
+.home-stats__inner {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 24px;
+}
+
 .home-entries {
   margin-top: 8px;
 }
@@ -359,31 +504,193 @@ onMounted(loadHomePage)
 
 .home-stats__heading h2,
 .home-entries__heading h2 {
-  font-size: clamp(28px, 4vw, 46px);
+  font-size: 42px;
   line-height: 1.05;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
-.home-stats__grid,
 .home-entries__grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 22px;
 }
 
-.home-stats__card,
 .home-entry-card {
   display: grid;
   gap: 12px;
   padding: 30px;
 }
 
-.home-stats__card {
-  border-radius: 28px;
-  background: rgba(255, 252, 248, 0.78);
-  border: 1px solid rgba(88, 62, 43, 0.08);
-  box-shadow: 0 28px 72px rgba(88, 62, 43, 0.09);
-  backdrop-filter: blur(10px);
+.home-stats__metrics {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  overflow: hidden;
+  border-top: 1px solid rgba(88, 62, 43, 0.08);
+  border-bottom: 1px solid rgba(88, 62, 43, 0.05);
+  background:
+    linear-gradient(90deg, rgba(88, 62, 43, 0.035) 1px, transparent 1px) 25% 0 / 25% 100% no-repeat,
+    linear-gradient(180deg, rgba(255, 250, 243, 0.38), rgba(255, 250, 243, 0.14));
+}
+
+.home-stats__metrics::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  width: calc(100% / var(--stat-count, 4));
+  background:
+    linear-gradient(180deg, rgba(255, 250, 243, 0.9), rgba(255, 250, 243, 0.42)),
+    linear-gradient(135deg, rgba(var(--cm-primary-rgb), 0.12), rgba(var(--cm-accent-rgb), 0.08));
+  box-shadow:
+    inset 0 -2px 0 var(--cm-text),
+    0 18px 44px rgba(88, 62, 43, 0.07);
+  transform: translateX(calc(var(--active-stat-index, 0) * 100%));
+  transition:
+    transform 660ms var(--cm-ease-enter),
+    background-color var(--cm-transition);
+}
+
+.home-stats__metrics::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(36, 25, 20, 0.12), transparent);
+}
+
+.home-stats__metric {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 168px;
+  padding: 24px 22px;
+  border: 0;
+  background: transparent;
+  color: var(--cm-text-tertiary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color var(--cm-transition),
+    background-color var(--cm-transition);
+}
+
+.home-stats__metric:hover,
+.home-stats__metric:focus-visible,
+.home-stats__metric.is-active {
+  color: var(--cm-text);
+  background: transparent;
+}
+
+.home-stats__metric:focus-visible {
+  outline: 2px solid rgba(var(--cm-primary-rgb), 0.32);
+  outline-offset: -2px;
+}
+
+.home-stats__metric strong {
+  font-size: 48px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.home-stats__metric-label {
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.home-stats__metric-desc {
+  max-width: 220px;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.65;
+  opacity: 0.82;
+}
+
+.home-stats__metric-flow {
+  position: absolute;
+  right: 22px;
+  bottom: 13px;
+  left: 22px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(36, 25, 20, 0.1);
+  opacity: 0;
+  transform: scaleX(0.4);
+  transform-origin: left center;
+  transition: opacity var(--cm-transition), transform var(--cm-transition);
+}
+
+.home-stats__metric-flow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--cm-text), rgba(var(--cm-primary-rgb), 0.42));
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.home-stats__metric.is-active .home-stats__metric-flow {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.home-stats__metric.is-active .home-stats__metric-flow::after {
+  animation: homeStatsMetricFlow 10s linear infinite;
+}
+
+.home-stats__metrics.is-reduced-motion .home-stats__metric-flow::after {
+  animation: none;
+  transform: scaleX(1);
+  opacity: 0.42;
+}
+
+.home-stats__stage-band {
+  position: relative;
+  overflow: hidden;
+  margin-top: -1px;
+  background:
+    radial-gradient(circle at 50% 96%, rgba(var(--cm-primary-rgb), 0.11), transparent 58%),
+    linear-gradient(180deg, rgba(255, 250, 243, 0.62) 0%, #fffaf3 16%, #f8efe4 66%, rgba(255, 250, 243, 0.68) 100%);
+}
+
+.home-stats__stage-band::before,
+.home-stats__stage-band::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.home-stats__stage-band::before {
+  top: 0;
+  height: 112px;
+  background: linear-gradient(180deg, rgba(255, 250, 243, 0.9) 0%, rgba(255, 250, 243, 0.34) 48%, rgba(255, 250, 243, 0) 100%);
+}
+
+.home-stats__stage-band::after {
+  bottom: 0;
+  height: 88px;
+  background: linear-gradient(0deg, rgba(255, 250, 243, 0.76) 0%, rgba(255, 250, 243, 0) 100%);
+}
+
+.home-stats__stage {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  padding: 0;
 }
 
 .home-entry-card {
@@ -399,29 +706,12 @@ onMounted(loadHomePage)
   border-color: rgba(88, 62, 43, 0.18);
 }
 
-.home-stats__card--left {
-  transform: rotate(-3deg) translateY(8px);
-}
-
-.home-stats__card--right {
-  transform: rotate(3deg) translateY(-8px);
-}
-
-.home-stats__card strong {
-  font-size: clamp(42px, 5vw, 68px);
-  line-height: 0.92;
-  letter-spacing: -0.06em;
-  color: var(--cm-text);
-}
-
-.home-stats__card h3,
 .home-entry-card h3 {
   font-size: 20px;
   line-height: 1.3;
   color: var(--cm-text);
 }
 
-.home-stats__card p,
 .home-entry-card p {
   color: var(--cm-text-secondary);
   font-size: 14px;
@@ -528,14 +818,33 @@ onMounted(loadHomePage)
 
 @media (max-width: 960px) {
   .home-hero__highlights,
-  .home-stats__grid,
   .home-entries__grid {
     grid-template-columns: 1fr;
   }
 
-  .home-hero__highlight,
-  .home-stats__card--left,
-  .home-stats__card--right {
+  .home-stats__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    background: rgba(255, 250, 243, 0.26);
+  }
+
+  .home-stats__metrics::before {
+    width: 50%;
+    height: 50%;
+    transform: translate(
+      calc(var(--active-stat-column, 0) * 100%),
+      calc(var(--active-stat-row, 0) * 100%)
+    );
+  }
+
+  .home-stats__metric:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .home-stats__metric:nth-child(n + 3) {
+    box-shadow: inset 0 1px 0 rgba(88, 62, 43, 0.08);
+  }
+
+  .home-hero__highlight {
     transform: none;
   }
 
@@ -568,7 +877,27 @@ onMounted(loadHomePage)
     line-height: 1.04;
   }
 
-  .home-stats__card,
+  .home-stats__heading h2,
+  .home-entries__heading h2 {
+    font-size: 32px;
+    line-height: 1.12;
+  }
+
+  .home-stats__metric {
+    min-height: 154px;
+    padding: 20px 16px;
+  }
+
+  .home-stats__metric-flow {
+    right: 16px;
+    bottom: 10px;
+    left: 16px;
+  }
+
+  .home-stats__metric strong {
+    font-size: 38px;
+  }
+
   .home-entry-card {
     padding: 24px;
   }
@@ -590,6 +919,16 @@ onMounted(loadHomePage)
   .home-footer__bottom {
     flex-direction: row;
     padding-bottom: 24px;
+  }
+}
+
+@keyframes homeStatsMetricFlow {
+  0% {
+    transform: scaleX(0);
+  }
+
+  100% {
+    transform: scaleX(1);
   }
 }
 </style>

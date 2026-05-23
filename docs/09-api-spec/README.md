@@ -4,13 +4,16 @@ This directory stores the formal API contract documents for `Youyu`.
 
 ## Current Modules
 
-- `auth.md`: authentication and current-user context
-- `product.md`: product browse, detail, publish, and seller operations
-- `order.md`: buyer order flow and admin order operations
-- `report.md`: user-side report submission and admin-side report processing
-- `search.md`: hot ranking, suggestions, governance rules, and search logs
-- `user.md`: authenticated user profile, preference, verification, address, and insight endpoints
 - `admin.md`: admin-side governance, review, and operational endpoints
+- `auth.md`: authentication and current-user context
+- `order.md`: buyer order flow and admin order operations
+- `product.md`: product browse, detail, publish, and seller operations
+- `recommend.md`: home and also-bought recommendation endpoints
+- `report.md`: user-side report submission and admin-side report processing
+- `review.md`: product and shop review endpoints
+- `search.md`: hot ranking, suggestions, governance rules, and search logs
+- `shop.md`: public and authenticated shop endpoints
+- `user.md`: authenticated user profile, preference, verification, address, and insight endpoints
 
 ## Source-Of-Truth Layers
 

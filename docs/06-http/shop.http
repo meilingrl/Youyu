@@ -1,0 +1,67 @@
+### Youyu - Shops
+### Run this file to validate public and authenticated shop endpoints.
+
+@baseUrl = http://localhost:8080
+@userToken = mock-1001-USER
+
+# ------------------------------------------------------------
+# Public shop endpoints
+# ------------------------------------------------------------
+
+### Shop module skeleton
+GET {{baseUrl}}/api/shops/skeleton
+
+###
+
+### Public shop detail
+GET {{baseUrl}}/api/shops/4001
+
+###
+
+### Public shop detail - non-existent shop
+GET {{baseUrl}}/api/shops/99999
+
+###
+
+### Shop insight snapshot
+GET {{baseUrl}}/api/shops/4001/insight-snapshot
+
+###
+
+### Public shop review list
+GET {{baseUrl}}/api/shops/4001/reviews?page=1&pageSize=10
+
+###
+
+### Public shop review summary
+GET {{baseUrl}}/api/shops/4001/review-summary
+
+# ------------------------------------------------------------
+# Authenticated user shop endpoints
+# ------------------------------------------------------------
+
+###
+
+### Get my shop
+GET {{baseUrl}}/api/shops/mine
+Authorization: Bearer {{userToken}}
+
+###
+
+### Apply for a shop
+### Note: seed users may already have a shop or pending application.
+POST {{baseUrl}}/api/shops/applications
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "name": "HTTP Test Campus Shop",
+  "description": "A shop application created from the HTTP validation collection.",
+  "coverUrl": "https://example.com/shop-cover.jpg",
+  "announcement": "Open for campus pickup."
+}
+
+###
+
+### Get my shop - missing auth
+GET {{baseUrl}}/api/shops/mine

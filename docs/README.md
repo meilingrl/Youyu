@@ -86,12 +86,15 @@ Formal API specification documents.
 - field definitions
 - error-code documentation
 - current module specs:
-  - `auth.md`
   - `admin.md`
-  - `product.md`
+  - `auth.md`
   - `order.md`
+  - `product.md`
+  - `recommend.md`
+  - `report.md`
   - `review.md`
   - `search.md`
+  - `shop.md`
   - `user.md`
 
 ## Reading Order

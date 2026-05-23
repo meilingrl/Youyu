@@ -1,3 +1,72 @@
+## [2026-05-23] - Home platform data visual polish
+
+### fix
+- Removed extra static Canvas anchor particles from the homepage platform-data network scenes
+- Removed the product-scene fixed endpoint rows and horizontal guide-line treatment so the stage no longer reads as having repeated baseline lines
+- Adjusted the student scene to use straight network segments, removed the shop scene's fixed endpoint/throat particles, and restored the product scene's upper/lower endpoint rows
+- Softened the platform-data section boundary with a shared warm background gradient and Canvas edge fades
+- Loosened the authenticated-student network and transition cluster so particles no longer gather into a tight center ring
+- Reworked the covered-region scene toward a Stripe-like hemisphere fan with a left-side connection hub while keeping the warm Youyu palette
+
+### docs
+- Archived `docs/08-tasks/archived/home-platform-data-visual-polish.md` for the feedback polish pass
+
+### test
+- Ran `frontend\\npm test`
+- Ran `frontend\\npm run build`
+- Ran Playwright visual smoke checks for the desktop Canvas themes, mobile static rendering, and reduced-motion static rendering
+
+## [2026-05-23] - API spec recommend and shop completion
+
+### docs
+- Added `docs/09-api-spec/recommend.md` covering home and also-bought recommendation endpoints
+- Added `docs/09-api-spec/shop.md` covering public shop detail, shop insight, current-user shop, shop applications, and shop-hosted review endpoints
+- Added `docs/06-http/shop.http` as the dedicated shop validation collection
+- Updated API spec indexes and current roadmap status so formal API specs are complete for current modules; future spec maintenance is deferred until UI/UX decisions create endpoint changes
+- Archived `docs/08-tasks/active/api-spec-standardization-follow-up.md` after delivery
+
+## [2026-05-23] - Home platform data interaction refinement
+
+### feat
+- Refined the homepage `平台数据` metric labels into a connected strip with a sliding active highlight and active-cycle progress line
+- Reworked `HomeStatsNetwork.vue` around a single morphing curve/particle field so themes share one underlying system and collapse into a center cluster before expanding into the next scene
+- Added desktop pointer interaction for the Canvas network so nearby lines and particles respond to cursor movement without replacing the native cursor or drawing pointer rings
+- Strengthened the four scene silhouettes with structural guide lines, especially the `覆盖地区` hemisphere grid and cross-region arcs
+
+### docs
+- Archived `docs/08-tasks/archived/home-platform-data-interaction-refinement.md` for the follow-up interaction pass
+
+### test
+- Ran `frontend\\npm test`
+- Ran `frontend\\npm run build`
+- Ran Playwright smoke checks for sliding metric highlight, center-collapse theme transition, pointer interaction, mobile static rendering, mobile overflow, and reduced-motion static rendering
+
+## [2026-05-23] - Document reality calibration
+
+### docs
+- Restored current roadmap state so hot-search P3 is treated as completed instead of pending, matching archived task records and current code
+- Corrected database baseline docs to state MySQL is the local/dev runtime database and H2 is test-only
+- Updated API specification planning status: formal specs are in progress with `recommend` and `shop` remaining, and activated the follow-up task for those modules
+
+### test
+- Ran `backend\\mvnw.cmd -Dtest=YouyuBackendApplicationTests#searchSuggestionUsesLogPrefixAndDoesNotCreateExtraLogs+searchSuggestionHonorsGovernanceAndPinnedOrdering test`
+
+## [2026-05-23] - Home platform data network stage
+
+### feat
+- Replaced the homepage `平台数据` card grid with four clickable metric labels and a full-width Canvas stage for the campus transaction network
+- Added `frontend/src/components/home/HomeStatsNetwork.vue` with native Canvas 2D themes for authenticated students, campus shops, listed products, and covered regions
+- Added 10-second metric auto-rotation, click-to-switch behavior, and static Canvas rendering for mobile and reduced-motion states
+
+### docs
+- Archived `docs/08-tasks/archived/home-platform-data-network-stage.md` as the task record for the homepage platform data redesign
+
+### test
+- Ran `backend\\mvnw.cmd test`
+- Ran `frontend\\npm test`
+- Ran `frontend\\npm run build`
+- Ran Playwright smoke checks for desktop canvas animation, metric click switching, mobile static rendering, mobile overflow, and reduced-motion static rendering
+
 ## [2026-05-23] - Repository-wide project rename to Youyu
 
 ### chore
