@@ -1,6 +1,6 @@
 import { getStorage, removeStorage, setStorage } from './storage'
 
-const AUTH_STORAGE_KEY = 'campus-market-auth'
+const AUTH_STORAGE_KEY = 'youyu-auth'
 
 /**
  * 从 localStorage 读取认证会话数据。

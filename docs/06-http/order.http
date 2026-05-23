@@ -1,4 +1,4 @@
-### CampusMarket — Cart, Orders & Payment
+### Youyu — Cart, Orders & Payment
 ### Run this file after every change to cart, order, or payment endpoints.
 
 @baseUrl = http://localhost:8080

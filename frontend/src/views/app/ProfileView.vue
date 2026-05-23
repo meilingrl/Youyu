@@ -43,7 +43,7 @@ onMounted(loadProfileData)
     <section class="shell-card profile-hero">
       <img :src="profile.avatar" :alt="profile.nickname" class="profile-avatar" />
       <div class="profile-hero__content">
-        <span class="eyebrow">{{ profile.school || 'CampusMarket' }}</span>
+        <span class="eyebrow">{{ profile.school || 'Youyu' }}</span>
         <h1>{{ profile.nickname }}</h1>
         <p>{{ profile.bio || '还没有填写个人简介' }}</p>
         <div class="detail-inline-metrics">

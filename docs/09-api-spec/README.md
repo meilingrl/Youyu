@@ -1,26 +1,29 @@
 # API Specification Directory
 
-This directory stores the formal API contract documents for `CampusMarket`.
+This directory stores the formal API contract documents for `Youyu`.
 
 ## Current Modules
 
-- `auth.md`: authentication and current-user context
-- `product.md`: product browse, detail, publish, and seller operations
-- `order.md`: buyer order flow and admin order operations
-- `report.md`: user-side report submission and admin-side report processing
-- `search.md`: hot ranking, suggestions, governance rules, and search logs
-- `user.md`: authenticated user profile, preference, verification, address, and insight endpoints
 - `admin.md`: admin-side governance, review, and operational endpoints
+- `auth.md`: authentication and current-user context
+- `order.md`: buyer order flow and admin order operations
+- `product.md`: product browse, detail, publish, and seller operations
+- `recommend.md`: home and also-bought recommendation endpoints
+- `report.md`: user-side report submission and admin-side report processing
+- `review.md`: product and shop review endpoints
+- `search.md`: hot ranking, suggestions, governance rules, and search logs
+- `shop.md`: public and authenticated shop endpoints
+- `user.md`: authenticated user profile, preference, verification, address, and insight endpoints
 
 ## Source-Of-Truth Layers
 
 The repository currently maintains three API-related layers with different responsibilities:
 
 1. Runtime truth
-   - `backend/src/main/java/com/campusmarket/backend/controller/**`
-   - `backend/src/main/java/com/campusmarket/backend/controller/advice/GlobalExceptionHandler.java`
-   - `backend/src/main/java/com/campusmarket/backend/common/api/ApiResponse.java`
-   - `backend/src/main/java/com/campusmarket/backend/common/api/ResultCode.java`
+   - `backend/src/main/java/com/youyu/backend/controller/**`
+   - `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
+   - `backend/src/main/java/com/youyu/backend/common/api/ApiResponse.java`
+   - `backend/src/main/java/com/youyu/backend/common/api/ResultCode.java`
 2. Formal contract
    - `docs/09-api-spec/*.md`
    - Stable caller-facing endpoint contracts, field definitions, response envelope rules, and error semantics

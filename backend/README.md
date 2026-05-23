@@ -1,16 +1,16 @@
 # Backend
 
-Spring Boot 3.3 backend for CampusMarket. Layered by domain: `controller / service / mapper / entity / config / filter / listener`.
+Spring Boot 3.3 backend for Youyu. Layered by domain: `controller / service / mapper / entity / config / filter / listener`.
 
 ## Run locally
 
-**Prerequisite**: MySQL 8+ on `localhost:3306`, database `campus_market` created. Set credentials via `MYSQL_PASSWORD` env var or edit `application.yml`.
+**Prerequisite**: MySQL 8+ on `localhost:3306`, database `youyu` created. Set credentials via `MYSQL_PASSWORD` env var or edit `application.yml`.
 
 ### Environment variables
 
 | Name | Required | Default | Description |
 |------|----------|---------|-------------|
-| `MYSQL_PASSWORD` | local: optional, deploy: yes | `yinkaixin123` | MySQL password for the `campus_market` schema |
+| `MYSQL_PASSWORD` | local: optional, deploy: yes | `yinkaixin123` | MySQL password for the `youyu` schema |
 | `APP_JWT_SECRET` | local: optional, deploy: **yes** | committed dev secret | JWT signing secret (≥32 chars); falls back to a dev default when running with profile `dev` / `seed` / `test` |
 
 **Production checklist**: `APP_JWT_SECRET` MUST be exported (≥32 chars) before booting any non-dev/seed/test profile. The application fails fast at startup if the committed dev default is detected under any other active profile.
@@ -37,7 +37,7 @@ Tests use H2 in-memory — no MySQL required.
 
 ```bash
 mvnw.cmd test                                          # all tests
-mvnw.cmd test -Dtest=CampusMarketBackendApplicationTests  # single class
+mvnw.cmd test -Dtest=YouyuBackendApplicationTests  # single class
 ```
 
 H2 console (test profile only): `http://localhost:8080/h2-console`  

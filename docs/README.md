@@ -1,6 +1,6 @@
-# CampusMarket Documentation
+# Youyu Documentation
 
-This directory is the single structured documentation workspace for `CampusMarket`.
+This directory is the single structured documentation workspace for `Youyu`.
 
 The goal of this system is not to collect notes indefinitely. It is to keep product intent, engineering rules, roadmaps, API contracts, and executable tasks separated clearly enough that both humans and AI agents can work without guessing.
 
@@ -86,12 +86,15 @@ Formal API specification documents.
 - field definitions
 - error-code documentation
 - current module specs:
-  - `auth.md`
   - `admin.md`
-  - `product.md`
+  - `auth.md`
   - `order.md`
+  - `product.md`
+  - `recommend.md`
+  - `report.md`
   - `review.md`
   - `search.md`
+  - `shop.md`
   - `user.md`
 
 ## Reading Order

@@ -15,7 +15,7 @@
 
 本节区分“当前已落地运行基线”和“课程/后续目标路线”。
 
-当前阶段不得把 MySQL/MyBatis 目标误读为必须立即全量迁移。除非任务明确要求迁移，否则新增 MVP 收口工作应优先沿用当前 H2 file + JDBC 基线。
+当前应用运行基线已经是 MySQL + JDBC。H2 只作为自动化测试数据库使用，不再作为本地或开发运行数据库。MyBatis 仍是课程约束中的目标技术点，后续引入时必须有独立任务说明迁移范围、兼容策略和测试要求。
 
 ### 2.1 前端
 
@@ -37,19 +37,19 @@
 
 ### 2.3 数据库
 
-- 当前默认运行数据库：H2 file，路径为 `~/.campusmarket/h2/campusmarket`
-- 当前测试数据库：H2 in-memory
-- 当前 H2 配置使用 MySQL compatibility mode，便于后续迁移审计
-- 目标数据库方向：`MySQL`
+- 当前默认运行数据库：MySQL 8，默认连接 `localhost:3306/youyu`
+- 当前后端 schema 来源：`backend/src/main/resources/schema.sql`
+- 当前数据访问方式：JDBC / `JdbcTemplate` / mapper 实现
+- 当前测试数据库：H2 in-memory，使用 MySQL compatibility mode 保障快速测试
 - `database/001_mvp_init.sql` 是 MySQL 8 设计资产和迁移参考，不是当前默认启动脚本
-- 后续可通过 MySQL profile、Flyway 和 MyBatis mapper 逐步迁移，但必须以独立任务或 ADR 明确决策
+- 后续如引入 MyBatis、Flyway 或容器化 MySQL 测试，必须以独立任务或 ADR 明确决策
 
 ### 2.4 当前阶段选择原则
 
-- 小体量 MVP 收口任务：沿用 H2 file + JDBC
-- 新增持久化表：优先在现有 `schema.sql` 风格下做兼容性设计，并同步数据库文档
-- MySQL/MyBatis/Flyway：仅在专门迁移任务中引入
-- 后端集成测试：默认继续使用 H2，确保本地和 CI 可快速运行
+- 本地和演示运行：使用 MySQL 8
+- 新增持久化表：优先在现有 `schema.sql` 风格下做 MySQL 兼容设计，并保持 H2 测试通过
+- MyBatis/Flyway：仅在专门迁移任务中引入
+- 后端自动化测试：默认继续使用 H2 in-memory，确保本地和 CI 可快速运行
 
 ## 3. 当前阶段架构原则
 

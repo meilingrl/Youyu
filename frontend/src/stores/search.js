@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 import { getStorage, setStorage } from '@/utils/storage'
 import { getHotSearchList, getSearchSuggestions } from '@/api/modules/search'
 
-const SEARCH_HISTORY_KEY = 'campus-market-search-history'
+const SEARCH_HISTORY_KEY = 'youyu-search-history'
 const HISTORY_LIMIT = 8
 const SUGGESTION_LIMIT = 8
 

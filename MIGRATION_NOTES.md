@@ -1,6 +1,6 @@
 # Migration Notes
 
-- Main project content was copied from `E:\NEU\大二下\web开发技术\CampusMarket`
+- Main project content was copied from `E:\NEU\大二下\web开发技术\Youyu`
 - This folder is intended to become the new clean project home for `Youyu`
 - Runtime and cache directories were intentionally excluded, including:
   - `.claude/`

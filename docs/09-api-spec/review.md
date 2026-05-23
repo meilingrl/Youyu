@@ -4,10 +4,10 @@
 
 - Status: active
 - Source of truth:
-  - controller: `backend/src/main/java/com/campusmarket/backend/controller/review/ReviewController.java`
-  - controller: `backend/src/main/java/com/campusmarket/backend/controller/product/ProductController.java` (public review list and summary)
-  - controller: `backend/src/main/java/com/campusmarket/backend/controller/shop/ShopController.java` (public shop review list and summary)
-  - service: `backend/src/main/java/com/campusmarket/backend/service/review/impl/ReviewServiceImpl.java`
+  - controller: `backend/src/main/java/com/youyu/backend/controller/review/ReviewController.java`
+  - controller: `backend/src/main/java/com/youyu/backend/controller/product/ProductController.java` (public review list and summary)
+  - controller: `backend/src/main/java/com/youyu/backend/controller/shop/ShopController.java` (public shop review list and summary)
+  - service: `backend/src/main/java/com/youyu/backend/service/review/impl/ReviewServiceImpl.java`
   - request sample: `docs/06-http/review.http`
 - Last updated: 2026-05-20
 

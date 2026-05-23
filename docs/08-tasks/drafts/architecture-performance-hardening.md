@@ -46,7 +46,7 @@ This task is not a broad rewrite. Its purpose is to identify and then execute a 
 
 ## Background
 
-CampusMarket has already moved beyond early scaffolding. Core transaction flow, search governance, review, recommendation, report, and admin capabilities are present, and the repository has entered a post-MVP expansion stage. At this stage, the most important risks are no longer obvious syntax or missing-feature issues, but hidden structural issues that still work under small data volume while becoming increasingly expensive as data size and feature count grow.
+Youyu has already moved beyond early scaffolding. Core transaction flow, search governance, review, recommendation, report, and admin capabilities are present, and the repository has entered a post-MVP expansion stage. At this stage, the most important risks are no longer obvious syntax or missing-feature issues, but hidden structural issues that still work under small data volume while becoming increasingly expensive as data size and feature count grow.
 
 The current codebase still retains several MVP-style implementation patterns that are acceptable during rapid feature landing, but are now risky for mid-stage evolution:
 
@@ -75,7 +75,7 @@ This pattern has several side effects:
 
 Representative code paths:
 
-- `backend/src/main/java/com/campusmarket/backend/service/admin/impl/AdminServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/service/admin/impl/AdminServiceImpl.java`
 - `dashboard()`
 - `listUsers()`
 - `listProducts()`
@@ -93,9 +93,9 @@ This creates a hidden risk because review submission is a user-facing interactiv
 
 Representative code paths:
 
-- `backend/src/main/java/com/campusmarket/backend/service/review/impl/ReviewServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/service/review/impl/ReviewServiceImpl.java`
 - `findOrderByOrderItemId()`
-- `backend/src/main/java/com/campusmarket/backend/service/transaction/support/TransactionDataStore.java`
+- `backend/src/main/java/com/youyu/backend/service/transaction/support/TransactionDataStore.java`
 - `listOrders()`
 - `findOrderItems()`
 
@@ -112,7 +112,7 @@ Risks:
 
 Representative code paths:
 
-- `backend/src/main/java/com/campusmarket/backend/mapper/product/impl/JdbcProductMapper.java`
+- `backend/src/main/java/com/youyu/backend/mapper/product/impl/JdbcProductMapper.java`
 - `findPublicByFiltersPaged()`
 - `countPublicByFilters()`
 - `backend/src/main/resources/schema.sql`
@@ -212,12 +212,12 @@ Representative file:
 - `frontend/README.md`
 - `backend/src/main/resources/schema.sql`
 - `backend/src/main/resources/application.yml`
-- `backend/src/main/java/com/campusmarket/backend/service/admin/impl/AdminServiceImpl.java`
-- `backend/src/main/java/com/campusmarket/backend/service/review/impl/ReviewServiceImpl.java`
-- `backend/src/main/java/com/campusmarket/backend/service/transaction/support/TransactionDataStore.java`
-- `backend/src/main/java/com/campusmarket/backend/mapper/product/impl/JdbcProductMapper.java`
-- `backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java`
-- `backend/src/main/java/com/campusmarket/backend/controller/order/OrderController.java`
+- `backend/src/main/java/com/youyu/backend/service/admin/impl/AdminServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/service/review/impl/ReviewServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/service/transaction/support/TransactionDataStore.java`
+- `backend/src/main/java/com/youyu/backend/mapper/product/impl/JdbcProductMapper.java`
+- `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java`
+- `backend/src/main/java/com/youyu/backend/controller/order/OrderController.java`
 - `frontend/src/views/app/ProductListView.vue`
 - `frontend/src/stores/market.js`
 - related mapper interfaces and JDBC implementations for user, report, shop, review task, search log, order, payment, and refund access

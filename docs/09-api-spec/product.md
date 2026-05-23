@@ -4,7 +4,7 @@
 
 - Status: active
 - Source of truth:
-  - controller: `backend/src/main/java/com/campusmarket/backend/controller/product/ProductController.java`
+  - controller: `backend/src/main/java/com/youyu/backend/controller/product/ProductController.java`
   - request sample: `docs/06-http/product.http`
 - Last updated: 2026-05-16
 

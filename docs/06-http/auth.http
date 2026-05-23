@@ -1,4 +1,4 @@
-### CampusMarket — Authentication & User
+### Youyu — Authentication & User
 ### Run this file after every change to auth, user profile, or verification endpoints.
 
 @baseUrl = http://localhost:8080

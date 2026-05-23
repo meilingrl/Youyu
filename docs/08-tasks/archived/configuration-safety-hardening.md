@@ -20,7 +20,7 @@ Replace the hardcoded JWT secret default in `application.yml` with an environmen
 
 Per the parent task's "Problem Summary §6" and the post-migration ledger audit:
 
-- `backend/src/main/resources/application.yml` line ~43 has `app.jwt.secret: campusmarket-dev-secret-key-replace-in-production-min32` hardcoded with no env-var override path
+- `backend/src/main/resources/application.yml` line ~43 has `app.jwt.secret: youyu-dev-secret-key-replace-in-production-min32` hardcoded with no env-var override path
 - `spring.datasource.password` already uses `${MYSQL_PASSWORD:yinkaixin123}` — JWT secret should follow the same pattern
 - Today's repository runs in `dev` profile by default; a future deploy or even an accidental `prod` profile run must NOT silently boot with the committed default
 
@@ -56,7 +56,7 @@ This is a small, surgical change. The dev experience must remain unchanged: runn
    ```yaml
    app:
      jwt:
-       secret: ${APP_JWT_SECRET:campusmarket-dev-secret-key-replace-in-production-min32}
+       secret: ${APP_JWT_SECRET:youyu-dev-secret-key-replace-in-production-min32}
    ```
    Same pattern as the existing `${MYSQL_PASSWORD:...}`. Default value stays identical so local dev does not break.
 
@@ -222,8 +222,8 @@ Completed 2026-05-22 on branch `chore/ux-polish-and-task-cleanup`.
 
 ### Changes
 - `backend/src/main/resources/application.yml` — wrapped `app.jwt.secret` with `${APP_JWT_SECRET:<dev default>}`. Dev default value unchanged.
-- `backend/src/main/java/com/campusmarket/backend/config/JwtSecretGuard.java` — new component. `@PostConstruct` validate() compares the resolved secret against the committed dev default; logs WARN under safe profiles ({dev, seed, test, default}) or empty profile, throws `IllegalStateException` otherwise.
-- `backend/src/test/java/com/campusmarket/backend/config/JwtSecretGuardTest.java` — five `ApplicationContextRunner`-based tests covering: dev profile allow, seed profile allow, no-profile allow, prod profile reject, prod-with-override allow.
+- `backend/src/main/java/com/youyu/backend/config/JwtSecretGuard.java` — new component. `@PostConstruct` validate() compares the resolved secret against the committed dev default; logs WARN under safe profiles ({dev, seed, test, default}) or empty profile, throws `IllegalStateException` otherwise.
+- `backend/src/test/java/com/youyu/backend/config/JwtSecretGuardTest.java` — five `ApplicationContextRunner`-based tests covering: dev profile allow, seed profile allow, no-profile allow, prod profile reject, prod-with-override allow.
 - `backend/README.md` — added env var table including `APP_JWT_SECRET` and a one-line production checklist.
 
 ### Delegated (per orchestrator overrides)

@@ -195,9 +195,9 @@ onBeforeUnmount(() => {
   <section class="featured-stage" aria-label="精选好物">
     <div class="featured-stage__header shell-container">
       <div class="featured-stage__heading">
-        <span class="eyebrow">Featured Picks</span>
-        <h2>精选好物</h2>
-        <p>先看这一组最值得打开的校园好物，再决定下一步去逛什么。</p>
+        <span class="eyebrow">精选推荐</span>
+        <h2>值得先看的好物。</h2>
+        <p>根据热度和评价筛出来的，随时更新。</p>
       </div>
 
       <div class="featured-stage__actions">
@@ -262,14 +262,14 @@ onBeforeUnmount(() => {
             <div class="featured-stage__vignette" />
 
             <div class="featured-stage__topline">
-              <span class="featured-stage__brand">CampusMarket</span>
+              <span class="featured-stage__brand">Youyu</span>
               <span class="featured-stage__category">{{ product.categoryName || '校园精选' }}</span>
             </div>
 
             <div class="featured-stage__content">
               <div class="featured-stage__copy">
                 <h3>{{ product.title }}</h3>
-                <p>{{ product.shopName || '校园卖家' }} · 今天值得优先打开的一件好物。</p>
+                <p>{{ product.shopName || '校园卖家' }}{{ product.categoryName ? ' · ' + product.categoryName : '' }}</p>
               </div>
 
               <div class="featured-stage__footer">

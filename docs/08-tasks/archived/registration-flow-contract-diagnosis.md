@@ -41,7 +41,7 @@ The raw issue backlog includes a real validation failure from `AuthController.re
 - `docs/06-http/auth.http`
 - `frontend/src/views/auth/LoginView.vue`
 - any register view/component and auth store/api modules
-- `backend/src/main/java/com/campusmarket/backend/controller/auth/AuthController.java`
+- `backend/src/main/java/com/youyu/backend/controller/auth/AuthController.java`
 - register request DTO and auth service files
 
 ## Allowed Changes

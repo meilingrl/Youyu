@@ -109,7 +109,7 @@ async function handleRegister() {
   <div class="login-page">
     <div class="login-page__panel shell-card auth-panel">
       <div class="login-page__intro">
-        <span class="eyebrow">CampusMarket</span>
+        <span class="eyebrow">Youyu</span>
         <h1>统一登录</h1>
         <p>
           使用同一入口登录：系统根据账号类型自动进入前台或管理后台。管理员与普通用户使用各自账号与密码；演示用户可使用学号/用户名/邮箱登录。

@@ -1,4 +1,4 @@
-name: CampusMarket CI
+name: Youyu CI
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
     runs-on: windows-latest
     defaults:
       run:
-        working-directory: CampusMarket/backend
+        working-directory: Youyu/backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
     runs-on: windows-latest
     defaults:
       run:
-        working-directory: CampusMarket/frontend
+        working-directory: Youyu/frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,7 +44,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: CampusMarket/frontend/package-lock.json
+          cache-dependency-path: Youyu/frontend/package-lock.json
 
       - name: Install dependencies
         run: npm ci

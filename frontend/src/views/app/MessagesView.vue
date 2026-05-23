@@ -102,7 +102,7 @@ const placeholderConversations = [
     id: 'support-dispute-901',
     category: 'support',
     title: '平台客服协助',
-    counterpart: 'CampusMarket Support',
+    counterpart: 'Youyu Support',
     preview: '我要反馈一个订单问题。',
     updatedAt: '昨天 11:40',
     unread: 1,

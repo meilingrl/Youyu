@@ -32,7 +32,7 @@ The frontend already has a `/app/messages` shell (placeholder) and `/admin/suppo
 2. Read `docs/02-requirements/communication-and-after-sales-boundary.md`
 3. Read `docs/03-architecture/frontend-information-architecture.md` — locate the "messages" section to see what the frontend information architecture already promised
 4. Read `docs/08-tasks/archived/ui-redesign-messages-support.md` — locate the "Deferred" / "Follow-up" section to see what the UI shell explicitly left open
-5. `grep -ni "chat\|message\|conversation" backend/src/main/java/com/campusmarket/backend/entity/ -r` — confirm there is NO chat entity yet
+5. `grep -ni "chat\|message\|conversation" backend/src/main/java/com/youyu/backend/entity/ -r` — confirm there is NO chat entity yet
 6. `grep -ni "chat\|message" backend/src/main/resources/schema.sql` — confirm there is NO chat table yet
 7. `ls frontend/src/views/app/MessagesView.vue frontend/src/views/admin/SupportView.vue` — confirm the placeholders exist
 

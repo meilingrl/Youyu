@@ -1,4 +1,4 @@
-# CampusMarket MVP 数据库开发状态说明
+# Youyu MVP 数据库开发状态说明
 
 ## 1. 当前阶段结论
 

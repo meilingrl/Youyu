@@ -1,4 +1,4 @@
-﻿# Task: API Spec Report Module Standardization
+# Task: API Spec Report Module Standardization
 
 ## Metadata
 
@@ -26,9 +26,9 @@ Run and paste into Final Report section B:
 1. `ls docs/09-api-spec/` — confirm `report.md` is absent
 2. Read `docs/09-api-spec/API_SPEC_TEMPLATE.md` end-to-end
 3. Read `docs/09-api-spec/admin.md` and `docs/09-api-spec/user.md` to internalize the house style (response envelope phrasing, error semantics section, `.http` cross-reference table)
-4. `grep -n "^\s*@\(Get\|Post\|Put\|Delete\|Patch\)Mapping\|@LoginRequired" backend/src/main/java/com/campusmarket/backend/controller/report/ReportController.java`
-5. `grep -n "report" backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java` — capture admin-side report endpoints
-6. Read `backend/src/main/java/com/campusmarket/backend/service/report/impl/ReportServiceImpl.java` to confirm response field set
+4. `grep -n "^\s*@\(Get\|Post\|Put\|Delete\|Patch\)Mapping\|@LoginRequired" backend/src/main/java/com/youyu/backend/controller/report/ReportController.java`
+5. `grep -n "report" backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java` — capture admin-side report endpoints
+6. Read `backend/src/main/java/com/youyu/backend/service/report/impl/ReportServiceImpl.java` to confirm response field set
 7. Read `docs/06-http/report.http` and diff against the endpoint inventory from steps 4-5
 
 ## Files to Read
@@ -39,11 +39,11 @@ Run and paste into Final Report section B:
 - `docs/09-api-spec/admin.md` (as style reference)
 - `docs/09-api-spec/user.md` (as style reference)
 - `docs/06-http/report.http`
-- `backend/src/main/java/com/campusmarket/backend/controller/report/ReportController.java`
-- `backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java` (filter to report-related methods)
-- `backend/src/main/java/com/campusmarket/backend/service/report/impl/ReportServiceImpl.java`
-- `backend/src/main/java/com/campusmarket/backend/mapper/report/impl/JdbcReportMapper.java` (only for field shape; do not edit)
-- `backend/src/main/java/com/campusmarket/backend/common/api/ResultCode.java` (error codes referenced by spec)
+- `backend/src/main/java/com/youyu/backend/controller/report/ReportController.java`
+- `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java` (filter to report-related methods)
+- `backend/src/main/java/com/youyu/backend/service/report/impl/ReportServiceImpl.java`
+- `backend/src/main/java/com/youyu/backend/mapper/report/impl/JdbcReportMapper.java` (only for field shape; do not edit)
+- `backend/src/main/java/com/youyu/backend/common/api/ResultCode.java` (error codes referenced by spec)
 
 ## In Scope
 
@@ -96,7 +96,7 @@ Run and paste into Final Report section B:
 - Frontend: not required
 - API validation:
   - `grep -E "^(GET|POST|PUT|DELETE|PATCH) " docs/06-http/report.http` — every path must appear in the new spec
-  - `grep -n "/api/reports\|/api/admin/reports" backend/src/main/java/com/campusmarket/backend/controller/**/*.java` — every path returned must appear in the new spec
+  - `grep -n "/api/reports\|/api/admin/reports" backend/src/main/java/com/youyu/backend/controller/**/*.java` — every path returned must appear in the new spec
 - Manual: read the new spec end-to-end; each endpoint section answers the questions a frontend developer would ask before writing a fetch call
 
 ## Acceptance Criteria

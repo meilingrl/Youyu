@@ -1,4 +1,4 @@
-### CampusMarket — Products & Shop
+### Youyu — Products & Shop
 ### Run this file after every change to product or shop endpoints.
 
 @baseUrl = http://localhost:8080

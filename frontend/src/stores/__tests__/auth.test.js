@@ -8,7 +8,7 @@ vi.mock('@/api/modules/auth', () => ({
   register: vi.fn()
 }))
 
-const AUTH_STORAGE_KEY = 'campus-market-auth'
+const AUTH_STORAGE_KEY = 'youyu-auth'
 
 function setupStore() {
   setActivePinia(createPinia())

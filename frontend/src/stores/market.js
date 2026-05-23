@@ -24,7 +24,7 @@ import {
   normalizeShop
 } from '@/utils/market-normalizers'
 
-const USER_PREFERENCE_KEY = 'campus-market-user-preference'
+const USER_PREFERENCE_KEY = 'youyu-user-preference'
 
 const DEFAULT_CATEGORIES = [
   { id: 1, name: '学习资料' },

@@ -1,15 +1,15 @@
-﻿# API Spec: report
+# API Spec: report
 
 ## Document Info
 
 - Status: active
 - Source of truth:
-  - controller: `backend/src/main/java/com/campusmarket/backend/controller/report/ReportController.java`
-  - controller: `backend/src/main/java/com/campusmarket/backend/controller/admin/AdminController.java` (report-related methods)
-  - service impl: `backend/src/main/java/com/campusmarket/backend/service/report/impl/ReportServiceImpl.java`
-  - mapper impl: `backend/src/main/java/com/campusmarket/backend/mapper/report/impl/JdbcReportMapper.java`
-  - shared response / error handling: `backend/src/main/java/com/campusmarket/backend/common/api/ApiResponse.java`
-  - shared response / error handling: `backend/src/main/java/com/campusmarket/backend/controller/advice/GlobalExceptionHandler.java`
+  - controller: `backend/src/main/java/com/youyu/backend/controller/report/ReportController.java`
+  - controller: `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java` (report-related methods)
+  - service impl: `backend/src/main/java/com/youyu/backend/service/report/impl/ReportServiceImpl.java`
+  - mapper impl: `backend/src/main/java/com/youyu/backend/mapper/report/impl/JdbcReportMapper.java`
+  - shared response / error handling: `backend/src/main/java/com/youyu/backend/common/api/ApiResponse.java`
+  - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - request sample: `docs/06-http/report.http`
   - related task: `docs/08-tasks/archived/api-spec-report-module-standardization.md`
 - Last updated: 2026-05-22

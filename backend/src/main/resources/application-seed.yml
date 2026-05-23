@@ -1,4 +1,4 @@
-# Optional demo + performance catalog inserts. Use when the DB file is new or you deleted ~/.campusmarket/h2/.
+# Optional demo + performance catalog inserts. Use when the DB file is new or you deleted ~/.youyu/h2/.
 # Example: mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=seed
 spring:
   config:
