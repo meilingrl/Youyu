@@ -1,3 +1,46 @@
+## [2026-05-24] - Home campus scenario carousel and hover navigation
+
+### feat
+- Added a desktop hover/focus-reveal homepage navigation using the existing app header routes and mobile menu fallback
+- Added a Stripe-reference-inspired campus scenario carousel after the platform-data section and before the recommendation rail
+
+### docs
+- Archived `docs/08-tasks/archived/home-campus-scenario-carousel-and-hover-nav.md` with completion notes
+
+### test
+- Ran `frontend\npm test`
+- Ran `frontend\npm run build`
+- Ran a Playwright local-preview smoke check for `/app/home` at desktop and mobile widths
+
+## [2026-05-24] - Home quick entry card buttons
+
+### feat
+- Made the three homepage quick-entry cards full-card navigation buttons instead of requiring users to click the smaller action text
+- Preserved the existing card layout and added a visible keyboard focus state
+
+### docs
+- Archived `docs/08-tasks/archived/home-quick-entry-card-buttons.md` for this feedback pass
+
+### test
+- Ran `frontend\npm test`
+- Ran `frontend\npm run build`
+- Ran a Playwright local-preview smoke check for full-card button rendering and exploration-card navigation
+
+## [2026-05-24] - Home platform data animation tuning
+
+### fix
+- Tuned the homepage platform-data Canvas so the student network emits straight lines from one shared point
+- Tuned the covered-region scene so network arcs start from one shared left-side hub while preserving the globe fan structure
+- Slowed shop-scene moving particles by 50% and restored persistent static endpoint dots on both sides of each line
+
+### docs
+- Archived `docs/08-tasks/archived/home-platform-data-origin-and-speed-tuning.md` for this feedback pass
+
+### test
+- Ran `frontend\npm test`
+- Ran `frontend\npm run build`
+- Ran a Playwright local-preview smoke check for four metric tabs and nonblank Canvas rendering
+
 ## [2026-05-23] - CI pull request checkout hardening
 
 ### fix
