@@ -1,0 +1,112 @@
+### Chat API Smoke Tests
+
+### Variables
+@baseUrl = http://localhost:8080
+@user1Token = mock-1001-USER
+@user2Token = mock-1002-USER
+@user3Token = mock-1003-USER
+
+### 1. Create conversation (product inquiry)
+# @name createConversation
+POST {{baseUrl}}/api/chat/conversations
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "peerUserId": 1002,
+  "productId": 3001
+}
+
+### 2. Create conversation (idempotent - should return same conversation)
+POST {{baseUrl}}/api/chat/conversations
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "peerUserId": 1002,
+  "productId": 3001
+}
+
+### 3. Create conversation (shop inquiry)
+POST {{baseUrl}}/api/chat/conversations
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "peerUserId": 1002,
+  "shopId": 5001
+}
+
+### 4. Create conversation (direct)
+POST {{baseUrl}}/api/chat/conversations
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "peerUserId": 1003
+}
+
+### 5. Send message
+POST {{baseUrl}}/api/chat/conversations/1/messages
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "body": "你好,请问这本书还在吗?"
+}
+
+### 6. Send reply from peer user
+POST {{baseUrl}}/api/chat/conversations/1/messages
+Authorization: Bearer {{user2Token}}
+Content-Type: application/json
+
+{
+  "body": "在的,书还在。什么时候方便面交?"
+}
+
+### 7. Get messages in conversation
+GET {{baseUrl}}/api/chat/conversations/1/messages?page=0&size=20
+Authorization: Bearer {{user1Token}}
+
+### 8. Get messages with pagination
+GET {{baseUrl}}/api/chat/conversations/1/messages?page=0&size=1
+Authorization: Bearer {{user1Token}}
+
+### 9. Get conversations list
+GET {{baseUrl}}/api/chat/conversations?page=0&size=20
+Authorization: Bearer {{user1Token}}
+
+### 10. Get conversations list (peer user)
+GET {{baseUrl}}/api/chat/conversations?page=0&size=20
+Authorization: Bearer {{user2Token}}
+
+### 11. Try to send message as non-participant (should fail)
+POST {{baseUrl}}/api/chat/conversations/1/messages
+Authorization: Bearer {{user3Token}}
+Content-Type: application/json
+
+{
+  "body": "Unauthorized message"
+}
+
+### 12. Try to get messages as non-participant (should fail)
+GET {{baseUrl}}/api/chat/conversations/1/messages
+Authorization: Bearer {{user3Token}}
+
+### 13. Try to send empty message (should fail)
+POST {{baseUrl}}/api/chat/conversations/1/messages
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "body": ""
+}
+
+### 14. Try to create conversation with self (should fail)
+POST {{baseUrl}}/api/chat/conversations
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "peerUserId": 1001
+}

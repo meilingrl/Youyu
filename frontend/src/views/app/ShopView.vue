@@ -11,6 +11,7 @@ import RatingSummary from '@/components/common/RatingSummary.vue'
 import ReviewList from '@/components/common/ReviewList.vue'
 import { shopInsightMetricDefinitions } from '@/constants/insightMetrics'
 import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
 import { useMarketStore } from '@/stores/market'
 import { useReviewStore } from '@/stores/review'
 
@@ -23,6 +24,7 @@ const props = defineProps({
 
 const router = useRouter()
 const authStore = useAuthStore()
+const chatStore = useChatStore()
 const marketStore = useMarketStore()
 const reviewStore = useReviewStore()
 
@@ -149,24 +151,27 @@ async function loadShop() {
   }
 }
 
-function handleContactOwner() {
+async function handleContactOwner() {
   if (!authStore.isLoggedIn) {
     ElMessage.warning('联系店主前请先登录')
     router.push('/login')
     return
   }
-  ElMessage.info('消息功能正在建设中')
-  router.push({
-    path: '/app/messages',
-    query: {
-      category: 'shop',
-      entry: 'shop',
-      entryId: String(props.id || ''),
-      targetType: 'shop',
-      targetId: String(props.id || ''),
-      intent: 'consult'
-    }
-  })
+
+  if (!shopViewModel.value) {
+    return
+  }
+
+  try {
+    await chatStore.findOrCreateConversation(
+      shopViewModel.value.ownerId,
+      null,
+      shopViewModel.value.id
+    )
+    router.push('/app/messages')
+  } catch (error) {
+    ElMessage.error('无法发起会话，请稍后重试')
+  }
 }
 
 function handleOpenShopMessagesHub() {
