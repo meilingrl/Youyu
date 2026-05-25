@@ -358,6 +358,80 @@ textarea {
     box-shadow var(--cm-transition-feature);
 }
 
+@media (min-width: 961px) {
+  .app-header--hover-reveal {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    z-index: 45;
+    width: min(calc(100% - 56px), 1120px);
+    margin: 0;
+    border-color: rgba(88, 62, 43, 0.1);
+    background: rgba(255, 250, 243, 0.58);
+    box-shadow: 0 10px 30px rgba(88, 62, 43, 0.08);
+    opacity: 0.96;
+    transform: translateX(-50%) translateY(calc(-100% + 18px));
+    transition:
+      transform var(--cm-transition-unfold),
+      opacity var(--cm-transition-unfold),
+      background-color var(--cm-transition-unfold),
+      box-shadow var(--cm-transition-unfold),
+      border-color var(--cm-transition-unfold);
+  }
+
+  .app-header--hover-reveal::after {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    left: 50%;
+    width: 76px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(126, 87, 194, 0.32);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 10px 24px rgba(92, 62, 146, 0.16);
+    pointer-events: none;
+    transform: translateX(-50%);
+    transition:
+      opacity var(--cm-transition-micro),
+      transform var(--cm-transition-micro);
+  }
+
+  .app-header--hover-reveal .app-header__brand,
+  .app-header--hover-reveal .app-header__nav--desktop,
+  .app-header--hover-reveal .app-header__actions--desktop {
+    opacity: 0;
+    transform: translateY(-6px);
+    transition:
+      opacity var(--cm-transition-unfold),
+      transform var(--cm-transition-unfold);
+  }
+
+  .app-header--hover-reveal:hover,
+  .app-header--hover-reveal:focus-within {
+    border-color: rgba(88, 62, 43, 0.16);
+    background: rgba(255, 250, 243, 0.84);
+    box-shadow: var(--cm-shadow-glass);
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .app-header--hover-reveal:hover::after,
+  .app-header--hover-reveal:focus-within::after {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px) scaleX(0.72);
+  }
+
+  .app-header--hover-reveal:hover .app-header__brand,
+  .app-header--hover-reveal:hover .app-header__nav--desktop,
+  .app-header--hover-reveal:hover .app-header__actions--desktop,
+  .app-header--hover-reveal:focus-within .app-header__brand,
+  .app-header--hover-reveal:focus-within .app-header__nav--desktop,
+  .app-header--hover-reveal:focus-within .app-header__actions--desktop {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .app-header__brand-text {
   display: grid;
 }
@@ -1201,5 +1275,15 @@ textarea {
 
   .home-hero-copy__title {
     max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-header--hover-reveal,
+  .app-header--hover-reveal::after,
+  .app-header--hover-reveal .app-header__brand,
+  .app-header--hover-reveal .app-header__nav--desktop,
+  .app-header--hover-reveal .app-header__actions--desktop {
+    transition: none;
   }
 }

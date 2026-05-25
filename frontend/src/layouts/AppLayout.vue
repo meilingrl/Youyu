@@ -29,7 +29,7 @@ onUnmounted(() => {
 
 <template>
   <div class="market-layout">
-    <AppHeader v-if="!isHome" />
+    <AppHeader :reveal-on-hover="isHome" />
     <main class="market-layout__main">
       <router-view />
     </main>
