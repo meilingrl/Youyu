@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from '@/plugins/element-plus-services'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
+import HomeCampusScenarioCarousel from '@/components/home/HomeCampusScenarioCarousel.vue'
 import HomeFeaturedRail from '@/components/home/HomeFeaturedRail.vue'
 import HomeStatsNetwork from '@/components/home/HomeStatsNetwork.vue'
 import { useRecommendStore } from '@/stores/recommend'
@@ -311,6 +312,8 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
+    <HomeCampusScenarioCarousel />
+
     <div v-if="loadError" class="home-error shell-container">
       <ErrorBlock @retry="loadHomePage" />
     </div>
@@ -330,13 +333,19 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="home-entries__grid">
-        <article v-for="item in entryCards" :key="item.title" class="home-entry-card">
-          <h3>{{ item.title }}</h3>
-          <p>{{ item.desc }}</p>
-          <button type="button" class="home-entry-card__action" @click="item.handler()">
+        <button
+          v-for="item in entryCards"
+          :key="item.title"
+          type="button"
+          class="home-entry-card"
+          @click="item.handler()"
+        >
+          <span class="home-entry-card__title">{{ item.title }}</span>
+          <span class="home-entry-card__desc">{{ item.desc }}</span>
+          <span class="home-entry-card__action">
             {{ item.action }} →
-          </button>
-        </article>
+          </span>
+        </button>
       </div>
     </section>
 
@@ -519,6 +528,10 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 12px;
   padding: 30px;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  appearance: none;
 }
 
 .home-stats__metrics {
@@ -706,13 +719,14 @@ onBeforeUnmount(() => {
   border-color: rgba(88, 62, 43, 0.18);
 }
 
-.home-entry-card h3 {
+.home-entry-card__title {
   font-size: 20px;
   line-height: 1.3;
+  font-weight: 700;
   color: var(--cm-text);
 }
 
-.home-entry-card p {
+.home-entry-card__desc {
   color: var(--cm-text-secondary);
   font-size: 14px;
   line-height: 1.75;
@@ -726,7 +740,11 @@ onBeforeUnmount(() => {
   color: var(--cm-primary);
   font-size: 15px;
   font-weight: 700;
-  cursor: pointer;
+}
+
+.home-entry-card:focus-visible {
+  outline: 2px solid rgba(var(--cm-primary-rgb), 0.36);
+  outline-offset: 3px;
 }
 
 .home-error {

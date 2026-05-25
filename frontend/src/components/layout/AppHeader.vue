@@ -6,6 +6,13 @@ import { useAppStore } from '@/stores/app'
 import { appNavigation } from '@/constants/navigation'
 import MobileNav from '@/components/layout/MobileNav.vue'
 
+const props = defineProps({
+  revealOnHover: {
+    type: Boolean,
+    default: false
+  }
+})
+
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -49,7 +56,11 @@ function focusExploreSearch() {
 <template>
   <header
     class="app-header shell-card"
-    :class="{ 'app-header--home': isHome, 'app-header--condensed': isCondensed }"
+    :class="{
+      'app-header--home': isHome,
+      'app-header--condensed': isCondensed,
+      'app-header--hover-reveal': props.revealOnHover
+    }"
   >
     <button type="button" class="app-header__brand" @click="router.push('/app/home')">
       <span class="app-header__badge">CM</span>

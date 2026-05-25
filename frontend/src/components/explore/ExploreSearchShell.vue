@@ -331,11 +331,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   height: 52px;
   border: 0;
   border-radius: 999px;
-  background: linear-gradient(135deg, #ff0f5b 0%, #dc0b49 100%);
+  background: linear-gradient(135deg, #d9936d 0%, #b86c45 100%);
   color: #fff;
   display: grid;
   place-items: center;
-  box-shadow: 0 10px 24px rgba(220, 11, 73, 0.3);
+  box-shadow: 0 10px 24px rgba(184, 108, 69, 0.24);
   cursor: pointer;
   transition:
     transform var(--cm-transition),
@@ -349,7 +349,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .explore-search-shell__action:hover {
   transform: scale(1.06);
-  box-shadow: 0 14px 30px rgba(220, 11, 73, 0.38);
+  box-shadow: 0 14px 30px rgba(184, 108, 69, 0.32);
 }
 
 /* ── Dropdown panel（绝对定位，向下延伸） ── */
@@ -583,7 +583,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .explore-search-shell.is-condensed .explore-search-shell__action {
   width: 42px;
   height: 42px;
-  box-shadow: 0 6px 18px rgba(220, 11, 73, 0.24);
+  box-shadow: 0 6px 18px rgba(184, 108, 69, 0.2);
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__action svg {

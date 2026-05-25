@@ -200,7 +200,7 @@ function sceneSegment(theme, index, total, width, height, time) {
   if (theme === 'shops') {
     const leftY = height * (0.2 + t * 0.62)
     const rightY = height * (0.8 - t * 0.62)
-    const sideDrift = Math.sin(index * 0.47 + time * 0.8) * height * 0.012
+    const sideDrift = Math.sin(index * 0.47) * height * 0.006
 
     return {
       p0: { x: width * 0.11, y: leftY + sideDrift },
@@ -231,15 +231,10 @@ function sceneSegment(theme, index, total, width, height, time) {
     const theta = Math.PI * (0.07 + edgeT * 0.88)
     const edgeRadius = globe.radius * (0.78 + (index % 6) * 0.038)
     const hub = {
-      x: globe.center.x - globe.radius * 0.34,
-      y: globe.center.y - globe.radius * globe.yScale * 0.48
+      x: globe.center.x - globe.radius * 0.38,
+      y: globe.center.y - globe.radius * globe.yScale * 0.5
     }
-    const hubAngle = index * 2.399 + time * 0.24
-    const hubSpread = globe.radius * (0.018 + (index % 9) * 0.006)
-    const start = {
-      x: hub.x + Math.cos(hubAngle) * hubSpread,
-      y: hub.y + Math.sin(hubAngle) * hubSpread * 0.72
-    }
+    const start = hub
     const end = pointOnGlobeDome(globe, theta, edgeRadius)
     const lift = globe.radius * (0.16 + (index % 7) * 0.018)
 
@@ -260,14 +255,12 @@ function sceneSegment(theme, index, total, width, height, time) {
   const angle = t * Math.PI * 2 + Math.sin(index * 1.73) * 0.2
   const layer = index % 5
   const base = Math.min(width, height)
-  const innerAngle = angle + Math.sin(index * 0.61) * 0.55
   const outerAngle = angle + ((index % 3) - 1) * 0.2 + Math.sin(time * 0.22 + index) * 0.04
-  const innerRadius = base * (0.08 + (index % 9) * 0.024) + Math.sin(index * 1.29 + time * 0.4) * 12
   const outerRadius = base * (0.39 + layer * 0.064) + Math.sin(index * 2.1) * 20
   const verticalScale = 0.64
   const start = {
-    x: center.x + Math.cos(innerAngle) * (innerRadius + wave * 4),
-    y: center.y + Math.sin(innerAngle) * (innerRadius * verticalScale + wave * 3)
+    x: center.x,
+    y: center.y
   }
   const end = {
     x: center.x + Math.cos(outerAngle) * (outerRadius + wave * 6),
@@ -328,6 +321,7 @@ function drawSegment(ctx, segment, index, total, time, options = {}) {
   const pulseAlpha = options.pulseAlpha ?? 0.7
   const width = options.width ?? 1
   const pointerStrength = options.pointerStrength ?? 18
+  const pulseSpeedScale = options.pulseSpeedScale ?? 1
 
   const p0 = applyPointer(segment.p0, pointerStrength)
   const c1 = applyPointer(segment.c1, pointerStrength * 0.85)
@@ -353,7 +347,7 @@ function drawSegment(ctx, segment, index, total, time, options = {}) {
   const pulseCount = options.pulseCount ?? 1
   for (let pulseIndex = 0; pulseIndex < pulseCount; pulseIndex += 1) {
     const progress = canAnimate.value
-      ? (time * (0.14 + (index % 5) * 0.011) + index * 0.017 + pulseIndex * 0.48) % 1
+      ? (time * (0.14 + (index % 5) * 0.011) * pulseSpeedScale + index * 0.017 + pulseIndex * 0.48) % 1
       : ((index + pulseIndex * 9) % total) / total
     if (options.pulseFilter && !options.pulseFilter(progress)) {
       continue
@@ -400,9 +394,10 @@ function drawTheme(theme, ctx, width, height, time) {
       pulseAlpha: isStudentTheme ? 0.52 : isRegionTheme ? 0.7 : 0.66,
       width: isProductTheme ? 0.9 : isStudentTheme ? 0.96 : isRegionTheme ? 1.08 : 1.05,
       pulseCount: isStudentTheme ? 1 : 2,
+      pulseSpeedScale: isShopTheme ? 0.5 : 1,
       pointerStrength: isProductTheme ? 14 : isRegionTheme ? 18 : 20,
-      drawStartDot: !isStudentTheme && !isShopTheme && !isRegionTheme,
-      drawEndDot: !isShopTheme,
+      drawStartDot: !isStudentTheme && !isRegionTheme,
+      drawEndDot: true,
       pulseFilter: isShopTheme
         ? (progress) => progress > 0.08 && progress < 0.92 && Math.abs(progress - 0.5) > 0.055
         : isRegionTheme
