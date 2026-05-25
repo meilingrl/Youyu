@@ -1,3 +1,58 @@
+## [2026-05-25] - Home and Explore UX Bundle Update
+
+### feat
+- Added campus scenario carousel to homepage with 6 scenario cards (dorm essentials, study tools, campus life, digital products, second-hand market, campus services)
+- Implemented Stripe-inspired carousel design with gradient backgrounds and smooth animations
+- Added desktop hover navigation menu to app header with category-based navigation
+- Enhanced explore search shell with improved spacing and visual hierarchy
+- Improved homepage stats network animation with better particle distribution
+
+### frontend
+- Created `HomeCampusScenarioCarousel.vue` component with responsive carousel (612 lines)
+- Updated `AppHeader.vue` with hover navigation menu for desktop
+- Enhanced `HomeStatsNetwork.vue` particle animation system
+- Refined `ExploreSearchShell.vue` spacing and layout
+- Updated `HomeView.vue` to integrate campus scenario carousel
+- Added CSS utilities for carousel animations and transitions
+
+### ux
+- Carousel auto-advances every 4 seconds with smooth transitions
+- Hover navigation reveals on desktop, mobile uses existing menu
+- Scenario cards feature gradient backgrounds matching Youyu warm palette
+- Responsive design: 3 cards on desktop, 2 on tablet, 1 on mobile
+- Improved visual hierarchy with consistent spacing (56-80px block spacing)
+
+### test
+- Verified carousel auto-advance and manual navigation
+- Verified hover navigation on desktop and mobile menu fallback
+- Verified responsive behavior at 900px and 640px breakpoints
+- All frontend tests passing
+
+---
+
+## [2026-05-25] - Chat seed data and store fixes
+
+### feat
+- Added chat seed data with 8 conversations and 24 messages for testing
+- Seed data includes product inquiries, shop inquiries, and direct conversations
+- Conversations between existing seed users (zhangsan, lisi, wangwu, zhaoliu)
+
+### fix
+- Fixed chat store API response data access (response.data.data → response.data)
+- Corrected user IDs in seed data to match existing users (1001-1004)
+
+### backend
+- Added `seed/data-chat.sql` with idempotent INSERT statements
+- Seed data loads only with profile `seed`
+- Conversations span multiple days for realistic testing
+
+### test
+- Verified seed data loads without errors
+- Verified conversations appear in messages view
+- Verified message timestamps and ordering
+
+---
+
 ## [2026-05-25] - Chat MVP Frontend Integration
 
 ### feat
@@ -83,7 +138,7 @@
 - HTTP smoke tests: `docs/06-http/chat.http` with 14 request examples
 
 ### docs
-- Task document: `docs/08-tasks/drafts/chat-mvp-backend-implementation.md`
+- Task document: `docs/08-tasks/archived/chat-mvp-backend-implementation.md`
 
 ### constraints
 - MVP scope: Text messages only, no WebSocket, no unread counts, no file attachments

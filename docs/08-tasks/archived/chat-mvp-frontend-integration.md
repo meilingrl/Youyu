@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: chat-mvp-frontend-integration
-- Status: draft
-- Owner: unassigned
+- Status: completed
+- Owner: Claude
 - Track: feature
 - Depends on: `chat-mvp-backend-implementation` (必须先完成)
 - Priority: high
 - Planned date: 2026-05-25
-- Completed date:
+- Completed date: 2026-05-25
 
 ## Objective
 
