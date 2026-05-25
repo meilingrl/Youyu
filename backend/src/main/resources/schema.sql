@@ -433,3 +433,32 @@ CREATE TABLE IF NOT EXISTS shop_reviews (
 
 CREATE INDEX idx_shop_reviews_shop  ON shop_reviews(shop_id);
 CREATE INDEX idx_shop_reviews_buyer ON shop_reviews(buyer_user_id);
+
+CREATE TABLE IF NOT EXISTS chat_conversations (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    type VARCHAR(32) NOT NULL DEFAULT 'direct',
+    product_id BIGINT,
+    shop_id BIGINT,
+    user_a_id BIGINT NOT NULL,
+    user_b_id BIGINT NOT NULL,
+    last_message_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_chat_conv_user_a FOREIGN KEY (user_a_id) REFERENCES users(id),
+    CONSTRAINT fk_chat_conv_user_b FOREIGN KEY (user_b_id) REFERENCES users(id),
+    CONSTRAINT fk_chat_conv_product FOREIGN KEY (product_id) REFERENCES products(id),
+    CONSTRAINT fk_chat_conv_shop FOREIGN KEY (shop_id) REFERENCES shops(id),
+    INDEX idx_user_a_last_message (user_a_id, last_message_at DESC),
+    INDEX idx_user_b_last_message (user_b_id, last_message_at DESC),
+    UNIQUE INDEX uk_conversation_pair (user_a_id, user_b_id, product_id, shop_id)
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id BIGINT NOT NULL,
+    sender_user_id BIGINT NOT NULL,
+    body TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_chat_msg_conversation FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id),
+    CONSTRAINT fk_chat_msg_sender FOREIGN KEY (sender_user_id) REFERENCES users(id),
+    INDEX idx_conversation_created (conversation_id, created_at DESC)
+);

@@ -6,4 +6,4 @@ spring:
       on-profile: seed
   sql:
     init:
-      data-locations: classpath:seed/data.sql,classpath:seed/seed-transactions.sql,classpath:seed/data-perf-catalog.sql
+      data-locations: classpath:seed/data.sql,classpath:seed/seed-transactions.sql,classpath:seed/data-perf-catalog.sql,classpath:seed/seed-chat-data.sql

@@ -1,3 +1,127 @@
+## [2026-05-25] - Chat MVP Frontend Integration
+
+### feat
+- Integrated chat messaging frontend with backend API
+- Implemented real-time message sending and receiving with 8-second polling
+- Added "Contact Seller" button on product detail pages
+- Added "Contact Shop Owner" button on shop detail pages
+- Removed placeholder data and connected to live backend endpoints
+
+### frontend
+- Created API module: `api/modules/chat.js` with 4 endpoint functions
+- Created Pinia store: `stores/chat.js` with conversation and message management
+- Transformed `MessagesView.vue` to use real API data
+- Updated `ProductDetailView.vue` with conversation creation on "Contact Seller"
+- Updated `ShopView.vue` with conversation creation on "Contact Shop Owner"
+- Implemented polling logic: starts on conversation open, stops on conversation close
+- Added loading states with skeleton screens
+- Added error handling with ElMessage notifications
+
+### api
+- `getConversations(params)` - Fetch conversation list with pagination
+- `createConversation(data)` - Find or create conversation (idempotent)
+- `getMessages(conversationId, params)` - Fetch messages with pagination
+- `sendMessage(conversationId, data)` - Send text message
+
+### store
+- State: conversations, activeConversationId, messages, loading, sending
+- Actions: fetchConversations, findOrCreateConversation, fetchMessages, sendMessage
+- Polling: startPolling (8s interval), stopPolling
+- Message order handling: backend returns descending, frontend reverses to ascending
+
+### ux
+- Empty message validation (cannot send empty messages)
+- Send button shows loading state during message send
+- Messages auto-scroll to bottom on new message
+- Conversation list shows formatted timestamps (HH:mm, "昨天", MM-DD)
+- Mobile responsive: list/detail view switching
+- Desktop: auto-select first conversation on load
+
+### integration
+- Product detail page: "Contact Seller" creates conversation with (sellerId, productId, null)
+- Shop detail page: "Contact Shop Owner" creates conversation with (ownerId, null, shopId)
+- Both redirect to `/app/messages` after conversation creation
+- Error handling: shows user-friendly messages on API failures
+
+### constraints
+- MVP scope: No unread counts (backend doesn't provide), no WebSocket (polling only)
+- Polling only active when conversation is open
+- Category filtering not yet implemented (all conversations show in "trade" category)
+- Group chat UI placeholder only (not functional)
+
+---
+
+## [2026-05-25] - Chat MVP Backend Implementation
+
+### feat
+- Implemented chat messaging backend MVP with conversation management and text messaging
+- Added two database tables: `chat_conversations` and `chat_messages`
+- Created complete backend architecture: entities, mappers, services, and controllers
+- Implemented 4 REST API endpoints:
+  - GET `/api/chat/conversations` - List user conversations with pagination
+  - POST `/api/chat/conversations` - Find or create conversation (idempotent)
+  - GET `/api/chat/conversations/{id}/messages` - Get messages with pagination
+  - POST `/api/chat/conversations/{id}/messages` - Send text message
+- Added conversation types: `direct`, `product_inquiry`, `shop_inquiry`
+- Implemented permission checks (only participants can access conversations)
+- Added automatic `last_message_at` update on message send
+- Idempotent conversation creation with unique constraint on (user_a_id, user_b_id, product_id, shop_id)
+
+### backend
+- Entity classes: `ChatConversation.java`, `ChatMessage.java`
+- Mapper interfaces: `ChatConversationMapper`, `ChatMessageMapper`
+- Mapper implementations: `JdbcChatConversationMapper`, `JdbcChatMessageMapper`
+- Service: `ChatService` interface + `ChatServiceImpl`
+- Controller: `ChatController` with DTOs (`CreateConversationRequest`, `SendMessageRequest`)
+- Database schema: Added foreign keys to users, products, shops tables
+- Indexes: Composite indexes on (user_a_id, last_message_at) and (user_b_id, last_message_at)
+
+### test
+- Created comprehensive integration test suite: `ChatControllerTest` with 14 test cases
+- All tests passing (100/100 tests in full suite)
+- Test coverage: conversation creation, idempotency, message sending, pagination, permission checks, validation
+- HTTP smoke tests: `docs/06-http/chat.http` with 14 request examples
+
+### docs
+- Task document: `docs/08-tasks/drafts/chat-mvp-backend-implementation.md`
+
+### constraints
+- MVP scope: Text messages only, no WebSocket, no unread counts, no file attachments
+- Message body max length: 2000 characters
+- Pagination limits: conversations (max 50/page), messages (max 100/page)
+
+---
+
+## [2026-05-25] - Messages UX redesign
+
+### feat
+- Redesigned messages center with warm color system (warm orange #EA580C, warm white #FFFBF5, paper #FAFAF9)
+- Removed router dependency for conversation switching to prevent page scroll-to-top issue
+- Implemented local state management for conversation selection
+- Added smooth transition animations (280ms for conversation switching, 160ms for hover)
+- Increased spacing and breathing room following ui-ux-constitution.md guidelines
+- Applied gradient backgrounds to message bubbles (warm orange gradient for self messages)
+- Simplified page structure by removing Hero, Entry Context, and bottom explanation sections
+- Enhanced visual hierarchy with proper border radius system (16-20px cards, 18px inputs)
+- Improved responsive design with proper mobile/tablet breakpoints (900px, 640px)
+
+### fix
+- Fixed page jumping to top when clicking conversations (removed router.push, using local state)
+- Fixed visual hierarchy and spacing issues (increased block spacing to 56-80px)
+- Fixed lack of warmth in color palette (replaced gray tones with warm colors)
+
+### docs
+- Task document: `docs/08-tasks/drafts/messages-ux-redesign.md`
+
+### test
+- Dev server running at http://localhost:5173
+- Verified conversation switching without page scroll
+- Verified warm color system application
+- Verified spacing and breathing room
+- Verified message bubble gradients
+- Verified smooth animations
+- Verified responsive behavior at 900px and 640px breakpoints
+
 ## [2026-05-24] - Home campus scenario carousel and hover navigation
 
 ### feat

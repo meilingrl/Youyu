@@ -9,6 +9,7 @@ import ErrorBlock from '@/components/common/ErrorBlock.vue'
 import RatingSummary from '@/components/common/RatingSummary.vue'
 import ReviewList from '@/components/common/ReviewList.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
 import { useMarketStore } from '@/stores/market'
 import { useRecommendStore } from '@/stores/recommend'
 import { useReviewStore } from '@/stores/review'
@@ -22,6 +23,7 @@ const props = defineProps({
 
 const router = useRouter()
 const authStore = useAuthStore()
+const chatStore = useChatStore()
 const marketStore = useMarketStore()
 const recommendStore = useRecommendStore()
 const reviewStore = useReviewStore()
@@ -194,22 +196,21 @@ async function handleToggleFavorite() {
   }
 }
 
-function handleContactSeller() {
-  if (!requireLogin('联系卖家')) {
+async function handleContactSeller() {
+  if (!requireLogin('联系卖家') || !detailModel.value) {
     return
   }
-  ElMessage.info('消息功能正在建设中')
-  router.push({
-    path: '/app/messages',
-    query: {
-      category: 'shop',
-      entry: 'product',
-      entryId: String(detailModel.value?.id || ''),
-      targetType: 'shop',
-      targetId: String(detailModel.value?.shopId || ''),
-      intent: 'consult'
-    }
-  })
+
+  try {
+    await chatStore.findOrCreateConversation(
+      detailModel.value.sellerId,
+      detailModel.value.id,
+      null
+    )
+    router.push('/app/messages')
+  } catch (error) {
+    ElMessage.error('无法发起会话，请稍后重试')
+  }
 }
 
 function handleGoShop() {

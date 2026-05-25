@@ -1,7 +1,11 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 
 const activeIndex = ref(0)
+const cardElements = ref([])
+const flipStyles = ref(new Map())
+const transitionSuppressedIndexes = ref(new Set())
+let animationFrameId = 0
 
 const scenarios = [
   {
@@ -46,24 +50,136 @@ function mod(index, length) {
   return ((index % length) + length) % length
 }
 
-const visibleScenarios = computed(() => {
-  const offsets = [-1, 0, 1, 2]
-  return offsets.map((offset) => {
-    const index = mod(activeIndex.value + offset, scenarios.length)
+const cardSlots = {
+  '-2': { left: -7, width: 5, state: 'edge' },
+  '-1': { left: 0, width: 10, state: 'previous' },
+  0: { left: 12, width: 56, state: 'active' },
+  1: { left: 70, width: 15, state: 'next' },
+  2: { left: 86.5, width: 6.5, state: 'after' },
+  3: { left: 94.5, width: 2.4, state: 'edge' }
+}
+
+function getRelativeOffsetForActive(index, active) {
+  let offset = index - active
+
+  if (offset < -2) {
+    offset += scenarios.length
+  }
+
+  if (offset > 3) {
+    offset -= scenarios.length
+  }
+
+  return offset
+}
+
+function getRelativeOffset(index) {
+  return getRelativeOffsetForActive(index, activeIndex.value)
+}
+
+function getSlotForOffset(offset) {
+  return cardSlots[offset] || { left: 101, width: 2, state: 'hidden' }
+}
+
+function getWrapSuppressedIndexes(nextIndex) {
+  return scenarios
+    .map((_, index) => {
+      const currentSlot = getSlotForOffset(getRelativeOffsetForActive(index, activeIndex.value))
+      const nextSlot = getSlotForOffset(getRelativeOffsetForActive(index, nextIndex))
+      return Math.abs(nextSlot.left - currentSlot.left) > 60 ? index : null
+    })
+    .filter((index) => index !== null)
+}
+
+const positionedScenarios = computed(() => {
+  return scenarios.map((scenario, index) => {
+    const offset = getRelativeOffset(index)
+    const slot = getSlotForOffset(offset)
+
     return {
-      ...scenarios[index],
+      ...scenario,
       index,
-      state: offset === 0 ? 'active' : offset === -1 ? 'previous' : offset === 1 ? 'next' : 'after'
+      state: slot.state,
+      style: {
+        '--scenario-card-x': `${slot.left}cqw`,
+        '--scenario-card-width': `${slot.width}cqw`,
+        ...(flipStyles.value.get(index) || {})
+      }
     }
   })
 })
 
+function setCardElement(element, index) {
+  if (element) {
+    cardElements.value[index] = element
+  }
+}
+
+function measureCards() {
+  return cardElements.value.map((element) => {
+    if (!element) {
+      return null
+    }
+
+    const rect = element.getBoundingClientRect()
+    return {
+      left: rect.left,
+      width: rect.width
+    }
+  })
+}
+
+async function moveToScenario(index) {
+  const nextIndex = mod(index, scenarios.length)
+
+  if (nextIndex === activeIndex.value) {
+    return
+  }
+
+  if (animationFrameId) {
+    window.cancelAnimationFrame(animationFrameId)
+    animationFrameId = 0
+  }
+
+  const firstRects = measureCards()
+  const suppressedIndexes = getWrapSuppressedIndexes(nextIndex)
+  transitionSuppressedIndexes.value = new Set(scenarios.map((_, scenarioIndex) => scenarioIndex))
+  activeIndex.value = nextIndex
+
+  await nextTick()
+
+  const lastRects = measureCards()
+  const suppressedSet = new Set(suppressedIndexes)
+  const nextFlipStyles = new Map()
+
+  lastRects.forEach((lastRect, cardIndex) => {
+    const firstRect = firstRects[cardIndex]
+
+    if (!firstRect || !lastRect || suppressedSet.has(cardIndex) || lastRect.width === 0) {
+      return
+    }
+
+    nextFlipStyles.set(cardIndex, {
+      '--flip-dx': `${firstRect.left - lastRect.left}px`,
+      '--flip-scale-x': firstRect.width / lastRect.width
+    })
+  })
+
+  flipStyles.value = nextFlipStyles
+
+  animationFrameId = window.requestAnimationFrame(() => {
+    flipStyles.value = new Map()
+    transitionSuppressedIndexes.value = new Set()
+    animationFrameId = 0
+  })
+}
+
 function step(direction) {
-  activeIndex.value = mod(activeIndex.value + direction, scenarios.length)
+  moveToScenario(activeIndex.value + direction)
 }
 
 function selectScenario(index) {
-  activeIndex.value = index
+  moveToScenario(index)
 }
 </script>
 
@@ -98,13 +214,19 @@ function selectScenario(index) {
 
       <div class="campus-scenarios__track" aria-live="polite">
         <button
-          v-for="scenario in visibleScenarios"
-          :key="`${scenario.title}-${scenario.index}`"
+          v-for="scenario in positionedScenarios"
+          :key="scenario.index"
           type="button"
           class="campus-scenario-card"
-          :class="`is-${scenario.state}`"
+          :class="[
+            `is-${scenario.state}`,
+            { 'is-transition-suppressed': transitionSuppressedIndexes.has(scenario.index) }
+          ]"
+          :style="scenario.style"
           :aria-current="scenario.index === activeIndex ? 'true' : undefined"
+          :aria-hidden="scenario.state === 'hidden' ? 'true' : undefined"
           :aria-label="`查看${scenario.title}场景`"
+          :ref="(element) => setCardElement(element, scenario.index)"
           @click="selectScenario(scenario.index)"
         >
           <span class="campus-scenario-card__image-wrap">
@@ -211,12 +333,10 @@ function selectScenario(index) {
     box-shadow var(--cm-transition-micro);
 }
 
-.campus-scenarios__arrow:hover,
 .campus-scenarios__arrow:focus-visible {
   border-color: rgba(126, 87, 194, 0.34);
   background: #f7f1ff;
   box-shadow: 0 14px 30px rgba(92, 62, 146, 0.14);
-  transform: translateY(-1px);
 }
 
 .campus-scenarios__arrow:focus-visible,
@@ -227,17 +347,24 @@ function selectScenario(index) {
 }
 
 .campus-scenarios__track {
-  display: grid;
-  grid-template-columns: minmax(92px, 0.22fr) minmax(0, 1fr) minmax(116px, 0.3fr) minmax(88px, 0.2fr);
-  gap: 16px;
-  align-items: stretch;
-  min-height: clamp(390px, 42vw, 500px);
+  position: relative;
+  container-type: inline-size;
+  overflow: hidden;
+  height: clamp(390px, 42vw, 500px);
+  --scenario-transition: 680ms cubic-bezier(0.16, 1, 0.3, 1);
+  --flip-dx: 0px;
+  --flip-scale-x: 1;
 }
 
 .campus-scenario-card {
-  position: relative;
+  position: absolute;
+  inset-block: 0;
+  left: 0;
   display: grid;
+  width: var(--scenario-card-width);
+  height: 100%;
   min-width: 0;
+  min-height: 0;
   padding: 0;
   overflow: hidden;
   border: 1px solid rgba(36, 25, 20, 0.08);
@@ -247,35 +374,54 @@ function selectScenario(index) {
   cursor: pointer;
   text-align: left;
   box-shadow: 0 18px 44px rgba(36, 25, 20, 0.08);
+  contain: layout paint;
+  transform: translate3d(var(--scenario-card-x), 0, 0) translate3d(var(--flip-dx), 0, 0) scaleX(var(--flip-scale-x));
+  transform-origin: left center;
+  backface-visibility: hidden;
+  will-change: transform, opacity;
   transition:
-    transform var(--cm-transition-feature),
+    transform var(--scenario-transition),
     box-shadow var(--cm-transition-feature),
-    opacity var(--cm-transition-feature),
+    opacity var(--scenario-transition),
     border-color var(--cm-transition-feature);
-}
-
-.campus-scenario-card:hover {
-  border-color: rgba(36, 25, 20, 0.16);
-  box-shadow: 0 22px 54px rgba(36, 25, 20, 0.12);
-  transform: translateY(-2px);
 }
 
 .campus-scenario-card.is-active {
   grid-template-rows: minmax(0, 1fr) auto;
+  z-index: 4;
 }
 
 .campus-scenario-card:not(.is-active) {
   grid-template-rows: minmax(0, 1fr);
   opacity: 0.76;
+  z-index: 2;
 }
 
 .campus-scenario-card.is-after {
   opacity: 0.56;
+  z-index: 1;
+}
+
+.campus-scenario-card.is-edge {
+  opacity: 0.84;
+  z-index: 0;
+}
+
+.campus-scenario-card.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.campus-scenario-card.is-transition-suppressed {
+  transition: none;
 }
 
 .campus-scenario-card__image-wrap {
   position: relative;
   display: block;
+  width: 100%;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
 }
@@ -300,10 +446,6 @@ function selectScenario(index) {
   height: 100%;
   object-fit: cover;
   transition: transform var(--cm-transition-feature);
-}
-
-.campus-scenario-card:hover .campus-scenario-card__image {
-  transform: scale(1.025);
 }
 
 .campus-scenario-card__preview-title {
@@ -409,17 +551,21 @@ function selectScenario(index) {
   }
 
   .campus-scenarios__track {
-    grid-template-columns: 1fr;
-    min-height: auto;
+    height: clamp(390px, 78vw, 430px);
   }
 
   .campus-scenario-card {
-    min-height: 420px;
+    left: 0;
+    width: 100%;
+    min-height: 0;
+    transform: none;
   }
 
   .campus-scenario-card.is-previous,
   .campus-scenario-card.is-next,
-  .campus-scenario-card.is-after {
+  .campus-scenario-card.is-after,
+  .campus-scenario-card.is-edge,
+  .campus-scenario-card.is-hidden {
     display: none;
   }
 
@@ -433,8 +579,8 @@ function selectScenario(index) {
 }
 
 @media (max-width: 520px) {
-  .campus-scenario-card {
-    min-height: 390px;
+  .campus-scenarios__track {
+    height: clamp(380px, 116vw, 410px);
   }
 
   .campus-scenarios__heading h2 {
