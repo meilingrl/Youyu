@@ -166,6 +166,9 @@ async function moveToScenario(index) {
   })
 
   flipStyles.value = nextFlipStyles
+  await nextTick()
+
+  cardElements.value[0]?.getBoundingClientRect()
 
   animationFrameId = window.requestAnimationFrame(() => {
     flipStyles.value = new Map()
