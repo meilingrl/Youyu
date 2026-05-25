@@ -22,8 +22,8 @@ export const useChatStore = defineStore('chat', () => {
     loading.value = true
     try {
       const response = await chatApi.getConversations({ page, size })
-      conversations.value = response.content
-      return response
+      conversations.value = response.data.content
+      return response.data
     } catch (error) {
       console.error('Failed to fetch conversations:', error)
       throw error
@@ -61,8 +61,8 @@ export const useChatStore = defineStore('chat', () => {
     try {
       const response = await chatApi.getMessages(conversationId, { page, size })
       // Backend returns descending order, frontend needs ascending
-      messages.value = response.content.reverse()
-      return response
+      messages.value = response.data.content.reverse()
+      return response.data
     } catch (error) {
       console.error('Failed to fetch messages:', error)
       throw error
@@ -99,7 +99,7 @@ export const useChatStore = defineStore('chat', () => {
     pollingTimer.value = setInterval(async () => {
       try {
         const response = await chatApi.getMessages(conversationId, { page: 0, size: 50 })
-        const newMessages = response.content.reverse()
+        const newMessages = response.data.content.reverse()
         // Only update if there are new messages (avoid flicker)
         if (newMessages.length > messages.value.length) {
           messages.value = newMessages
