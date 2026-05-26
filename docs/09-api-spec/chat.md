@@ -89,6 +89,50 @@ Side effects:
 - Updates conversation `lastMessageAt`.
 - Increments the recipient's unread count.
 
+### `GET /api/chat/quick-replies`
+
+Lists quick replies owned by the current user.
+
+Ordering:
+- `sortOrder` ascending
+- `createdAt` ascending
+
+Response `data[]` includes:
+- `id`
+- `userId`
+- `content`
+- `sortOrder`
+- `createdAt`
+- `updatedAt`
+
+### `POST /api/chat/quick-replies`
+
+Creates a quick reply for the current user.
+
+Body:
+- `content`: required, trimmed, max 500 characters
+- `sortOrder`: optional, default `0`
+
+Response:
+
+```json
+{
+  "id": 1
+}
+```
+
+### `PUT /api/chat/quick-replies/{id}`
+
+Updates a quick reply. The current user must own the quick reply.
+
+Body:
+- `content`: required, trimmed, max 500 characters
+- `sortOrder`: optional, default `0`
+
+### `DELETE /api/chat/quick-replies/{id}`
+
+Deletes a quick reply. The current user must own the quick reply.
+
 ### `GET /api/chat/unread-count`
 
 Returns total unread chat messages for the current user.
@@ -111,7 +155,7 @@ Side effects:
 
 ## Error Cases
 
-- `400`: invalid payload, unsupported message type, empty text body, invalid media URL
+- `400`: invalid payload, unsupported message type, empty text body, invalid media URL, invalid quick reply content
 - `401`: not logged in
-- `403`: current user is not a conversation participant
-- `404`: conversation not found
+- `403`: current user is not a conversation participant or not the quick reply owner
+- `404`: conversation or quick reply not found

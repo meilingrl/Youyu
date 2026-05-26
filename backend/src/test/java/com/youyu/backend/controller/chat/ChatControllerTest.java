@@ -28,6 +28,7 @@ class ChatControllerTest {
     private MockMvc mockMvc;
 
     private static Long conversationId;
+    private static Long orderConversationId;
 
     @Test
     @Order(1)
@@ -272,5 +273,147 @@ class ChatControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.content", hasSize(1)))
                 .andExpect(jsonPath("$.data.size").value(1));
+    }
+
+    @Test
+    @Order(16)
+    void sendProductCardMessageSuccess() throws Exception {
+        String token = "mock-1001-USER";
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"body": "Please check this product", "messageType": "product_card", "productId": 3001}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.messageType").value("product_card"))
+                .andExpect(jsonPath("$.data.productId").value(3001))
+                .andExpect(jsonPath("$.data.product.id").value(3001))
+                .andExpect(jsonPath("$.data.product.title").value("Advanced Math Review Pack"))
+                .andExpect(jsonPath("$.data.product.price").value(19.90))
+                .andExpect(jsonPath("$.data.product.status").value("on_sale"))
+                .andExpect(jsonPath("$.data.product.imageUrl").exists());
+    }
+
+    @Test
+    @Order(17)
+    void getMessagesIncludesProductCardSummary() throws Exception {
+        String token = "mock-1001-USER";
+        mockMvc.perform(get("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .param("page", "0")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content[0].messageType").value("product_card"))
+                .andExpect(jsonPath("$.data.content[0].productId").value(3001))
+                .andExpect(jsonPath("$.data.content[0].product.id").value(3001))
+                .andExpect(jsonPath("$.data.content[0].product.title").value("Advanced Math Review Pack"))
+                .andExpect(jsonPath("$.data.content[0].product.price").value(19.90))
+                .andExpect(jsonPath("$.data.content[0].product.status").value("on_sale"))
+                .andExpect(jsonPath("$.data.content[0].product.imageUrl").exists());
+    }
+
+    @Test
+    @Order(18)
+    void sendProductCardRequiresExistingShareableProduct() throws Exception {
+        String token = "mock-1001-USER";
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"messageType": "product_card", "productId": 999999}
+                                """))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"messageType": "product_card", "productId": 3004}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Order(19)
+    void createOrderConversationSuccess() throws Exception {
+        String token = "mock-1010-USER";
+        String response = mockMvc.perform(post("/api/chat/conversations")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"peerUserId": 1004}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").exists())
+                .andReturn().getResponse().getContentAsString();
+
+        orderConversationId = ((Number) JsonPath.read(response, "$.data.id")).longValue();
+    }
+
+    @Test
+    @Order(20)
+    void sendOrderCardMessageSuccess() throws Exception {
+        String token = "mock-1010-USER";
+        mockMvc.perform(post("/api/chat/conversations/" + orderConversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"body": "Please check this order", "messageType": "order_card", "orderId": 8001}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.messageType").value("order_card"))
+                .andExpect(jsonPath("$.data.orderId").value(8001))
+                .andExpect(jsonPath("$.data.order.id").value(8001))
+                .andExpect(jsonPath("$.data.order.orderNumber").value("SEED8001"))
+                .andExpect(jsonPath("$.data.order.status").value("pending_payment"))
+                .andExpect(jsonPath("$.data.order.totalAmount").value(35.00))
+                .andExpect(jsonPath("$.data.order.productTitle").value("Engineering Drawing Tool Set"))
+                .andExpect(jsonPath("$.data.order.productImage").exists());
+    }
+
+    @Test
+    @Order(21)
+    void getMessagesIncludesOrderCardSummary() throws Exception {
+        String token = "mock-1010-USER";
+        mockMvc.perform(get("/api/chat/conversations/" + orderConversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .param("page", "0")
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content[0].messageType").value("order_card"))
+                .andExpect(jsonPath("$.data.content[0].orderId").value(8001))
+                .andExpect(jsonPath("$.data.content[0].order.id").value(8001))
+                .andExpect(jsonPath("$.data.content[0].order.orderNumber").value("SEED8001"))
+                .andExpect(jsonPath("$.data.content[0].order.status").value("pending_payment"))
+                .andExpect(jsonPath("$.data.content[0].order.totalAmount").value(35.00))
+                .andExpect(jsonPath("$.data.content[0].order.productTitle").value("Engineering Drawing Tool Set"))
+                .andExpect(jsonPath("$.data.content[0].order.productImage").exists());
+    }
+
+    @Test
+    @Order(22)
+    void sendOrderCardRequiresExistingParticipantOrder() throws Exception {
+        String token = "mock-1001-USER";
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"messageType": "order_card", "orderId": 999999}
+                                """))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"messageType": "order_card", "orderId": 8001}
+                                """))
+                .andExpect(status().isForbidden());
     }
 }

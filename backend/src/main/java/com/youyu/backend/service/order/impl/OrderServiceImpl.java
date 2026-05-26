@@ -508,17 +508,20 @@ public class OrderServiceImpl implements OrderService {
     private Map<String, Object> toOrderListItem(Map<String, Object> order) {
         List<Map<String, Object>> items = transactionDataStore.findOrderItems((Long) order.get("id"));
         Map<String, Object> firstItem = items.isEmpty() ? Map.of("productTitleSnapshot", "-") : items.get(0);
-        return Map.of(
-                "id", order.get("id"),
-                "orderNo", order.get("orderNo"),
-                "productTitle", firstItem.get("productTitleSnapshot"),
-                "itemCount", items.size(),
-                "orderStatus", order.get("orderStatus"),
-                "paymentStatus", order.get("paymentStatus"),
-                "fulfillmentType", order.get("fulfillmentType"),
-                "payableAmount", order.get("payableAmount"),
-                "submittedAt", order.get("submittedAt")
-        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", order.get("id"));
+        result.put("orderNo", order.get("orderNo"));
+        result.put("buyerUserId", order.get("buyerUserId"));
+        result.put("sellerUserId", order.get("sellerUserId"));
+        result.put("shopId", order.get("shopId"));
+        result.put("productTitle", firstItem.get("productTitleSnapshot"));
+        result.put("itemCount", items.size());
+        result.put("orderStatus", order.get("orderStatus"));
+        result.put("paymentStatus", order.get("paymentStatus"));
+        result.put("fulfillmentType", order.get("fulfillmentType"));
+        result.put("payableAmount", order.get("payableAmount"));
+        result.put("submittedAt", order.get("submittedAt"));
+        return result;
     }
 
     private List<String> resolveAllowedFulfillmentTypes(Map<String, Object> product) {

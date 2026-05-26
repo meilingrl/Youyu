@@ -465,12 +465,29 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     read_at TIMESTAMP NULL,
     message_type VARCHAR(32) NOT NULL DEFAULT 'text',
     media_url MEDIUMTEXT NULL,
+    product_id BIGINT NULL,
+    order_id BIGINT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_chat_msg_conversation FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id),
     CONSTRAINT fk_chat_msg_sender FOREIGN KEY (sender_user_id) REFERENCES users(id),
+    CONSTRAINT fk_chat_msg_product FOREIGN KEY (product_id) REFERENCES products(id),
+    CONSTRAINT fk_chat_msg_order FOREIGN KEY (order_id) REFERENCES orders(id),
     INDEX idx_conversation_created (conversation_id, created_at DESC),
     INDEX idx_conversation_unread (conversation_id, is_read),
-    INDEX idx_conversation_type (conversation_id, message_type)
+    INDEX idx_conversation_type (conversation_id, message_type),
+    INDEX idx_message_product (product_id),
+    INDEX idx_message_order (order_id)
+);
+
+CREATE TABLE IF NOT EXISTS quick_replies (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    content TEXT NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_quick_reply_user FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_quick_reply_user_sort (user_id, sort_order, created_at)
 );
 
 CREATE TABLE IF NOT EXISTS notifications (

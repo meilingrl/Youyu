@@ -1,3 +1,25 @@
+## [2026-05-26] - Message Center P1 E-commerce Tools
+
+### feat
+- Added product card chat messages with product validation, nested product summaries, product detail sharing, and chat bubble rendering.
+- Added order card chat messages with participant validation, nested order summaries, order contact actions, and chat bubble rendering.
+- Added authenticated quick reply CRUD endpoints under `/api/chat/quick-replies`.
+- Added seller quick reply panel in the message composer with default replies when no custom replies exist.
+- Added quick reply API/store integration and click-to-fill composer behavior.
+
+### backend
+- Extended chat message persistence for `product_id` and `order_id` card-message references.
+- Exposed order participant fields in order list items so the frontend can create the correct chat conversation before sending an order card.
+
+### docs
+- Updated message center roadmap, chat HTTP smoke collection, and chat API spec for P1 card messages and quick replies.
+- Archived completed P1 task documents.
+
+### test
+- Added backend controller coverage for product card, order card, and quick reply flows.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
 ## [2026-05-25] - Home and Explore UX Bundle Update
 
 ### feat

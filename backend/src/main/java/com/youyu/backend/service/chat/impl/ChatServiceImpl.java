@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,8 @@ public class ChatServiceImpl implements ChatService {
     private static final int MAX_PAGE_SIZE_MESSAGES = 100;
     private static final String MESSAGE_TYPE_TEXT = "text";
     private static final String MESSAGE_TYPE_IMAGE = "image";
+    private static final String MESSAGE_TYPE_PRODUCT_CARD = "product_card";
+    private static final String MESSAGE_TYPE_ORDER_CARD = "order_card";
 
     private final ChatConversationMapper conversationMapper;
     private final ChatMessageMapper messageMapper;
@@ -126,17 +129,19 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     @Transactional
-    public Map<String, Object> sendMessage(Long conversationId, Long currentUserId, String body, String messageType, String mediaUrl) {
+    public Map<String, Object> sendMessage(Long conversationId, Long currentUserId, String body, String messageType, String mediaUrl, Long productId, Long orderId) {
         requireLogin(currentUserId);
 
         String normalizedType = normalizeMessageType(messageType);
         String normalizedBody = normalizeBody(body);
         String normalizedMediaUrl = normalizeMediaUrl(mediaUrl);
-        validateMessagePayload(normalizedBody, normalizedType, normalizedMediaUrl);
+        validateMessagePayload(normalizedBody, normalizedType, normalizedMediaUrl, productId, orderId);
 
         Map<String, Object> conversation = requireParticipant(conversationId, currentUserId);
         Long userAId = (Long) conversation.get("userAId");
         Long userBId = (Long) conversation.get("userBId");
+        Map<String, Object> product = validateProductCard(normalizedType, productId);
+        Map<String, Object> order = validateOrderCard(normalizedType, orderId, currentUserId);
 
         LocalDateTime now = LocalDateTime.now();
         Map<String, Object> messageData = new LinkedHashMap<>();
@@ -145,6 +150,8 @@ public class ChatServiceImpl implements ChatService {
         messageData.put("body", normalizedBody);
         messageData.put("messageType", normalizedType);
         messageData.put("mediaUrl", normalizedMediaUrl);
+        messageData.put("productId", MESSAGE_TYPE_PRODUCT_CARD.equals(normalizedType) ? productId : null);
+        messageData.put("orderId", MESSAGE_TYPE_ORDER_CARD.equals(normalizedType) ? orderId : null);
         messageData.put("isRead", false);
         messageData.put("readAt", null);
         messageData.put("createdAt", now);
@@ -162,6 +169,10 @@ public class ChatServiceImpl implements ChatService {
         result.put("body", normalizedBody);
         result.put("messageType", normalizedType);
         result.put("mediaUrl", normalizedMediaUrl);
+        result.put("productId", MESSAGE_TYPE_PRODUCT_CARD.equals(normalizedType) ? productId : null);
+        result.put("orderId", MESSAGE_TYPE_ORDER_CARD.equals(normalizedType) ? orderId : null);
+        result.put("product", product);
+        result.put("order", sanitizeOrderCard(order));
         result.put("isRead", false);
         result.put("readAt", null);
         result.put("createdAt", now);
@@ -255,8 +266,11 @@ public class ChatServiceImpl implements ChatService {
         return mediaUrl == null ? null : mediaUrl.trim();
     }
 
-    private void validateMessagePayload(String body, String messageType, String mediaUrl) {
-        if (!MESSAGE_TYPE_TEXT.equals(messageType) && !MESSAGE_TYPE_IMAGE.equals(messageType)) {
+    private void validateMessagePayload(String body, String messageType, String mediaUrl, Long productId, Long orderId) {
+        if (!MESSAGE_TYPE_TEXT.equals(messageType)
+                && !MESSAGE_TYPE_IMAGE.equals(messageType)
+                && !MESSAGE_TYPE_PRODUCT_CARD.equals(messageType)
+                && !MESSAGE_TYPE_ORDER_CARD.equals(messageType)) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "Unsupported message type");
         }
         if (body.length() > MAX_MESSAGE_LENGTH) {
@@ -267,6 +281,10 @@ public class ChatServiceImpl implements ChatService {
         }
         if (MESSAGE_TYPE_TEXT.equals(messageType) && mediaUrl != null && !mediaUrl.isEmpty()) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "Text messages cannot include mediaUrl");
+        }
+        if ((MESSAGE_TYPE_TEXT.equals(messageType) || MESSAGE_TYPE_IMAGE.equals(messageType))
+                && (productId != null || orderId != null)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Only card messages can include productId or orderId");
         }
         if (MESSAGE_TYPE_IMAGE.equals(messageType)) {
             if (mediaUrl == null || mediaUrl.isEmpty()) {
@@ -281,6 +299,79 @@ public class ChatServiceImpl implements ChatService {
                 throw new BusinessException(ResultCode.BAD_REQUEST, "mediaUrl must start with http://, https://, or data:image/");
             }
         }
+        if (MESSAGE_TYPE_PRODUCT_CARD.equals(messageType)) {
+            if (productId == null) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Product card messages require productId");
+            }
+            if (orderId != null) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Product card messages cannot include orderId");
+            }
+            if (mediaUrl != null && !mediaUrl.isEmpty()) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Product card messages cannot include mediaUrl");
+            }
+        }
+        if (MESSAGE_TYPE_ORDER_CARD.equals(messageType)) {
+            if (orderId == null) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Order card messages require orderId");
+            }
+            if (productId != null) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Order card messages cannot include productId");
+            }
+            if (mediaUrl != null && !mediaUrl.isEmpty()) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Order card messages cannot include mediaUrl");
+            }
+        }
+    }
+
+    private Map<String, Object> validateProductCard(String messageType, Long productId) {
+        if (!MESSAGE_TYPE_PRODUCT_CARD.equals(messageType)) {
+            return null;
+        }
+        Map<String, Object> product = messageMapper.findProductCardSummary(productId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Product not found"));
+        if (!"on_sale".equals(String.valueOf(product.get("status")))) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Product is not shareable");
+        }
+        Object reviewStatus = product.get("reviewStatus");
+        if (reviewStatus != null
+                && !"approved".equals(String.valueOf(reviewStatus))
+                && !"not_required".equals(String.valueOf(reviewStatus))) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Product is not shareable");
+        }
+        return withoutReviewStatus(product);
+    }
+
+    private Map<String, Object> validateOrderCard(String messageType, Long orderId, Long currentUserId) {
+        if (!MESSAGE_TYPE_ORDER_CARD.equals(messageType)) {
+            return null;
+        }
+        Map<String, Object> order = messageMapper.findOrderCardSummary(orderId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Order not found"));
+        Long buyerUserId = toLong(order.get("buyerUserId"));
+        Long sellerUserId = toLong(order.get("sellerUserId"));
+        if (!Objects.equals(currentUserId, buyerUserId) && !Objects.equals(currentUserId, sellerUserId)) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "No permission to share this order");
+        }
+        return order;
+    }
+
+    private Map<String, Object> withoutReviewStatus(Map<String, Object> product) {
+        if (product == null) {
+            return null;
+        }
+        Map<String, Object> sanitized = new LinkedHashMap<>(product);
+        sanitized.remove("reviewStatus");
+        return sanitized;
+    }
+
+    private Map<String, Object> sanitizeOrderCard(Map<String, Object> order) {
+        if (order == null) {
+            return null;
+        }
+        Map<String, Object> sanitized = new LinkedHashMap<>(order);
+        sanitized.remove("buyerUserId");
+        sanitized.remove("sellerUserId");
+        return sanitized;
     }
 
     private int toInt(Object value) {
@@ -291,5 +382,15 @@ public class ChatServiceImpl implements ChatService {
             return 0;
         }
         return Integer.parseInt(value.toString());
+    }
+
+    private Long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return null;
+        }
+        return Long.parseLong(value.toString());
     }
 }

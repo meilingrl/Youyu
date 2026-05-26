@@ -33,7 +33,23 @@ function normalizeMessage(message = {}) {
     senderUserId: message.senderUserId ?? message.senderId ?? message.sender_user_id ?? message.sender_id,
     messageType: message.messageType ?? message.message_type ?? 'text',
     mediaUrl: message.mediaUrl ?? message.media_url ?? null,
+    productId: message.productId ?? message.product_id ?? null,
+    product: message.product ?? null,
+    orderId: message.orderId ?? message.order_id ?? null,
+    order: message.order ?? null,
     createdAt: message.createdAt ?? message.created_at
+  }
+}
+
+function normalizeQuickReply(quickReply = {}) {
+  return {
+    ...quickReply,
+    id: quickReply.id,
+    userId: quickReply.userId ?? quickReply.user_id,
+    content: quickReply.content ?? '',
+    sortOrder: quickReply.sortOrder ?? quickReply.sort_order ?? 0,
+    createdAt: quickReply.createdAt ?? quickReply.created_at,
+    updatedAt: quickReply.updatedAt ?? quickReply.updated_at
   }
 }
 
@@ -41,8 +57,10 @@ export const useChatStore = defineStore('chat', () => {
   const conversations = ref([])
   const activeConversationId = ref(null)
   const messages = ref([])
+  const quickReplies = ref([])
   const unreadCount = ref(0)
   const loading = ref(false)
+  const quickRepliesLoading = ref(false)
   const sending = ref(false)
   const pollingTimer = ref(null)
 
@@ -160,6 +178,8 @@ export const useChatStore = defineStore('chat', () => {
     const isTextMessage = (messagePayload.messageType ?? 'text') === 'text'
     if (isTextMessage && !messagePayload.body?.trim()) return null
     if (messagePayload.messageType === 'image' && !messagePayload.mediaUrl) return null
+    if (messagePayload.messageType === 'product_card' && !messagePayload.productId) return null
+    if (messagePayload.messageType === 'order_card' && !messagePayload.orderId) return null
 
     sending.value = true
     try {
@@ -178,6 +198,52 @@ export const useChatStore = defineStore('chat', () => {
     } finally {
       sending.value = false
     }
+  }
+
+  function sendProductCardMessage(conversationId, productId, body = '') {
+    return sendMessage(conversationId, {
+      body,
+      messageType: 'product_card',
+      productId
+    })
+  }
+
+  function sendOrderCardMessage(conversationId, orderId, body = '') {
+    return sendMessage(conversationId, {
+      body,
+      messageType: 'order_card',
+      orderId
+    })
+  }
+
+  async function fetchQuickReplies() {
+    quickRepliesLoading.value = true
+    try {
+      const payload = unwrapData(await chatApi.getQuickReplies())
+      quickReplies.value = (Array.isArray(payload) ? payload : []).map(normalizeQuickReply)
+      return quickReplies.value
+    } catch (error) {
+      console.error('Failed to fetch quick replies:', error)
+      throw error
+    } finally {
+      quickRepliesLoading.value = false
+    }
+  }
+
+  async function createQuickReply(payload) {
+    const response = unwrapData(await chatApi.createQuickReply(payload))
+    await fetchQuickReplies()
+    return response
+  }
+
+  async function updateQuickReply(id, payload) {
+    await chatApi.updateQuickReply(id, payload)
+    await fetchQuickReplies()
+  }
+
+  async function deleteQuickReply(id) {
+    await chatApi.deleteQuickReply(id)
+    quickReplies.value = quickReplies.value.filter((item) => item.id !== id)
   }
 
   function startPolling(conversationId, interval = 8000) {
@@ -211,8 +277,10 @@ export const useChatStore = defineStore('chat', () => {
     conversations.value = []
     activeConversationId.value = null
     messages.value = []
+    quickReplies.value = []
     unreadCount.value = 0
     loading.value = false
+    quickRepliesLoading.value = false
     sending.value = false
     stopPolling()
   }
@@ -221,8 +289,10 @@ export const useChatStore = defineStore('chat', () => {
     conversations,
     activeConversationId,
     messages,
+    quickReplies,
     unreadCount,
     loading,
+    quickRepliesLoading,
     sending,
     activeConversation,
     fetchUnreadCount,
@@ -231,6 +301,12 @@ export const useChatStore = defineStore('chat', () => {
     markConversationRead,
     fetchMessages,
     sendMessage,
+    sendProductCardMessage,
+    sendOrderCardMessage,
+    fetchQuickReplies,
+    createQuickReply,
+    updateQuickReply,
+    deleteQuickReply,
     startPolling,
     stopPolling,
     $reset

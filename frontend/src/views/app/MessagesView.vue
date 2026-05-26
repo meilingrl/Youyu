@@ -1,15 +1,28 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElImageViewer } from 'element-plus/es/components/image-viewer/index.mjs'
 import 'element-plus/es/components/image-viewer/style/css'
 import { ElMessage } from '@/plugins/element-plus-services'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ImageUploader from '@/components/chat/ImageUploader.vue'
+import OrderCardMessage from '@/components/chat/OrderCardMessage.vue'
+import ProductCardMessage from '@/components/chat/ProductCardMessage.vue'
+import QuickReplyPanel from '@/components/chat/QuickReplyPanel.vue'
 import NotificationsView from '@/views/app/NotificationsView.vue'
 import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 
+const props = defineProps({
+  conversationId: {
+    type: String,
+    default: ''
+  }
+})
+
+const route = useRoute()
+const router = useRouter()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
@@ -18,7 +31,9 @@ const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200
 const selectedCategory = ref('trade')
 const messagesThreadRef = ref(null)
 const messagesEndRef = ref(null)
+const messageInputRef = ref(null)
 const messageInput = ref('')
+const quickReplyPanelOpen = ref(false)
 const failedImageIds = ref(new Set())
 const previewImageUrl = ref('')
 
@@ -97,6 +112,10 @@ const displayMessages = computed(() => {
       body: msg.body,
       messageType: msg.messageType || 'text',
       mediaUrl: msg.mediaUrl,
+      productId: msg.productId,
+      product: msg.product,
+      orderId: msg.orderId,
+      order: msg.order,
       imageFailed: failedImageIds.value.has(msg.id)
     }
   })
@@ -120,6 +139,8 @@ function categoryUnreadCount(categoryId) {
 
 function messagePreview(conv, lastMessage) {
   if (lastMessage?.messageType === 'image') return '[图片]'
+  if (lastMessage?.messageType === 'product_card') return '[商品卡片]'
+  if (lastMessage?.messageType === 'order_card') return '[订单卡片]'
   return lastMessage?.body || conv.lastMessagePreview || conv.last_message_preview || '开始对话'
 }
 
@@ -147,6 +168,7 @@ function handleResize() {
 function openCategory(categoryId) {
   selectedCategory.value = categoryId
   chatStore.activeConversationId = null
+  quickReplyPanelOpen.value = false
 
   if (categoryId !== 'notifications' && !isMobile.value && visibleConversations.value.length > 0) {
     openConversation(visibleConversations.value[0].id)
@@ -154,12 +176,15 @@ function openCategory(categoryId) {
 }
 
 async function openConversation(conversationId) {
+  const pageScrollY = typeof window !== 'undefined' ? window.scrollY : 0
   chatStore.activeConversationId = conversationId
+  quickReplyPanelOpen.value = false
 
   try {
     await chatStore.fetchMessages(conversationId)
     chatStore.startPolling(conversationId)
     scrollToBottom()
+    restorePageScroll(pageScrollY)
   } catch (error) {
     ElMessage.error('加载消息失败')
   }
@@ -168,6 +193,7 @@ async function openConversation(conversationId) {
 function backToList() {
   chatStore.stopPolling()
   chatStore.activeConversationId = null
+  quickReplyPanelOpen.value = false
 }
 
 async function handleSendMessage() {
@@ -177,6 +203,7 @@ async function handleSendMessage() {
 
   const body = messageInput.value.trim()
   messageInput.value = ''
+  quickReplyPanelOpen.value = false
 
   try {
     await chatStore.sendMessage(chatStore.activeConversationId, {
@@ -194,6 +221,7 @@ async function handleImageSelected(image) {
   if (!chatStore.activeConversationId || chatStore.sending) {
     return
   }
+  quickReplyPanelOpen.value = false
 
   try {
     await chatStore.sendMessage(chatStore.activeConversationId, {
@@ -221,6 +249,26 @@ function closeImagePreview() {
   previewImageUrl.value = ''
 }
 
+function toggleQuickReplyPanel() {
+  quickReplyPanelOpen.value = !quickReplyPanelOpen.value
+}
+
+function handleQuickReplySelect(content) {
+  messageInput.value = content
+  quickReplyPanelOpen.value = false
+  nextTick(() => {
+    messageInputRef.value?.focus()
+  })
+}
+
+function restorePageScroll(scrollY) {
+  nextTick(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' })
+    }
+  })
+}
+
 function scrollToBottom() {
   nextTick(() => {
     const thread = messagesThreadRef.value
@@ -230,8 +278,31 @@ function scrollToBottom() {
   })
 }
 
+function openProductCard(productId) {
+  if (productId) {
+    router.push(`/app/products/${productId}`)
+  }
+}
+
+function openOrderCard(orderId) {
+  if (orderId) {
+    router.push({
+      path: '/app/orders',
+      query: { orderId: String(orderId) }
+    })
+  }
+}
+
+function getInitialConversationId() {
+  return props.conversationId || route.query.conversationId || ''
+}
+
 async function loadConversations() {
   try {
+    if (route.query.category) {
+      selectedCategory.value = String(route.query.category)
+    }
+
     await chatStore.fetchConversations()
     chatStore.fetchUnreadCount().catch((error) => {
       console.error('Failed to load unread count:', error)
@@ -240,8 +311,13 @@ async function loadConversations() {
       console.error('Failed to load notification unread count:', error)
     })
 
-    if (!isMobile.value && visibleConversations.value.length > 0) {
-      await openConversation(visibleConversations.value[0].id)
+    const initialConversationId = getInitialConversationId()
+    const initialConversation = initialConversationId
+      ? visibleConversations.value.find((item) => String(item.id) === String(initialConversationId))
+      : null
+
+    if (initialConversation || (!isMobile.value && visibleConversations.value.length > 0)) {
+      await openConversation(initialConversation?.id || visibleConversations.value[0].id)
     }
   } catch (error) {
     ElMessage.error('加载会话列表失败')
@@ -360,7 +436,10 @@ onBeforeUnmount(() => {
                 class="messages-bubble"
                 :class="[
                   `messages-bubble--${message.role}`,
-                  { 'messages-bubble--image': message.messageType === 'image' }
+                  {
+                    'messages-bubble--image': message.messageType === 'image',
+                    'messages-bubble--card': ['product_card', 'order_card'].includes(message.messageType)
+                  }
                 ]"
               >
                 <template v-if="message.messageType === 'image'">
@@ -382,6 +461,18 @@ onBeforeUnmount(() => {
                   </div>
                   <p v-if="message.body" class="messages-image-caption">{{ message.body }}</p>
                 </template>
+                <ProductCardMessage
+                  v-else-if="message.messageType === 'product_card'"
+                  :product="message.product || { id: message.productId }"
+                  :body="message.body"
+                  @open="openProductCard"
+                />
+                <OrderCardMessage
+                  v-else-if="message.messageType === 'order_card'"
+                  :order="message.order || { id: message.orderId }"
+                  :body="message.body"
+                  @open="openOrderCard"
+                />
                 <p v-else>{{ message.body }}</p>
               </article>
             </template>
@@ -389,9 +480,26 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="messages-input-area">
+            <QuickReplyPanel
+              v-if="quickReplyPanelOpen"
+              class="messages-quick-reply-panel"
+              @select="handleQuickReplySelect"
+            />
             <div class="messages-composer">
               <ImageUploader @selected="handleImageSelected" />
+              <button
+                type="button"
+                class="messages-quick-reply-btn"
+                :class="{ 'is-active': quickReplyPanelOpen }"
+                :aria-pressed="quickReplyPanelOpen"
+                title="快捷回复"
+                @click="toggleQuickReplyPanel"
+              >
+                <span class="messages-quick-reply-btn__icon" aria-hidden="true">⚡</span>
+                <span class="messages-quick-reply-btn__text">快捷</span>
+              </button>
               <input
+                ref="messageInputRef"
                 v-model="messageInput"
                 type="text"
                 placeholder="输入消息..."
@@ -749,6 +857,13 @@ onBeforeUnmount(() => {
   background: #FFF7ED;
 }
 
+.messages-bubble--card,
+.messages-bubble--self.messages-bubble--card {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .messages-image-btn {
   display: block;
   padding: 0;
@@ -787,6 +902,7 @@ onBeforeUnmount(() => {
 }
 
 .messages-input-area {
+  position: relative;
   padding: var(--msg-space-lg) var(--msg-space-xl);
   background: var(--msg-warm-white);
   border-top: 1px solid var(--msg-paper);
@@ -799,6 +915,43 @@ onBeforeUnmount(() => {
   display: flex;
   gap: var(--msg-space-sm);
   align-items: center;
+}
+
+.messages-quick-reply-panel {
+  position: absolute;
+  left: var(--msg-space-xl);
+  bottom: calc(100% - var(--msg-space-sm));
+  z-index: 20;
+}
+
+.messages-quick-reply-btn {
+  min-width: 76px;
+  min-height: 42px;
+  border: 1px solid #FED7AA;
+  border-radius: 18px;
+  background: #FFFFFF;
+  color: var(--msg-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform var(--msg-transition-fast), box-shadow var(--msg-transition-fast), background var(--msg-transition-fast);
+  flex-shrink: 0;
+}
+
+.messages-quick-reply-btn:hover,
+.messages-quick-reply-btn.is-active {
+  background: var(--msg-primary-bg);
+  transform: translateY(-2px);
+  box-shadow: var(--msg-shadow-primary);
+}
+
+.messages-quick-reply-btn__icon {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .messages-input {
@@ -903,6 +1056,12 @@ onBeforeUnmount(() => {
     padding: var(--msg-space-md);
   }
 
+  .messages-quick-reply-panel {
+    left: var(--msg-space-md);
+    right: var(--msg-space-md);
+    width: auto;
+  }
+
   .messages-bubble {
     max-width: 85%;
   }
@@ -940,6 +1099,15 @@ onBeforeUnmount(() => {
 
   .messages-send-btn {
     padding: var(--msg-space-sm) 18px;
+  }
+
+  .messages-quick-reply-btn {
+    min-width: 46px;
+    padding: 0 10px;
+  }
+
+  .messages-quick-reply-btn__text {
+    display: none;
   }
 }
 </style>

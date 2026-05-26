@@ -4,6 +4,8 @@ public class SendMessageRequest {
     private String body;
     private String messageType;
     private String mediaUrl;
+    private Long productId;
+    private Long orderId;
 
     public String getBody() {
         return body;
@@ -27,5 +29,21 @@ public class SendMessageRequest {
 
     public void setMediaUrl(String mediaUrl) {
         this.mediaUrl = mediaUrl;
+    }
+
+    public Long getProductId() {
+        return productId;
+    }
+
+    public void setProductId(Long productId) {
+        this.productId = productId;
+    }
+
+    public Long getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(Long orderId) {
+        this.orderId = orderId;
     }
 }

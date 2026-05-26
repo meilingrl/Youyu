@@ -69,7 +69,14 @@ public class ChatController {
             @RequestBody SendMessageRequest req,
             HttpServletRequest request) {
         Long userId = AuthContextHolder.get().getUserId();
-        return ApiResponse.success(chatService.sendMessage(id, userId, req.getBody(), req.getMessageType(), req.getMediaUrl()), traceId(request));
+        return ApiResponse.success(chatService.sendMessage(
+                id,
+                userId,
+                req.getBody(),
+                req.getMessageType(),
+                req.getMediaUrl(),
+                req.getProductId(),
+                req.getOrderId()), traceId(request));
     }
 
     @PostMapping("/conversations/{id}/read")

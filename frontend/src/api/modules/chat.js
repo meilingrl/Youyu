@@ -35,3 +35,33 @@ export async function markConversationRead(conversationId) {
 export async function sendMessage(conversationId, data) {
   return service.post(`/chat/conversations/${conversationId}/messages`, data)
 }
+
+export async function getQuickReplies() {
+  return service.get('/chat/quick-replies')
+}
+
+export async function createQuickReply(data) {
+  return service.post('/chat/quick-replies', data)
+}
+
+export async function updateQuickReply(id, data) {
+  return service.put(`/chat/quick-replies/${id}`, data)
+}
+
+export async function deleteQuickReply(id) {
+  return service.delete(`/chat/quick-replies/${id}`)
+}
+
+export async function sendProductCardMessage(conversationId, data) {
+  return sendMessage(conversationId, {
+    ...data,
+    messageType: 'product_card'
+  })
+}
+
+export async function sendOrderCardMessage(conversationId, data) {
+  return sendMessage(conversationId, {
+    ...data,
+    messageType: 'order_card'
+  })
+}

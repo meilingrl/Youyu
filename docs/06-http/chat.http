@@ -139,3 +139,42 @@ Content-Type: application/json
 {
   "peerUserId": 1001
 }
+
+### 19. List quick replies
+GET {{baseUrl}}/api/chat/quick-replies
+Authorization: Bearer {{user1Token}}
+
+### 20. Create quick reply
+# @name createQuickReply
+POST {{baseUrl}}/api/chat/quick-replies
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "content": "Thanks for your message.",
+  "sortOrder": 1
+}
+
+### 21. Update quick reply
+PUT {{baseUrl}}/api/chat/quick-replies/1
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "content": "I will check and reply soon.",
+  "sortOrder": 0
+}
+
+### 22. Delete quick reply
+DELETE {{baseUrl}}/api/chat/quick-replies/1
+Authorization: Bearer {{user1Token}}
+
+### 23. Try to update another user's quick reply (should fail)
+PUT {{baseUrl}}/api/chat/quick-replies/1
+Authorization: Bearer {{user2Token}}
+Content-Type: application/json
+
+{
+  "content": "Not allowed.",
+  "sortOrder": 0
+}
