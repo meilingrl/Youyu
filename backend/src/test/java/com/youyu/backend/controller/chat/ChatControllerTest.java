@@ -231,6 +231,36 @@ class ChatControllerTest {
 
     @Test
     @Order(14)
+    void unreadCountAndMarkReadWork() throws Exception {
+        String token = "mock-1001-USER";
+
+        mockMvc.perform(get("/api/chat/unread-count")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.count").value(greaterThanOrEqualTo(1)));
+
+        mockMvc.perform(get("/api/chat/conversations")
+                        .header("Authorization", "Bearer " + token)
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].id").value(conversationId))
+                .andExpect(jsonPath("$.data.content[0].unreadCount").value(1));
+
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/read")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/chat/unread-count")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.count").value(0));
+    }
+
+    @Test
+    @Order(15)
     void paginationWorks() throws Exception {
         String token = "mock-1001-USER";
         // Request with size=1 to test pagination

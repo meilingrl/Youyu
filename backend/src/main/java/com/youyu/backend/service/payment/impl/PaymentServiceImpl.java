@@ -3,6 +3,7 @@ package com.youyu.backend.service.payment.impl;
 import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.enums.OrderStatus;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.service.notification.NotificationService;
 import com.youyu.backend.service.payment.PaymentGatewayService;
 import com.youyu.backend.service.payment.PaymentService;
 import com.youyu.backend.service.transaction.support.TransactionDataStore;
@@ -17,10 +18,14 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentGatewayService paymentGatewayService;
     private final TransactionDataStore transactionDataStore;
+    private final NotificationService notificationService;
 
-    public PaymentServiceImpl(PaymentGatewayService paymentGatewayService, TransactionDataStore transactionDataStore) {
+    public PaymentServiceImpl(PaymentGatewayService paymentGatewayService,
+                              TransactionDataStore transactionDataStore,
+                              NotificationService notificationService) {
         this.paymentGatewayService = paymentGatewayService;
         this.transactionDataStore = transactionDataStore;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -109,6 +114,7 @@ public class PaymentServiceImpl implements PaymentService {
             order.put("orderStatus", OrderStatus.PENDING_FULFILLMENT.getValue());
             fulfillment.put("fulfillmentStatus", "pending_action");
         }
+        notifyPaymentSuccess(order);
 
         return Map.of(
                 "orderId", orderId,
@@ -141,5 +147,13 @@ public class PaymentServiceImpl implements PaymentService {
                     : "wait_for_offline_appointment_and_double_confirmation";
         }
         return "none";
+    }
+
+    private void notifyPaymentSuccess(Map<String, Object> order) {
+        try {
+            notificationService.createOrderStatusNotification(order, "paid", true);
+        } catch (RuntimeException ignored) {
+            // Notification delivery must not break payment completion.
+        }
     }
 }

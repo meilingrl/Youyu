@@ -21,6 +21,14 @@ export async function getMessages(conversationId, params) {
   return service.get(`/chat/conversations/${conversationId}/messages`, { params })
 }
 
+export async function getUnreadCount() {
+  return service.get('/chat/unread-count')
+}
+
+export async function markConversationRead(conversationId) {
+  return service.post(`/chat/conversations/${conversationId}/read`)
+}
+
 /**
  * 发送消息
  */

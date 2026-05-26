@@ -2,6 +2,8 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
+import { useNotificationStore } from '@/stores/notification'
 import { appNavigation } from '@/constants/navigation'
 
 defineProps({
@@ -26,6 +28,8 @@ const drawerWidth = computed(() => `${Math.min(viewportW.value * 0.88, 320)}px`)
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const chatStore = useChatStore()
+const notificationStore = useNotificationStore()
 
 const visibleNavigation = computed(() =>
   appNavigation.filter((item) => !item.auth || authStore.isLoggedIn)
@@ -59,6 +63,18 @@ function handleLogout() {
 function isActive(item) {
   return route.meta?.navKey === item.path
 }
+
+function formatBadge(count) {
+  const numericCount = Number(count || 0)
+  if (numericCount <= 0) return ''
+  return numericCount > 99 ? '99+' : String(numericCount)
+}
+
+function badgeForPath(path) {
+  if (path === '/app/messages') return formatBadge(chatStore.unreadCount)
+  if (path === '/app/notifications') return formatBadge(notificationStore.unreadCount)
+  return ''
+}
 </script>
 
 <template>
@@ -79,7 +95,10 @@ function isActive(item) {
         :class="{ 'is-active': isActive(item) }"
         @click="close"
       >
-        {{ item.label }}
+        <span>{{ item.label }}</span>
+        <span v-if="badgeForPath(item.path)" class="mobile-nav__badge">
+          {{ badgeForPath(item.path) }}
+        </span>
       </router-link>
 
       <div class="mobile-nav__divider" />
@@ -109,6 +128,8 @@ function isActive(item) {
 .mobile-nav__link {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   min-height: 48px;
   padding: 13px 16px;
   border-radius: var(--cm-radius-sm);
@@ -120,6 +141,21 @@ function isActive(item) {
     border-color var(--cm-transition-micro),
     background-color var(--cm-transition-micro),
     transform var(--cm-transition-micro);
+}
+
+.mobile-nav__badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #DC2626;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .mobile-nav__link:hover {

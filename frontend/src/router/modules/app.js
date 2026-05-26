@@ -215,6 +215,17 @@ export default {
       }
     },
     {
+      path: 'notifications',
+      name: 'app-notifications',
+      component: () => import('@/views/app/NotificationsView.vue'),
+      meta: {
+        title: '通知中心',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/messages'
+      }
+    },
+    {
       path: 'me',
       name: 'app-me',
       component: () => import('@/views/app/ProfileView.vue'),

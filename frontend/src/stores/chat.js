@@ -2,45 +2,96 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import * as chatApi from '@/api/modules/chat'
 
+function unwrapData(response) {
+  return response?.data ?? response
+}
+
+function normalizeConversation(conversation = {}) {
+  const unreadCount = Number(conversation.unreadCount ?? conversation.unread_count ?? 0)
+
+  return {
+    ...conversation,
+    id: conversation.id,
+    userAId: conversation.userAId ?? conversation.user_a_id,
+    userBId: conversation.userBId ?? conversation.user_b_id,
+    productId: conversation.productId ?? conversation.product_id,
+    shopId: conversation.shopId ?? conversation.shop_id,
+    lastMessageAt: conversation.lastMessageAt ?? conversation.last_message_at,
+    createdAt: conversation.createdAt ?? conversation.created_at,
+    updatedAt: conversation.updatedAt ?? conversation.updated_at,
+    unreadCount: Number.isFinite(unreadCount) ? unreadCount : 0,
+    peerUser: conversation.peerUser ?? conversation.peer_user ?? null
+  }
+}
+
+function normalizeMessage(message = {}) {
+  return {
+    ...message,
+    id: message.id,
+    conversationId: message.conversationId ?? message.conversation_id,
+    senderId: message.senderId ?? message.senderUserId ?? message.sender_user_id ?? message.sender_id,
+    senderUserId: message.senderUserId ?? message.senderId ?? message.sender_user_id ?? message.sender_id,
+    messageType: message.messageType ?? message.message_type ?? 'text',
+    mediaUrl: message.mediaUrl ?? message.media_url ?? null,
+    createdAt: message.createdAt ?? message.created_at
+  }
+}
+
 export const useChatStore = defineStore('chat', () => {
-  // State
   const conversations = ref([])
   const activeConversationId = ref(null)
   const messages = ref([])
+  const unreadCount = ref(0)
   const loading = ref(false)
   const sending = ref(false)
   const pollingTimer = ref(null)
 
-  // Computed
   const activeConversation = computed(() => {
     if (!activeConversationId.value) return null
     return conversations.value.find((c) => c.id === activeConversationId.value)
   })
 
-  // Actions
-  async function fetchConversations(page = 0, size = 20) {
-    loading.value = true
+  async function fetchUnreadCount() {
     try {
-      const response = await chatApi.getConversations({ page, size })
-      conversations.value = response.data.content
-      return response.data
+      const payload = unwrapData(await chatApi.getUnreadCount())
+      const count = Number(payload?.count ?? payload?.unreadCount ?? payload ?? 0)
+      unreadCount.value = Number.isFinite(count) ? count : 0
+      return unreadCount.value
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error)
+      throw error
+    }
+  }
+
+  async function fetchConversations(page = 0, size = 20, options = {}) {
+    if (!options.silent) {
+      loading.value = true
+    }
+
+    try {
+      const payload = unwrapData(await chatApi.getConversations({ page, size }))
+      const content = payload?.content ?? []
+      conversations.value = content.map(normalizeConversation)
+      unreadCount.value = conversations.value.reduce((total, item) => total + (item.unreadCount || 0), 0)
+      return payload
     } catch (error) {
       console.error('Failed to fetch conversations:', error)
       throw error
     } finally {
-      loading.value = false
+      if (!options.silent) {
+        loading.value = false
+      }
     }
   }
 
   async function findOrCreateConversation(peerUserId, productId, shopId) {
     loading.value = true
     try {
-      const conversation = await chatApi.createConversation({
+      const conversation = normalizeConversation(unwrapData(await chatApi.createConversation({
         peerUserId,
         productId,
         shopId
-      })
-      // Add to list if not exists
+      })))
       const exists = conversations.value.find((c) => c.id === conversation.id)
       if (!exists) {
         conversations.value.unshift(conversation)
@@ -56,34 +107,70 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  async function fetchMessages(conversationId, page = 0, size = 50) {
-    loading.value = true
+  async function markConversationRead(conversationId) {
+    await chatApi.markConversationRead(conversationId)
+
+    const conversation = conversations.value.find((c) => c.id === conversationId)
+    const previousUnreadCount = conversation?.unreadCount || 0
+    if (conversation) {
+      conversation.unreadCount = 0
+    }
+    unreadCount.value = Math.max(0, unreadCount.value - previousUnreadCount)
+
     try {
-      const response = await chatApi.getMessages(conversationId, { page, size })
-      // Backend returns descending order, frontend needs ascending
-      messages.value = response.data.content.reverse()
-      return response.data
+      await fetchUnreadCount()
+    } catch (error) {
+      console.error('Failed to refresh unread count after read:', error)
+    }
+  }
+
+  async function fetchMessages(conversationId, page = 0, size = 50, options = {}) {
+    if (!options.silent) {
+      loading.value = true
+    }
+
+    try {
+      const payload = unwrapData(await chatApi.getMessages(conversationId, { page, size }))
+      messages.value = (payload?.content ?? []).map(normalizeMessage).reverse()
+
+      if (conversationId) {
+        try {
+          await markConversationRead(conversationId)
+        } catch (error) {
+          console.error('Failed to mark conversation read:', error)
+        }
+      }
+
+      return payload
     } catch (error) {
       console.error('Failed to fetch messages:', error)
       throw error
     } finally {
-      loading.value = false
+      if (!options.silent) {
+        loading.value = false
+      }
     }
   }
 
-  async function sendMessage(conversationId, body) {
-    if (!body.trim()) return
+  async function sendMessage(conversationId, payload) {
+    const messagePayload = typeof payload === 'string'
+      ? { body: payload, messageType: 'text' }
+      : { messageType: 'text', ...payload }
+
+    const isTextMessage = (messagePayload.messageType ?? 'text') === 'text'
+    if (isTextMessage && !messagePayload.body?.trim()) return null
+    if (messagePayload.messageType === 'image' && !messagePayload.mediaUrl) return null
 
     sending.value = true
     try {
-      const message = await chatApi.sendMessage(conversationId, { body })
-      // Add to message list
+      const message = normalizeMessage(unwrapData(await chatApi.sendMessage(conversationId, messagePayload)))
       messages.value.push(message)
-      // Update conversation lastMessageAt
-      const conv = conversations.value.find((c) => c.id === conversationId)
-      if (conv) {
-        conv.lastMessageAt = message.createdAt
+
+      const conversation = conversations.value.find((c) => c.id === conversationId)
+      if (conversation) {
+        conversation.lastMessageAt = message.createdAt
       }
+
       return message
     } catch (error) {
       console.error('Failed to send message:', error)
@@ -93,16 +180,19 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // Polling logic
   function startPolling(conversationId, interval = 8000) {
     stopPolling()
     pollingTimer.value = setInterval(async () => {
       try {
-        const response = await chatApi.getMessages(conversationId, { page: 0, size: 50 })
-        const newMessages = response.data.content.reverse()
-        // Only update if there are new messages (avoid flicker)
-        if (newMessages.length > messages.value.length) {
-          messages.value = newMessages
+        await fetchConversations(0, 20, { silent: true })
+
+        if (conversationId) {
+          const payload = unwrapData(await chatApi.getMessages(conversationId, { page: 0, size: 50 }))
+          const newMessages = (payload?.content ?? []).map(normalizeMessage).reverse()
+          if (newMessages.length !== messages.value.length || newMessages.at(-1)?.id !== messages.value.at(-1)?.id) {
+            messages.value = newMessages
+            await markConversationRead(conversationId)
+          }
         }
       } catch (error) {
         console.error('Polling failed:', error)
@@ -117,30 +207,28 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
-  // Cleanup
   function $reset() {
     conversations.value = []
     activeConversationId.value = null
     messages.value = []
+    unreadCount.value = 0
     loading.value = false
     sending.value = false
     stopPolling()
   }
 
   return {
-    // State
     conversations,
     activeConversationId,
     messages,
+    unreadCount,
     loading,
     sending,
-
-    // Computed
     activeConversation,
-
-    // Actions
+    fetchUnreadCount,
     fetchConversations,
     findOrCreateConversation,
+    markConversationRead,
     fetchMessages,
     sendMessage,
     startPolling,

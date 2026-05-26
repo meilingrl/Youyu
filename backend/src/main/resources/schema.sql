@@ -441,6 +441,8 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
     shop_id BIGINT,
     user_a_id BIGINT NOT NULL,
     user_b_id BIGINT NOT NULL,
+    unread_count_a INT NOT NULL DEFAULT 0,
+    unread_count_b INT NOT NULL DEFAULT 0,
     last_message_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_chat_conv_user_a FOREIGN KEY (user_a_id) REFERENCES users(id),
@@ -449,6 +451,8 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
     CONSTRAINT fk_chat_conv_shop FOREIGN KEY (shop_id) REFERENCES shops(id),
     INDEX idx_user_a_last_message (user_a_id, last_message_at DESC),
     INDEX idx_user_b_last_message (user_b_id, last_message_at DESC),
+    INDEX idx_user_a_unread (user_a_id, unread_count_a),
+    INDEX idx_user_b_unread (user_b_id, unread_count_b),
     UNIQUE INDEX uk_conversation_pair (user_a_id, user_b_id, product_id, shop_id)
 );
 
@@ -457,8 +461,28 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     conversation_id BIGINT NOT NULL,
     sender_user_id BIGINT NOT NULL,
     body TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMP NULL,
+    message_type VARCHAR(32) NOT NULL DEFAULT 'text',
+    media_url MEDIUMTEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_chat_msg_conversation FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id),
     CONSTRAINT fk_chat_msg_sender FOREIGN KEY (sender_user_id) REFERENCES users(id),
-    INDEX idx_conversation_created (conversation_id, created_at DESC)
+    INDEX idx_conversation_created (conversation_id, created_at DESC),
+    INDEX idx_conversation_unread (conversation_id, is_read),
+    INDEX idx_conversation_type (conversation_id, message_type)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(32) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    body TEXT NOT NULL,
+    action_url VARCHAR(512),
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_notification_user_read (user_id, is_read),
+    INDEX idx_notification_user_created (user_id, created_at DESC)
 );

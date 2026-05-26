@@ -35,6 +35,13 @@ public class ChatController {
         return ApiResponse.success(chatService.getConversations(userId, page, size), traceId(request));
     }
 
+    @GetMapping("/unread-count")
+    @LoginRequired
+    public ApiResponse<Map<String, Object>> getUnreadCount(HttpServletRequest request) {
+        Long userId = AuthContextHolder.get().getUserId();
+        return ApiResponse.success(chatService.getUnreadCount(userId), traceId(request));
+    }
+
     @PostMapping("/conversations")
     @LoginRequired
     public ApiResponse<Map<String, Object>> createConversation(@RequestBody CreateConversationRequest req,
@@ -62,7 +69,17 @@ public class ChatController {
             @RequestBody SendMessageRequest req,
             HttpServletRequest request) {
         Long userId = AuthContextHolder.get().getUserId();
-        return ApiResponse.success(chatService.sendMessage(id, userId, req.getBody()), traceId(request));
+        return ApiResponse.success(chatService.sendMessage(id, userId, req.getBody(), req.getMessageType(), req.getMediaUrl()), traceId(request));
+    }
+
+    @PostMapping("/conversations/{id}/read")
+    @LoginRequired
+    public ApiResponse<Void> markConversationRead(
+            @PathVariable Long id,
+            HttpServletRequest request) {
+        Long userId = AuthContextHolder.get().getUserId();
+        chatService.markConversationRead(id, userId);
+        return ApiResponse.success(null, traceId(request));
     }
 
     private String traceId(HttpServletRequest request) {

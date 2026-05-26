@@ -8,6 +8,7 @@ import com.youyu.backend.service.chat.ChatService;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -17,8 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChatServiceImpl implements ChatService {
 
     private static final int MAX_MESSAGE_LENGTH = 2000;
+    private static final int MAX_MEDIA_URL_LENGTH = 512;
+    private static final int MAX_DATA_IMAGE_URL_LENGTH = 7 * 1024 * 1024;
     private static final int MAX_PAGE_SIZE_CONVERSATIONS = 50;
     private static final int MAX_PAGE_SIZE_MESSAGES = 100;
+    private static final String MESSAGE_TYPE_TEXT = "text";
+    private static final String MESSAGE_TYPE_IMAGE = "image";
 
     private final ChatConversationMapper conversationMapper;
     private final ChatMessageMapper messageMapper;
@@ -30,9 +35,7 @@ public class ChatServiceImpl implements ChatService {
 
     @Override
     public Map<String, Object> getConversations(Long userId, int page, int size) {
-        if (userId == null) {
-            throw new BusinessException(ResultCode.UNAUTHORIZED, "请先登录");
-        }
+        requireLogin(userId);
 
         page = Math.max(0, page);
         size = Math.min(MAX_PAGE_SIZE_CONVERSATIONS, Math.max(1, size));
@@ -42,7 +45,6 @@ public class ChatServiceImpl implements ChatService {
         int total = conversationMapper.countByUserId(userId);
         int totalPages = (int) Math.ceil((double) total / size);
 
-        // Transform conversations to include peerUser
         List<Map<String, Object>> content = conversations.stream()
                 .map(conv -> buildConversationResponse(conv, userId))
                 .toList();
@@ -53,35 +55,28 @@ public class ChatServiceImpl implements ChatService {
         result.put("totalPages", totalPages);
         result.put("number", page);
         result.put("size", size);
-
         return result;
     }
 
     @Override
     @Transactional
     public Map<String, Object> findOrCreateConversation(Long currentUserId, Long peerUserId, Long productId, Long shopId) {
-        if (currentUserId == null) {
-            throw new BusinessException(ResultCode.UNAUTHORIZED, "请先登录");
-        }
+        requireLogin(currentUserId);
         if (peerUserId == null) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "对方用户ID不能为空");
+            throw new BusinessException(ResultCode.BAD_REQUEST, "peerUserId is required");
         }
         if (currentUserId.equals(peerUserId)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "不能与自己创建会话");
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Cannot create a conversation with yourself");
         }
 
-        // Try to find existing conversation
         Map<String, Object> existing = conversationMapper.findByParticipants(currentUserId, peerUserId, productId, shopId);
         if (existing != null) {
             return buildConversationResponse(existing, currentUserId);
         }
 
-        // Create new conversation
-        String type = determineConversationType(productId, shopId);
         LocalDateTime now = LocalDateTime.now();
-
         Map<String, Object> conversationData = new LinkedHashMap<>();
-        conversationData.put("type", type);
+        conversationData.put("type", determineConversationType(productId, shopId));
         conversationData.put("productId", productId);
         conversationData.put("shopId", shopId);
         conversationData.put("userAId", currentUserId);
@@ -93,39 +88,24 @@ public class ChatServiceImpl implements ChatService {
         try {
             conversationId = conversationMapper.insert(conversationData);
         } catch (DuplicateKeyException e) {
-            // Race condition: another thread created the conversation
             existing = conversationMapper.findByParticipants(currentUserId, peerUserId, productId, shopId);
             if (existing != null) {
                 return buildConversationResponse(existing, currentUserId);
             }
-            throw new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "创建会话失败");
+            throw new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "Failed to create conversation");
         }
 
         Map<String, Object> created = conversationMapper.findById(conversationId);
         if (created == null) {
-            throw new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "创建会话失败");
+            throw new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "Failed to create conversation");
         }
-
         return buildConversationResponse(created, currentUserId);
     }
 
     @Override
     public Map<String, Object> getMessages(Long conversationId, Long currentUserId, int page, int size) {
-        if (currentUserId == null) {
-            throw new BusinessException(ResultCode.UNAUTHORIZED, "请先登录");
-        }
-
-        // Verify user is participant
-        Map<String, Object> conversation = conversationMapper.findById(conversationId);
-        if (conversation == null) {
-            throw new BusinessException(ResultCode.NOT_FOUND, "会话不存在");
-        }
-
-        Long userAId = (Long) conversation.get("userAId");
-        Long userBId = (Long) conversation.get("userBId");
-        if (!currentUserId.equals(userAId) && !currentUserId.equals(userBId)) {
-            throw new BusinessException(ResultCode.FORBIDDEN, "无权访问此会话");
-        }
+        requireLogin(currentUserId);
+        requireParticipant(conversationId, currentUserId);
 
         page = Math.max(0, page);
         size = Math.min(MAX_PAGE_SIZE_MESSAGES, Math.max(1, size));
@@ -141,56 +121,90 @@ public class ChatServiceImpl implements ChatService {
         result.put("totalPages", totalPages);
         result.put("number", page);
         result.put("size", size);
-
         return result;
     }
 
     @Override
     @Transactional
-    public Map<String, Object> sendMessage(Long conversationId, Long currentUserId, String body) {
-        if (currentUserId == null) {
-            throw new BusinessException(ResultCode.UNAUTHORIZED, "请先登录");
-        }
-        if (body == null || body.trim().isEmpty()) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "消息内容不能为空");
-        }
-        if (body.length() > MAX_MESSAGE_LENGTH) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "消息内容不能超过" + MAX_MESSAGE_LENGTH + "字符");
-        }
+    public Map<String, Object> sendMessage(Long conversationId, Long currentUserId, String body, String messageType, String mediaUrl) {
+        requireLogin(currentUserId);
 
-        // Verify user is participant
-        Map<String, Object> conversation = conversationMapper.findById(conversationId);
-        if (conversation == null) {
-            throw new BusinessException(ResultCode.NOT_FOUND, "会话不存在");
-        }
+        String normalizedType = normalizeMessageType(messageType);
+        String normalizedBody = normalizeBody(body);
+        String normalizedMediaUrl = normalizeMediaUrl(mediaUrl);
+        validateMessagePayload(normalizedBody, normalizedType, normalizedMediaUrl);
 
+        Map<String, Object> conversation = requireParticipant(conversationId, currentUserId);
         Long userAId = (Long) conversation.get("userAId");
         Long userBId = (Long) conversation.get("userBId");
-        if (!currentUserId.equals(userAId) && !currentUserId.equals(userBId)) {
-            throw new BusinessException(ResultCode.FORBIDDEN, "无权在此会话中发送消息");
-        }
 
-        // Insert message
         LocalDateTime now = LocalDateTime.now();
         Map<String, Object> messageData = new LinkedHashMap<>();
         messageData.put("conversationId", conversationId);
         messageData.put("senderUserId", currentUserId);
-        messageData.put("body", body.trim());
+        messageData.put("body", normalizedBody);
+        messageData.put("messageType", normalizedType);
+        messageData.put("mediaUrl", normalizedMediaUrl);
+        messageData.put("isRead", false);
+        messageData.put("readAt", null);
         messageData.put("createdAt", now);
 
         Long messageId = messageMapper.insert(messageData);
-
-        // Update conversation last_message_at
         conversationMapper.updateLastMessageAt(conversationId, now.toString());
+
+        Long recipientUserId = currentUserId.equals(userAId) ? userBId : userAId;
+        conversationMapper.incrementUnreadCount(conversationId, recipientUserId);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", messageId);
         result.put("conversationId", conversationId);
         result.put("senderUserId", currentUserId);
-        result.put("body", body.trim());
+        result.put("body", normalizedBody);
+        result.put("messageType", normalizedType);
+        result.put("mediaUrl", normalizedMediaUrl);
+        result.put("isRead", false);
+        result.put("readAt", null);
         result.put("createdAt", now);
-
         return result;
+    }
+
+    @Override
+    public Map<String, Object> getUnreadCount(Long currentUserId) {
+        requireLogin(currentUserId);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("count", conversationMapper.sumUnreadCountByUserId(currentUserId));
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void markConversationRead(Long conversationId, Long currentUserId) {
+        requireLogin(currentUserId);
+        requireParticipant(conversationId, currentUserId);
+
+        messageMapper.markMessagesRead(conversationId, currentUserId, LocalDateTime.now());
+        conversationMapper.clearUnreadCount(conversationId, currentUserId);
+    }
+
+    private Map<String, Object> requireParticipant(Long conversationId, Long currentUserId) {
+        Map<String, Object> conversation = conversationMapper.findById(conversationId);
+        if (conversation == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "Conversation not found");
+        }
+
+        Long userAId = (Long) conversation.get("userAId");
+        Long userBId = (Long) conversation.get("userBId");
+        if (!currentUserId.equals(userAId) && !currentUserId.equals(userBId)) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "No permission to access this conversation");
+        }
+        return conversation;
+    }
+
+    private void requireLogin(Long userId) {
+        if (userId == null) {
+            throw new BusinessException(ResultCode.UNAUTHORIZED, "Please log in first");
+        }
     }
 
     private String determineConversationType(Long productId, Long shopId) {
@@ -203,17 +217,14 @@ public class ChatServiceImpl implements ChatService {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private Map<String, Object> buildConversationResponse(Map<String, Object> conversation, Long currentUserId) {
         Long userAId = (Long) conversation.get("userAId");
         Long userBId = (Long) conversation.get("userBId");
 
-        // Determine peer user (the other participant)
-        Map<String, Object> peerUser;
-        if (currentUserId.equals(userAId)) {
-            peerUser = (Map<String, Object>) conversation.get("userB");
-        } else {
-            peerUser = (Map<String, Object>) conversation.get("userA");
-        }
+        Map<String, Object> peerUser = currentUserId.equals(userAId)
+                ? (Map<String, Object>) conversation.get("userB")
+                : (Map<String, Object>) conversation.get("userA");
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", conversation.get("id"));
@@ -221,9 +232,64 @@ public class ChatServiceImpl implements ChatService {
         result.put("productId", conversation.get("productId"));
         result.put("shopId", conversation.get("shopId"));
         result.put("peerUser", peerUser);
+        result.put("unreadCount", currentUserId.equals(userAId)
+                ? toInt(conversation.get("unreadCountA"))
+                : toInt(conversation.get("unreadCountB")));
         result.put("lastMessageAt", conversation.get("lastMessageAt"));
         result.put("createdAt", conversation.get("createdAt"));
-
         return result;
+    }
+
+    private String normalizeMessageType(String messageType) {
+        if (messageType == null || messageType.trim().isEmpty()) {
+            return MESSAGE_TYPE_TEXT;
+        }
+        return messageType.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeBody(String body) {
+        return body == null ? "" : body.trim();
+    }
+
+    private String normalizeMediaUrl(String mediaUrl) {
+        return mediaUrl == null ? null : mediaUrl.trim();
+    }
+
+    private void validateMessagePayload(String body, String messageType, String mediaUrl) {
+        if (!MESSAGE_TYPE_TEXT.equals(messageType) && !MESSAGE_TYPE_IMAGE.equals(messageType)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Unsupported message type");
+        }
+        if (body.length() > MAX_MESSAGE_LENGTH) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Message body cannot exceed " + MAX_MESSAGE_LENGTH + " characters");
+        }
+        if (MESSAGE_TYPE_TEXT.equals(messageType) && body.isEmpty()) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Message body cannot be empty");
+        }
+        if (MESSAGE_TYPE_TEXT.equals(messageType) && mediaUrl != null && !mediaUrl.isEmpty()) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Text messages cannot include mediaUrl");
+        }
+        if (MESSAGE_TYPE_IMAGE.equals(messageType)) {
+            if (mediaUrl == null || mediaUrl.isEmpty()) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Image messages require mediaUrl");
+            }
+            boolean isDataImage = mediaUrl.startsWith("data:image/");
+            int maxMediaUrlLength = isDataImage ? MAX_DATA_IMAGE_URL_LENGTH : MAX_MEDIA_URL_LENGTH;
+            if (mediaUrl.length() > maxMediaUrlLength) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "mediaUrl cannot exceed " + maxMediaUrlLength + " characters");
+            }
+            if (!mediaUrl.startsWith("http://") && !mediaUrl.startsWith("https://") && !isDataImage) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "mediaUrl must start with http://, https://, or data:image/");
+            }
+        }
+    }
+
+    private int toInt(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value == null) {
+            return 0;
+        }
+        return Integer.parseInt(value.toString());
     }
 }
