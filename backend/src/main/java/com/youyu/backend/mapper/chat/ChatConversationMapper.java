@@ -13,4 +13,9 @@ public interface ChatConversationMapper {
     int incrementUnreadCount(Long id, Long recipientUserId);
     int clearUnreadCount(Long id, Long userId);
     int sumUnreadCountByUserId(Long userId);
+    int updatePinStatus(Long id, Long userId, boolean pinned);
+    int updateMuteStatus(Long id, Long userId, boolean muted);
+    int softDelete(Long id, Long userId);
+    int restoreForUser(Long id, Long userId);
+    int updateAutoRepliedAt(Long id, Long targetUserId, java.time.LocalDateTime repliedAt);
 }

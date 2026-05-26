@@ -3,15 +3,17 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElImageViewer } from 'element-plus/es/components/image-viewer/index.mjs'
 import 'element-plus/es/components/image-viewer/style/css'
-import { ElMessage } from '@/plugins/element-plus-services'
+import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import EmptyState from '@/components/common/EmptyState.vue'
+import ConversationMenu from '@/components/chat/ConversationMenu.vue'
 import ImageUploader from '@/components/chat/ImageUploader.vue'
+import MessageSearch from '@/components/chat/MessageSearch.vue'
 import OrderCardMessage from '@/components/chat/OrderCardMessage.vue'
 import ProductCardMessage from '@/components/chat/ProductCardMessage.vue'
 import QuickReplyPanel from '@/components/chat/QuickReplyPanel.vue'
 import NotificationsView from '@/views/app/NotificationsView.vue'
-import { useChatStore } from '@/stores/chat'
 import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notification'
 
 const props = defineProps({
@@ -23,168 +25,127 @@ const props = defineProps({
 
 const route = useRoute()
 const router = useRouter()
-const chatStore = useChatStore()
 const authStore = useAuthStore()
+const chatStore = useChatStore()
 const notificationStore = useNotificationStore()
 
-const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
 const selectedCategory = ref('trade')
-const messagesThreadRef = ref(null)
-const messagesEndRef = ref(null)
-const messageInputRef = ref(null)
+const searchOpen = ref(false)
+const quickReplyOpen = ref(false)
 const messageInput = ref('')
-const quickReplyPanelOpen = ref(false)
-const failedImageIds = ref(new Set())
+const threadRef = ref(null)
+const inputRef = ref(null)
 const previewImageUrl = ref('')
+const failedImageIds = ref(new Set())
+const highlightedMessageId = ref(null)
+const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1200)
 
-const categoryOptions = [
+const categories = [
   { id: 'trade', label: '交易' },
   { id: 'shop', label: '店铺' },
   { id: 'support', label: '客服' },
-  { id: 'notifications', label: '通知' },
-  { id: 'group', label: '群聊' }
-]
-
-const groupPlaceholders = [
-  {
-    title: '粉丝群',
-    description: '关注的店铺上新、活动通知第一时间收到。'
-  },
-  {
-    title: '优惠群',
-    description: '限时折扣、拼单信息实时推送。'
-  },
-  {
-    title: '校园活动群',
-    description: '约自习、拼团购、组队活动都在这里。'
-  }
+  { id: 'notifications', label: '通知' }
 ]
 
 const isMobile = computed(() => windowWidth.value < 900)
+const activeConversation = computed(() => chatStore.activeConversation)
+const showMobileDetail = computed(() => isMobile.value && activeConversation.value && selectedCategory.value !== 'notifications')
+const visibleConversations = computed(() => selectedCategory.value === 'notifications' ? [] : chatStore.conversations)
 
-const visibleConversations = computed(() => {
-  if (selectedCategory.value === 'group' || selectedCategory.value === 'notifications') {
-    return []
-  }
-  return chatStore.conversations
-})
-
-const activeConversation = computed(() => {
-  if (selectedCategory.value === 'group' || selectedCategory.value === 'notifications') {
-    return null
-  }
-  if (!chatStore.activeConversationId) {
-    if (isMobile.value) return null
-    return visibleConversations.value[0] || null
-  }
-  return chatStore.activeConversation
-})
-
-const mobileShowsDetail = computed(() => Boolean(isMobile.value && activeConversation.value))
-
-const selectedCategoryIsNotifications = computed(() => selectedCategory.value === 'notifications')
-
-const conversationDisplayList = computed(() => {
-  return visibleConversations.value.map((conv) => {
-    const peerUser = conv.peerUser || {}
-    const lastMessage = chatStore.messages.length > 0 && chatStore.activeConversationId === conv.id
-      ? chatStore.messages[chatStore.messages.length - 1]
-      : null
-
+const conversationRows = computed(() => {
+  return visibleConversations.value.map((conversation) => {
+    const peerUser = conversation.peerUser || {}
     return {
-      id: conv.id,
+      id: conversation.id,
       title: peerUser.nickname || peerUser.username || '用户',
-      preview: messagePreview(conv, lastMessage),
-      updatedAt: formatTime(conv.lastMessageAt || conv.createdAt),
-      unread: formatUnreadCount(conv.unreadCount || 0)
+      preview: conversation.lastMessagePreview || '开始对话',
+      time: formatTime(conversation.lastMessageAt || conversation.createdAt),
+      unread: conversation.isMuted ? '' : formatUnread(conversation.unreadCount),
+      isPinned: conversation.isPinned,
+      isMuted: conversation.isMuted
     }
   })
 })
 
 const displayMessages = computed(() => {
-  if (!activeConversation.value) return []
-
-  return chatStore.messages.map((msg) => {
-    const isSelf = msg.senderId === authStore.currentUser?.id
+  const currentUserId = String(authStore.currentUser?.id || '')
+  return chatStore.messages.map((message) => {
+    const senderId = String(message.senderId ?? message.senderUserId ?? '')
+    const isSelf = senderId === currentUserId
     return {
-      id: msg.id,
+      ...message,
       role: isSelf ? 'self' : 'other',
-      body: msg.body,
-      messageType: msg.messageType || 'text',
-      mediaUrl: msg.mediaUrl,
-      productId: msg.productId,
-      product: msg.product,
-      orderId: msg.orderId,
-      order: msg.order,
-      imageFailed: failedImageIds.value.has(msg.id)
+      canRecall: isSelf && canRecall(message),
+      recalledText: isSelf ? '你撤回了一条消息' : '对方撤回了一条消息',
+      isHighlighted: String(highlightedMessageId.value || '') === String(message.id),
+      imageFailed: failedImageIds.value.has(message.id)
     }
   })
 })
 
-function formatUnreadCount(count) {
-  const numericCount = Number(count || 0)
-  if (numericCount <= 0) return ''
-  return numericCount > 99 ? '99+' : String(numericCount)
+const quickReplyScenario = computed(() => {
+  if (selectedCategory.value === 'support') return 'support'
+  if (activeConversation.value?.shopId) return 'seller'
+  return 'buyer'
+})
+
+function formatUnread(count) {
+  const value = Number(count || 0)
+  if (value <= 0) return ''
+  return value > 99 ? '99+' : String(value)
 }
 
-function categoryUnreadCount(categoryId) {
-  if (categoryId === 'trade') {
-    return formatUnreadCount(chatStore.unreadCount)
-  }
-  if (categoryId === 'notifications') {
-    return formatUnreadCount(notificationStore.unreadCount)
-  }
+function categoryUnread(categoryId) {
+  if (categoryId === 'trade') return formatUnread(chatStore.unreadCount)
+  if (categoryId === 'notifications') return formatUnread(notificationStore.unreadCount)
   return ''
-}
-
-function messagePreview(conv, lastMessage) {
-  if (lastMessage?.messageType === 'image') return '[图片]'
-  if (lastMessage?.messageType === 'product_card') return '[商品卡片]'
-  if (lastMessage?.messageType === 'order_card') return '[订单卡片]'
-  return lastMessage?.body || conv.lastMessagePreview || conv.last_message_preview || '开始对话'
 }
 
 function formatTime(timestamp) {
   if (!timestamp) return ''
   const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return ''
   const now = new Date()
   const diff = now - date
-
   if (diff < 24 * 60 * 60 * 1000) {
     return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
-
-  if (diff < 48 * 60 * 60 * 1000) {
-    return '昨天 ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  }
-
   return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
 }
 
-function handleResize() {
+function canRecall(message) {
+  if (message.isRecalled || !message.createdAt) return false
+  const createdAt = new Date(message.createdAt).getTime()
+  return !Number.isNaN(createdAt) && Date.now() - createdAt <= 2 * 60 * 1000
+}
+
+function onResize() {
   windowWidth.value = window.innerWidth
 }
 
 function openCategory(categoryId) {
   selectedCategory.value = categoryId
-  chatStore.activeConversationId = null
-  quickReplyPanelOpen.value = false
-
-  if (categoryId !== 'notifications' && !isMobile.value && visibleConversations.value.length > 0) {
+  searchOpen.value = false
+  quickReplyOpen.value = false
+  if (categoryId === 'notifications') {
+    chatStore.activeConversationId = null
+  } else if (!isMobile.value && !chatStore.activeConversationId && visibleConversations.value.length) {
     openConversation(visibleConversations.value[0].id)
   }
 }
 
-async function openConversation(conversationId) {
-  const pageScrollY = typeof window !== 'undefined' ? window.scrollY : 0
+async function openConversation(conversationId, options = {}) {
   chatStore.activeConversationId = conversationId
-  quickReplyPanelOpen.value = false
-
+  quickReplyOpen.value = false
+  highlightedMessageId.value = options.messageId || null
   try {
     await chatStore.fetchMessages(conversationId)
     chatStore.startPolling(conversationId)
-    scrollToBottom()
-    restorePageScroll(pageScrollY)
+    if (options.messageId) {
+      scrollToMessage(options.messageId)
+    } else {
+      scrollToBottom()
+    }
   } catch (error) {
     ElMessage.error('加载消息失败')
   }
@@ -193,36 +154,26 @@ async function openConversation(conversationId) {
 function backToList() {
   chatStore.stopPolling()
   chatStore.activeConversationId = null
-  quickReplyPanelOpen.value = false
+  highlightedMessageId.value = null
 }
 
-async function handleSendMessage() {
-  if (!messageInput.value.trim() || chatStore.sending) {
-    return
-  }
-
+async function sendText() {
   const body = messageInput.value.trim()
+  if (!body || !chatStore.activeConversationId || chatStore.sending) return
   messageInput.value = ''
-  quickReplyPanelOpen.value = false
-
+  quickReplyOpen.value = false
   try {
-    await chatStore.sendMessage(chatStore.activeConversationId, {
-      body,
-      messageType: 'text'
-    })
+    await chatStore.sendMessage(chatStore.activeConversationId, { body, messageType: 'text' })
     scrollToBottom()
   } catch (error) {
-    ElMessage.error('发送消息失败')
     messageInput.value = body
+    ElMessage.error('发送消息失败')
   }
 }
 
-async function handleImageSelected(image) {
-  if (!chatStore.activeConversationId || chatStore.sending) {
-    return
-  }
-  quickReplyPanelOpen.value = false
-
+async function sendImage(image) {
+  if (!chatStore.activeConversationId || chatStore.sending) return
+  quickReplyOpen.value = false
   try {
     await chatStore.sendMessage(chatStore.activeConversationId, {
       body: image.fileName || '',
@@ -235,102 +186,106 @@ async function handleImageSelected(image) {
   }
 }
 
-function handleImageError(messageId) {
-  failedImageIds.value = new Set([...failedImageIds.value, messageId])
+function selectQuickReply(content) {
+  messageInput.value = content
+  quickReplyOpen.value = false
+  nextTick(() => inputRef.value?.focus())
 }
 
-function openImagePreview(url) {
-  if (url) {
-    previewImageUrl.value = url
+async function togglePin(conversationId) {
+  const conversation = chatStore.conversations.find((item) => String(item.id) === String(conversationId))
+  if (!conversation) return
+  await chatStore.setConversationPinned(conversationId, !conversation.isPinned)
+}
+
+async function toggleMute(conversationId) {
+  const conversation = chatStore.conversations.find((item) => String(item.id) === String(conversationId))
+  if (!conversation) return
+  await chatStore.setConversationMuted(conversationId, !conversation.isMuted)
+}
+
+async function deleteConversation(conversationId) {
+  try {
+    await ElMessageBox.confirm('删除后将不再显示此会话，但历史消息会保留。', '删除会话', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await chatStore.deleteConversation(conversationId)
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('删除会话失败')
   }
 }
 
-function closeImagePreview() {
-  previewImageUrl.value = ''
+async function recallMessage(message) {
+  try {
+    await ElMessageBox.confirm('确认撤回这条消息？', '撤回消息', {
+      confirmButtonText: '撤回',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await chatStore.recallMessage(message.id)
+  } catch (error) {
+    if (error !== 'cancel' && error !== 'close') ElMessage.error('撤回失败')
+  }
 }
 
-function toggleQuickReplyPanel() {
-  quickReplyPanelOpen.value = !quickReplyPanelOpen.value
-}
-
-function handleQuickReplySelect(content) {
-  messageInput.value = content
-  quickReplyPanelOpen.value = false
-  nextTick(() => {
-    messageInputRef.value?.focus()
-  })
-}
-
-function restorePageScroll(scrollY) {
-  nextTick(() => {
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: scrollY, left: 0, behavior: 'auto' })
-    }
-  })
+async function openSearchResult(result) {
+  searchOpen.value = false
+  selectedCategory.value = 'trade'
+  await openConversation(result.conversationId, { messageId: result.id })
 }
 
 function scrollToBottom() {
   nextTick(() => {
-    const thread = messagesThreadRef.value
-    if (thread) {
-      thread.scrollTop = thread.scrollHeight
-    }
+    if (threadRef.value) threadRef.value.scrollTop = threadRef.value.scrollHeight
   })
 }
 
-function openProductCard(productId) {
-  if (productId) {
-    router.push(`/app/products/${productId}`)
-  }
+function scrollToMessage(messageId) {
+  nextTick(() => {
+    const element = threadRef.value?.querySelector(`[data-message-id="${messageId}"]`)
+    if (element) element.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    else scrollToBottom()
+  })
 }
 
-function openOrderCard(orderId) {
-  if (orderId) {
-    router.push({
-      path: '/app/orders',
-      query: { orderId: String(orderId) }
-    })
-  }
+function openProduct(productId) {
+  if (productId) router.push(`/app/products/${productId}`)
 }
 
-function getInitialConversationId() {
-  return props.conversationId || route.query.conversationId || ''
+function openOrder(orderId) {
+  if (orderId) router.push({ path: '/app/orders', query: { orderId: String(orderId) } })
 }
 
-async function loadConversations() {
+function onImageError(messageId) {
+  failedImageIds.value = new Set([...failedImageIds.value, messageId])
+}
+
+async function load() {
   try {
-    if (route.query.category) {
-      selectedCategory.value = String(route.query.category)
-    }
-
+    if (route.query.category) selectedCategory.value = String(route.query.category)
     await chatStore.fetchConversations()
-    chatStore.fetchUnreadCount().catch((error) => {
-      console.error('Failed to load unread count:', error)
-    })
-    notificationStore.loadUnreadCount().catch((error) => {
-      console.error('Failed to load notification unread count:', error)
-    })
-
-    const initialConversationId = getInitialConversationId()
-    const initialConversation = initialConversationId
-      ? visibleConversations.value.find((item) => String(item.id) === String(initialConversationId))
+    notificationStore.loadUnreadCount().catch(() => {})
+    const initialId = props.conversationId || route.query.conversationId || ''
+    const initial = initialId
+      ? chatStore.conversations.find((item) => String(item.id) === String(initialId))
       : null
-
-    if (initialConversation || (!isMobile.value && visibleConversations.value.length > 0)) {
-      await openConversation(initialConversation?.id || visibleConversations.value[0].id)
+    if (initial || (!isMobile.value && chatStore.conversations.length)) {
+      await openConversation(initial?.id || chatStore.conversations[0].id)
     }
   } catch (error) {
-    ElMessage.error('加载会话列表失败')
+    ElMessage.error('加载会话失败')
   }
 }
 
 onMounted(() => {
-  window.addEventListener('resize', handleResize)
-  loadConversations()
+  window.addEventListener('resize', onResize)
+  load()
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize)
+  window.removeEventListener('resize', onResize)
   chatStore.stopPolling()
 })
 </script>
@@ -339,13 +294,16 @@ onBeforeUnmount(() => {
   <div class="messages-container">
     <header class="messages-header">
       <h1>消息中心</h1>
+      <button type="button" class="messages-search-toggle" :class="{ 'is-active': searchOpen }" @click="searchOpen = !searchOpen">
+        {{ searchOpen ? '返回会话' : '搜索消息' }}
+      </button>
     </header>
 
     <div class="messages-layout">
-      <aside v-if="!mobileShowsDetail" class="messages-sidebar">
+      <aside v-if="!showMobileDetail" class="messages-sidebar">
         <div class="messages-categories">
           <button
-            v-for="item in categoryOptions"
+            v-for="item in categories"
             :key="item.id"
             type="button"
             class="messages-category"
@@ -353,166 +311,146 @@ onBeforeUnmount(() => {
             @click="openCategory(item.id)"
           >
             <strong>{{ item.label }}</strong>
-            <span v-if="categoryUnreadCount(item.id)" class="messages-category__badge">
-              {{ categoryUnreadCount(item.id) }}
-            </span>
+            <span v-if="categoryUnread(item.id)" class="messages-category__badge">{{ categoryUnread(item.id) }}</span>
           </button>
         </div>
 
-        <div v-if="chatStore.loading && conversationDisplayList.length === 0" class="messages-conversation-list">
-          <div class="messages-loading">
-            <el-skeleton animated :rows="3" />
-          </div>
+        <div v-if="chatStore.loading && !conversationRows.length" class="messages-loading">
+          <el-skeleton animated :rows="3" />
         </div>
 
-        <div v-else-if="conversationDisplayList.length" class="messages-conversation-list">
-          <button
-            v-for="item in conversationDisplayList"
+        <div v-else-if="conversationRows.length" class="messages-conversation-list">
+          <article
+            v-for="item in conversationRows"
             :key="item.id"
-            type="button"
             class="messages-conversation"
-            :class="{ 'is-active': activeConversation?.id === item.id }"
-            @click="openConversation(item.id)"
+            :class="{ 'is-active': activeConversation?.id === item.id, 'is-pinned': item.isPinned, 'is-muted': item.isMuted }"
           >
-            <div class="messages-avatar">{{ item.title.slice(0, 1) }}</div>
-            <div class="messages-conversation__content">
-              <div class="messages-conversation__top">
-                <strong>{{ item.title }}</strong>
-                <span class="messages-time">{{ item.updatedAt }}</span>
+            <button type="button" class="messages-conversation__select" @click="openConversation(item.id)">
+              <div class="messages-avatar">{{ item.title.slice(0, 1) }}</div>
+              <div class="messages-conversation__content">
+                <div class="messages-conversation__top">
+                  <strong>{{ item.title }}</strong>
+                  <span class="messages-time">{{ item.time }}</span>
+                </div>
+                <p class="messages-preview">{{ item.preview }}</p>
+                <div v-if="item.isPinned || item.isMuted" class="messages-states">
+                  <span v-if="item.isPinned">置顶</span>
+                  <span v-if="item.isMuted">静音</span>
+                </div>
               </div>
-              <p class="messages-preview">{{ item.preview }}</p>
-            </div>
-            <span v-if="item.unread" class="messages-unread">{{ item.unread }}</span>
-          </button>
+              <span v-if="item.unread" class="messages-unread">{{ item.unread }}</span>
+            </button>
+            <ConversationMenu
+              :is-pinned="item.isPinned"
+              :is-muted="item.isMuted"
+              @pin="togglePin(item.id)"
+              @mute="toggleMute(item.id)"
+              @delete="deleteConversation(item.id)"
+            />
+          </article>
         </div>
 
         <EmptyState
           v-else
-          emoji="○"
+          emoji="💬"
           title="当前分类还没有会话"
-          :description="selectedCategory === 'group'
-            ? '群聊功能即将上线，敬请期待。'
-            : '暂时还没有这个分类的消息。'"
-        >
-          <div v-if="selectedCategory === 'group'" class="messages-group-placeholders">
-            <article
-              v-for="item in groupPlaceholders"
-              :key="item.title"
-              class="messages-group-placeholder"
-            >
-              <strong>{{ item.title }}</strong>
-              <p>{{ item.description }}</p>
-            </article>
-          </div>
-        </EmptyState>
+          description="新的聊天和通知会显示在这里。"
+        />
       </aside>
 
       <main class="messages-main">
-        <div v-if="mobileShowsDetail" class="messages-mobile-back">
-          <button type="button" class="messages-back-btn" @click="backToList">
-            返回
-          </button>
+        <div v-if="showMobileDetail" class="messages-mobile-back">
+          <button type="button" class="messages-back-btn" @click="backToList">返回</button>
         </div>
 
-        <NotificationsView v-if="selectedCategoryIsNotifications" embedded />
+        <MessageSearch v-if="searchOpen" @open-result="openSearchResult" />
+        <NotificationsView v-else-if="selectedCategory === 'notifications'" embedded />
 
         <template v-else-if="activeConversation">
           <header class="messages-detail-header">
             <div class="messages-avatar messages-avatar--large">
               {{ (activeConversation.peerUser?.nickname || activeConversation.peerUser?.username || '用户').slice(0, 1) }}
             </div>
-            <h2>{{ activeConversation.peerUser?.nickname || activeConversation.peerUser?.username || '用户' }}</h2>
+            <div>
+              <h2>{{ activeConversation.peerUser?.nickname || activeConversation.peerUser?.username || '用户' }}</h2>
+              <div class="messages-states">
+                <span v-if="activeConversation.isPinned">置顶</span>
+                <span v-if="activeConversation.isMuted">静音</span>
+              </div>
+            </div>
           </header>
 
-          <div ref="messagesThreadRef" class="messages-thread">
-            <div v-if="chatStore.loading && displayMessages.length === 0" class="messages-loading">
+          <div ref="threadRef" class="messages-thread">
+            <div v-if="chatStore.loading && !displayMessages.length" class="messages-loading">
               <el-skeleton animated :rows="5" />
             </div>
 
-            <template v-else>
-              <article
-                v-for="message in displayMessages"
-                :key="message.id"
-                class="messages-bubble"
-                :class="[
-                  `messages-bubble--${message.role}`,
-                  {
-                    'messages-bubble--image': message.messageType === 'image',
-                    'messages-bubble--card': ['product_card', 'order_card'].includes(message.messageType)
-                  }
-                ]"
-              >
-                <template v-if="message.messageType === 'image'">
-                  <button
-                    v-if="message.mediaUrl && !message.imageFailed"
-                    type="button"
-                    class="messages-image-btn"
-                    @click="openImagePreview(message.mediaUrl)"
-                  >
-                    <img
-                      :src="message.mediaUrl"
-                      :alt="message.body || '图片消息'"
-                      class="messages-image"
-                      @error="handleImageError(message.id)"
-                    />
-                  </button>
-                  <div v-else class="messages-image-fallback">
-                    图片加载失败
-                  </div>
-                  <p v-if="message.body" class="messages-image-caption">{{ message.body }}</p>
-                </template>
-                <ProductCardMessage
-                  v-else-if="message.messageType === 'product_card'"
-                  :product="message.product || { id: message.productId }"
-                  :body="message.body"
-                  @open="openProductCard"
-                />
-                <OrderCardMessage
-                  v-else-if="message.messageType === 'order_card'"
-                  :order="message.order || { id: message.orderId }"
-                  :body="message.body"
-                  @open="openOrderCard"
-                />
-                <p v-else>{{ message.body }}</p>
-              </article>
-            </template>
-            <div ref="messagesEndRef"></div>
+            <article
+              v-for="message in displayMessages"
+              v-else
+              :key="message.id"
+              class="messages-bubble"
+              :class="[
+                `messages-bubble--${message.role}`,
+                {
+                  'messages-bubble--image': message.messageType === 'image',
+                  'messages-bubble--card': ['product_card', 'order_card'].includes(message.messageType),
+                  'is-recalled': message.isRecalled,
+                  'is-highlighted': message.isHighlighted
+                }
+              ]"
+              :data-message-id="message.id"
+            >
+              <button v-if="message.canRecall" type="button" class="messages-recall-btn" @click="recallMessage(message)">
+                撤回
+              </button>
+
+              <p v-if="message.isRecalled" class="messages-recalled-text">{{ message.recalledText }}</p>
+
+              <template v-else-if="message.messageType === 'image'">
+                <button
+                  v-if="message.mediaUrl && !message.imageFailed"
+                  type="button"
+                  class="messages-image-btn"
+                  @click="previewImageUrl = message.mediaUrl"
+                >
+                  <img :src="message.mediaUrl" :alt="message.body || '图片消息'" class="messages-image" @error="onImageError(message.id)" />
+                </button>
+                <div v-else class="messages-image-fallback">图片加载失败</div>
+                <p v-if="message.body" class="messages-image-caption">{{ message.body }}</p>
+              </template>
+
+              <ProductCardMessage
+                v-else-if="message.messageType === 'product_card'"
+                :product="message.product || { id: message.productId }"
+                :body="message.body"
+                @open="openProduct"
+              />
+              <OrderCardMessage
+                v-else-if="message.messageType === 'order_card'"
+                :order="message.order || { id: message.orderId }"
+                :body="message.body"
+                @open="openOrder"
+              />
+              <p v-else>{{ message.body }}</p>
+            </article>
           </div>
 
           <div class="messages-input-area">
             <QuickReplyPanel
-              v-if="quickReplyPanelOpen"
+              v-if="quickReplyOpen"
               class="messages-quick-reply-panel"
-              @select="handleQuickReplySelect"
+              :scenario="quickReplyScenario"
+              @select="selectQuickReply"
             />
             <div class="messages-composer">
-              <ImageUploader @selected="handleImageSelected" />
-              <button
-                type="button"
-                class="messages-quick-reply-btn"
-                :class="{ 'is-active': quickReplyPanelOpen }"
-                :aria-pressed="quickReplyPanelOpen"
-                title="快捷回复"
-                @click="toggleQuickReplyPanel"
-              >
-                <span class="messages-quick-reply-btn__icon" aria-hidden="true">⚡</span>
-                <span class="messages-quick-reply-btn__text">快捷</span>
+              <ImageUploader @selected="sendImage" />
+              <button type="button" class="messages-quick-reply-btn" :class="{ 'is-active': quickReplyOpen }" @click="quickReplyOpen = !quickReplyOpen">
+                快捷
               </button>
-              <input
-                ref="messageInputRef"
-                v-model="messageInput"
-                type="text"
-                placeholder="输入消息..."
-                class="messages-input"
-                @keyup.enter="handleSendMessage"
-              />
-              <button
-                type="button"
-                class="messages-send-btn"
-                :class="{ 'is-active': messageInput.trim() }"
-                :disabled="!messageInput.trim() || chatStore.sending"
-                @click="handleSendMessage"
-              >
+              <input ref="inputRef" v-model="messageInput" class="messages-input" type="text" placeholder="输入消息..." @keyup.enter="sendText" />
+              <button type="button" class="messages-send-btn" :disabled="!messageInput.trim() || chatStore.sending" @click="sendText">
                 {{ chatStore.sending ? '发送中...' : '发送' }}
               </button>
             </div>
@@ -521,9 +459,9 @@ onBeforeUnmount(() => {
 
         <EmptyState
           v-else
-          emoji="○"
+          emoji="💬"
           title="选择一个会话查看详情"
-          description="点击左侧会话列表中的任意一条消息开始查看。"
+          description="点击左侧会话列表开始查看。"
         />
       </main>
     </div>
@@ -533,230 +471,207 @@ onBeforeUnmount(() => {
       :url-list="[previewImageUrl]"
       :initial-index="0"
       hide-on-click-modal
-      @close="closeImagePreview"
+      @close="previewImageUrl = ''"
     />
   </div>
 </template>
 
 <style scoped>
 .messages-container {
-  --msg-primary: #EA580C;
-  --msg-primary-light: #FED7AA;
-  --msg-primary-bg: #FFF7ED;
-  --msg-warm-white: #FFFBF5;
-  --msg-paper: #FAFAF9;
-  --msg-warm-yellow: #FEF3C7;
-  --msg-warm-yellow-text: #92400E;
-  --msg-text-primary: #1F2937;
-  --msg-text-secondary: #6B7280;
-  --msg-text-tertiary: #9CA3AF;
-  --msg-warm-gray: #78716C;
-  --msg-space-xs: 8px;
-  --msg-space-sm: 12px;
-  --msg-space-md: 16px;
-  --msg-space-lg: 20px;
-  --msg-space-xl: 32px;
-  --msg-space-xxl: 56px;
-  --msg-radius-sm: 12px;
-  --msg-radius-md: 16px;
-  --msg-radius-lg: 20px;
-  --msg-radius-xl: 24px;
-  --msg-radius-pill: 999px;
-  --msg-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --msg-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --msg-shadow-primary: 0 2px 12px rgba(234, 88, 12, 0.2);
-  --msg-transition-fast: 160ms ease-out;
-  --msg-transition-base: 220ms ease-out;
-  --msg-transition-slow: 280ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  --msg-primary: #ea580c;
+  --msg-primary-bg: #fff7ed;
+  --msg-primary-soft: #fed7aa;
+  --msg-paper: #fafaf9;
+  --msg-text: #1f2937;
+  --msg-muted: #6b7280;
   max-width: 1400px;
   margin: 0 auto;
-  padding: var(--msg-space-xl) var(--msg-space-xl) var(--msg-space-xxl);
+  padding: 32px;
+}
+
+.messages-header,
+.messages-categories,
+.messages-composer,
+.messages-detail-header,
+.messages-states {
+  display: flex;
+  align-items: center;
 }
 
 .messages-header {
-  display: flex;
-  align-items: center;
-  gap: var(--msg-space-md);
-  margin-bottom: var(--msg-space-xxl);
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
 .messages-header h1 {
-  font-size: 28px;
-  font-weight: 600;
-  color: var(--msg-text-primary);
   margin: 0;
+  font-size: 28px;
+}
+
+.messages-search-toggle,
+.messages-category,
+.messages-back-btn,
+.messages-send-btn,
+.messages-quick-reply-btn {
+  border: none;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.messages-search-toggle {
+  margin-left: auto;
+  height: 40px;
+  padding: 0 16px;
+  background: var(--msg-primary-bg);
+  color: var(--msg-primary);
+}
+
+.messages-search-toggle.is-active {
+  background: var(--msg-primary);
+  color: #fff;
 }
 
 .messages-layout {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: var(--msg-space-lg);
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 20px;
   min-height: 720px;
 }
 
 .messages-sidebar {
   display: flex;
   flex-direction: column;
-  gap: var(--msg-space-lg);
+  gap: 16px;
 }
 
 .messages-categories {
-  display: flex;
-  gap: var(--msg-space-sm);
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .messages-category {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: var(--msg-space-sm) var(--msg-space-lg);
-  border: none;
-  border-radius: var(--msg-radius-md);
+  min-height: 40px;
+  padding: 0 14px;
   background: var(--msg-primary-bg);
-  color: var(--msg-warm-gray);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--msg-transition-fast);
-}
-
-.messages-category__badge {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: var(--msg-radius-pill);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: #DC2626;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.messages-category:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--msg-shadow-soft);
+  color: var(--msg-muted);
 }
 
 .messages-category.is-active {
-  background: var(--msg-primary-light);
+  background: var(--msg-primary-soft);
   color: var(--msg-primary);
-  box-shadow: var(--msg-shadow-md);
 }
 
-.messages-loading {
-  padding: var(--msg-space-lg);
+.messages-category__badge,
+.messages-unread {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  padding: 0 5px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
 }
 
 .messages-conversation-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--msg-space-sm);
+  display: grid;
+  gap: 10px;
 }
 
 .messages-conversation {
   display: flex;
-  align-items: flex-start;
-  gap: var(--msg-space-md);
-  padding: var(--msg-space-md) 18px;
-  border: none;
-  border-radius: var(--msg-radius-lg);
+  gap: 6px;
+  padding: 8px;
+  border-radius: 16px;
   background: transparent;
-  cursor: pointer;
-  text-align: left;
-  transition: all var(--msg-transition-fast);
   position: relative;
 }
 
+.messages-conversation.is-active,
 .messages-conversation:hover {
-  background: var(--msg-warm-white);
-  transform: translateY(-2px);
-  box-shadow: var(--msg-shadow-soft);
+  background: var(--msg-primary-bg);
 }
 
-.messages-conversation.is-active {
-  background: linear-gradient(135deg, var(--msg-primary-bg) 0%, var(--msg-primary-light) 100%);
-  box-shadow: var(--msg-shadow-md);
+.messages-conversation.is-pinned {
+  border: 1px solid var(--msg-primary-soft);
+}
+
+.messages-conversation.is-muted {
+  opacity: 0.72;
+}
+
+.messages-conversation__select {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 12px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
 .messages-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--msg-radius-md);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(234, 88, 12, 0.12);
   color: var(--msg-primary);
-  font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
   flex-shrink: 0;
 }
 
 .messages-avatar--large {
   width: 40px;
   height: 40px;
-  border-radius: var(--msg-radius-sm);
 }
 
 .messages-conversation__content {
-  flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--msg-space-xs);
+  flex: 1;
 }
 
 .messages-conversation__top {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  gap: var(--msg-space-sm);
+  gap: 8px;
 }
 
-.messages-conversation__top strong {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--msg-text-primary);
-  white-space: nowrap;
+.messages-conversation__top strong,
+.messages-preview {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.messages-time {
-  font-size: 12px;
-  color: var(--msg-text-tertiary);
-  flex-shrink: 0;
+.messages-time,
+.messages-preview {
+  color: var(--msg-muted);
+  font-size: 13px;
 }
 
 .messages-preview {
-  font-size: 14px;
-  color: var(--msg-text-secondary);
-  line-height: 1.5;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  margin: 6px 0 0;
 }
 
-.messages-unread {
-  position: absolute;
-  top: var(--msg-space-md);
-  right: 18px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: var(--msg-radius-pill);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #DC2626;
-  color: white;
+.messages-states {
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.messages-states span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(234, 88, 12, 0.1);
+  color: var(--msg-primary);
   font-size: 12px;
   font-weight: 700;
 }
@@ -764,97 +679,68 @@ onBeforeUnmount(() => {
 .messages-main {
   display: flex;
   flex-direction: column;
-  background: white;
-  border-radius: var(--msg-radius-xl);
-  box-shadow: var(--msg-shadow-soft);
   overflow: hidden;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(31, 41, 55, 0.06);
 }
 
-.messages-mobile-back {
-  padding: var(--msg-space-md) var(--msg-space-lg);
+.messages-mobile-back,
+.messages-detail-header,
+.messages-input-area {
+  padding: 16px 24px;
   border-bottom: 1px solid var(--msg-paper);
-}
-
-.messages-back-btn {
-  padding: var(--msg-space-xs) var(--msg-space-md);
-  border: none;
-  border-radius: 10px;
-  background: var(--msg-paper);
-  color: var(--msg-text-primary);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all var(--msg-transition-fast);
-}
-
-.messages-back-btn:hover {
-  background: var(--msg-primary-bg);
-  color: var(--msg-primary);
 }
 
 .messages-detail-header {
-  display: flex;
-  align-items: center;
-  gap: var(--msg-space-md);
-  padding: var(--msg-space-lg) var(--msg-space-xl);
-  border-bottom: 1px solid var(--msg-paper);
+  gap: 12px;
 }
 
 .messages-detail-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--msg-text-primary);
   margin: 0;
+  font-size: 18px;
 }
 
 .messages-thread {
   flex: 1;
-  padding: var(--msg-space-xl);
-  background: var(--msg-paper);
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--msg-space-lg);
+  gap: 16px;
   overflow-y: auto;
+  padding: 24px;
+  background: var(--msg-paper);
 }
 
 .messages-bubble {
-  max-width: 65%;
-  padding: 14px 18px;
-  border-radius: var(--msg-radius-lg);
+  position: relative;
+  max-width: 66%;
+  padding: 12px 16px;
+  border-radius: 16px;
 }
 
 .messages-bubble p {
   margin: 0;
-  font-size: 15px;
   line-height: 1.6;
-  color: var(--msg-text-primary);
 }
 
 .messages-bubble--other {
   align-self: flex-start;
-  background: white;
-  border-radius: var(--msg-radius-lg) var(--msg-radius-lg) var(--msg-radius-lg) 6px;
-  box-shadow: var(--msg-shadow-soft);
+  background: #fff;
+  color: var(--msg-text);
+  border-bottom-left-radius: 6px;
+  box-shadow: 0 2px 8px rgba(31, 41, 55, 0.06);
 }
 
 .messages-bubble--self {
   align-self: flex-end;
-  background: linear-gradient(135deg, #FB923C 0%, var(--msg-primary) 100%);
-  border-radius: var(--msg-radius-lg) var(--msg-radius-lg) 6px var(--msg-radius-lg);
-  box-shadow: var(--msg-shadow-primary);
+  background: linear-gradient(135deg, #fb923c 0%, var(--msg-primary) 100%);
+  color: #fff;
+  border-bottom-right-radius: 6px;
 }
 
 .messages-bubble--self p {
-  color: white;
-}
-
-.messages-bubble--image {
-  padding: 8px;
-  background: white;
-}
-
-.messages-bubble--self.messages-bubble--image {
-  background: #FFF7ED;
+  color: #fff;
 }
 
 .messages-bubble--card,
@@ -864,22 +750,48 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
+.messages-bubble.is-recalled {
+  background: #e7e5e4;
+  color: var(--msg-muted);
+  box-shadow: none;
+}
+
+.messages-bubble.is-highlighted {
+  outline: 3px solid #facc15;
+  outline-offset: 3px;
+}
+
+.messages-recall-btn {
+  position: absolute;
+  top: -28px;
+  right: 0;
+  display: none;
+  height: 24px;
+  padding: 0 9px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(31, 41, 55, 0.85);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.messages-bubble:hover .messages-recall-btn {
+  display: inline-flex;
+  align-items: center;
+}
+
 .messages-image-btn {
   display: block;
-  padding: 0;
   border: none;
+  padding: 0;
   background: transparent;
   cursor: zoom-in;
-  border-radius: 12px;
-  overflow: hidden;
 }
 
 .messages-image {
-  display: block;
   max-width: min(300px, 58vw);
   max-height: 360px;
-  width: auto;
-  height: auto;
   border-radius: 12px;
   object-fit: contain;
 }
@@ -888,226 +800,75 @@ onBeforeUnmount(() => {
   width: min(300px, 58vw);
   min-height: 132px;
   border-radius: 12px;
-  background: #E7E5E4;
-  color: var(--msg-text-secondary);
+  background: #e7e5e4;
+  color: var(--msg-muted);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-}
-
-.messages-image-caption {
-  margin-top: 8px !important;
-  color: var(--msg-text-secondary) !important;
 }
 
 .messages-input-area {
   position: relative;
-  padding: var(--msg-space-lg) var(--msg-space-xl);
-  background: var(--msg-warm-white);
+  background: #fffbf5;
   border-top: 1px solid var(--msg-paper);
-  display: flex;
-  flex-direction: column;
-  gap: var(--msg-space-md);
+  border-bottom: 0;
 }
 
 .messages-composer {
-  display: flex;
-  gap: var(--msg-space-sm);
-  align-items: center;
+  gap: 10px;
 }
 
 .messages-quick-reply-panel {
   position: absolute;
-  left: var(--msg-space-xl);
-  bottom: calc(100% - var(--msg-space-sm));
+  left: 24px;
+  bottom: calc(100% - 8px);
   z-index: 20;
 }
 
-.messages-quick-reply-btn {
-  min-width: 76px;
-  min-height: 42px;
-  border: 1px solid #FED7AA;
-  border-radius: 18px;
-  background: #FFFFFF;
+.messages-quick-reply-btn,
+.messages-send-btn {
+  height: 42px;
+  padding: 0 16px;
+  background: #fff;
   color: var(--msg-primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform var(--msg-transition-fast), box-shadow var(--msg-transition-fast), background var(--msg-transition-fast);
-  flex-shrink: 0;
+  border: 1px solid var(--msg-primary-soft);
 }
 
-.messages-quick-reply-btn:hover,
-.messages-quick-reply-btn.is-active {
-  background: var(--msg-primary-bg);
-  transform: translateY(-2px);
-  box-shadow: var(--msg-shadow-primary);
+.messages-send-btn {
+  background: var(--msg-primary);
+  color: #fff;
 }
 
-.messages-quick-reply-btn__icon {
-  font-size: 15px;
-  line-height: 1;
+.messages-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .messages-input {
   flex: 1;
   min-width: 0;
-  padding: var(--msg-space-sm) 18px;
-  border: 1px solid var(--msg-paper);
-  border-radius: 18px;
-  background: white;
-  color: var(--msg-text-primary);
-  font-size: 15px;
-  font-family: inherit;
-  outline: none;
-  transition: all var(--msg-transition-fast);
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid #e7e5e4;
+  border-radius: 16px;
+  font: inherit;
 }
 
-.messages-input:focus {
-  border-color: var(--msg-primary-light);
-}
-
-.messages-send-btn {
-  padding: var(--msg-space-sm) 28px;
-  border: none;
-  border-radius: 18px;
-  background: var(--msg-text-tertiary);
-  color: white;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: not-allowed;
-  transition: all var(--msg-transition-fast);
-  flex-shrink: 0;
-}
-
-.messages-send-btn.is-active {
-  background: linear-gradient(135deg, #FB923C 0%, var(--msg-primary) 100%);
-  cursor: pointer;
-}
-
-.messages-send-btn.is-active:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--msg-shadow-primary);
-}
-
-.messages-send-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.messages-group-placeholders {
-  display: flex;
-  flex-direction: column;
-  gap: var(--msg-space-sm);
-  margin-top: var(--msg-space-md);
-}
-
-.messages-group-placeholder {
-  padding: var(--msg-space-md) 18px;
-  border-radius: 18px;
-  background: var(--msg-warm-white);
-  border: 1px solid var(--msg-paper);
-}
-
-.messages-group-placeholder strong {
-  display: block;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--msg-text-primary);
-  margin-bottom: var(--msg-space-xs);
-}
-
-.messages-group-placeholder p {
-  margin: 0;
-  font-size: 14px;
-  color: var(--msg-text-secondary);
-  line-height: 1.6;
+.messages-loading {
+  padding: 16px;
 }
 
 @media (max-width: 900px) {
+  .messages-container {
+    padding: 20px;
+  }
+
   .messages-layout {
     grid-template-columns: 1fr;
-    min-height: auto;
-  }
-
-  .messages-container {
-    padding: var(--msg-space-lg);
-  }
-
-  .messages-header {
-    margin-bottom: var(--msg-space-xl);
-  }
-
-  .messages-categories {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .messages-thread {
-    padding: var(--msg-space-lg);
-  }
-
-  .messages-input-area {
-    padding: var(--msg-space-md);
-  }
-
-  .messages-quick-reply-panel {
-    left: var(--msg-space-md);
-    right: var(--msg-space-md);
-    width: auto;
   }
 
   .messages-bubble {
-    max-width: 85%;
-  }
-}
-
-@media (max-width: 640px) {
-  .messages-container {
-    padding: var(--msg-space-md);
-  }
-
-  .messages-header h1 {
-    font-size: 24px;
-  }
-
-  .messages-conversation {
-    padding: var(--msg-space-sm) var(--msg-space-md);
-  }
-
-  .messages-avatar {
-    width: 40px;
-    height: 40px;
-  }
-
-  .messages-detail-header {
-    padding: var(--msg-space-md);
-  }
-
-  .messages-thread {
-    padding: var(--msg-space-md);
-  }
-
-  .messages-bubble {
-    max-width: 90%;
-  }
-
-  .messages-send-btn {
-    padding: var(--msg-space-sm) 18px;
-  }
-
-  .messages-quick-reply-btn {
-    min-width: 46px;
-    padding: 0 10px;
-  }
-
-  .messages-quick-reply-btn__text {
-    display: none;
+    max-width: 86%;
   }
 }
 </style>

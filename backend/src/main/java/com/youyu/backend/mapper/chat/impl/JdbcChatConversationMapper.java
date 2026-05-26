@@ -22,6 +22,8 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
 
     private final JdbcTemplate jdbcTemplate;
     private Boolean unreadColumnsAvailable;
+    private Boolean managementColumnsAvailable;
+    private Boolean autoReplyColumnsAvailable;
 
     public JdbcChatConversationMapper(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -32,8 +34,16 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         String unreadSelect = unreadColumnsAvailable()
                 ? "cc.unread_count_a, cc.unread_count_b,"
                 : "0 as unread_count_a, 0 as unread_count_b,";
+        String managementSelect = managementColumnsAvailable()
+                ? "cc.is_pinned_a, cc.is_pinned_b, cc.is_muted_a, cc.is_muted_b, cc.deleted_by_a_at, cc.deleted_by_b_at,"
+                : "FALSE as is_pinned_a, FALSE as is_pinned_b, FALSE as is_muted_a, FALSE as is_muted_b, NULL as deleted_by_a_at, NULL as deleted_by_b_at,";
+        String autoReplySelect = autoReplyColumnsAvailable()
+                ? "cc.auto_replied_to_a_at, cc.auto_replied_to_b_at,"
+                : "NULL as auto_replied_to_a_at, NULL as auto_replied_to_b_at,";
         String sql = """
             SELECT cc.id, cc.type, cc.product_id, cc.shop_id, cc.user_a_id, cc.user_b_id,
+                   %s
+                   %s
                    %s
                    cc.last_message_at, cc.created_at,
                    ua.id as user_a_id, ua.username as user_a_username, ua.nickname as user_a_nickname, ua.avatar as user_a_avatar,
@@ -42,7 +52,7 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
             LEFT JOIN users ua ON cc.user_a_id = ua.id
             LEFT JOIN users ub ON cc.user_b_id = ub.id
             WHERE cc.id = ?
-            """.formatted(unreadSelect);
+            """.formatted(unreadSelect, managementSelect, autoReplySelect);
         List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, id);
         return results.isEmpty() ? null : normalizeConversation(results.get(0));
     }
@@ -52,8 +62,22 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         String unreadSelect = unreadColumnsAvailable()
                 ? "cc.unread_count_a, cc.unread_count_b,"
                 : "0 as unread_count_a, 0 as unread_count_b,";
+        String managementSelect = managementColumnsAvailable()
+                ? "cc.is_pinned_a, cc.is_pinned_b, cc.is_muted_a, cc.is_muted_b, cc.deleted_by_a_at, cc.deleted_by_b_at,"
+                : "FALSE as is_pinned_a, FALSE as is_pinned_b, FALSE as is_muted_a, FALSE as is_muted_b, NULL as deleted_by_a_at, NULL as deleted_by_b_at,";
+        String autoReplySelect = autoReplyColumnsAvailable()
+                ? "cc.auto_replied_to_a_at, cc.auto_replied_to_b_at,"
+                : "NULL as auto_replied_to_a_at, NULL as auto_replied_to_b_at,";
+        String whereClause = managementColumnsAvailable()
+                ? "WHERE (cc.user_a_id = ? AND cc.deleted_by_a_at IS NULL) OR (cc.user_b_id = ? AND cc.deleted_by_b_at IS NULL)"
+                : "WHERE cc.user_a_id = ? OR cc.user_b_id = ?";
+        String orderClause = managementColumnsAvailable()
+                ? "ORDER BY CASE WHEN cc.user_a_id = ? THEN cc.is_pinned_a WHEN cc.user_b_id = ? THEN cc.is_pinned_b ELSE FALSE END DESC, cc.last_message_at DESC"
+                : "ORDER BY cc.last_message_at DESC";
         String sql = """
             SELECT cc.id, cc.type, cc.product_id, cc.shop_id, cc.user_a_id, cc.user_b_id,
+                   %s
+                   %s
                    %s
                    cc.last_message_at, cc.created_at,
                    ua.id as user_a_id, ua.username as user_a_username, ua.nickname as user_a_nickname, ua.avatar as user_a_avatar,
@@ -61,18 +85,27 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
             FROM chat_conversations cc
             LEFT JOIN users ua ON cc.user_a_id = ua.id
             LEFT JOIN users ub ON cc.user_b_id = ub.id
-            WHERE cc.user_a_id = ? OR cc.user_b_id = ?
-            ORDER BY cc.last_message_at DESC
+            %s
+            %s
             LIMIT ? OFFSET ?
-            """.formatted(unreadSelect);
-        return jdbcTemplate.queryForList(sql, userId, userId, limit, offset).stream()
+            """.formatted(unreadSelect, managementSelect, autoReplySelect, whereClause, orderClause);
+        Object[] params = managementColumnsAvailable()
+                ? new Object[] {userId, userId, userId, userId, limit, offset}
+                : new Object[] {userId, userId, limit, offset};
+        return jdbcTemplate.queryForList(sql, params).stream()
                 .map(this::normalizeConversation)
                 .toList();
     }
 
     @Override
     public int countByUserId(Long userId) {
-        String sql = "SELECT COUNT(*) FROM chat_conversations WHERE user_a_id = ? OR user_b_id = ?";
+        String sql = managementColumnsAvailable()
+                ? """
+                    SELECT COUNT(*) FROM chat_conversations
+                    WHERE (user_a_id = ? AND deleted_by_a_at IS NULL)
+                       OR (user_b_id = ? AND deleted_by_b_at IS NULL)
+                    """
+                : "SELECT COUNT(*) FROM chat_conversations WHERE user_a_id = ? OR user_b_id = ?";
         Long count = jdbcTemplate.queryForObject(sql, Long.class, userId, userId);
         return count == null ? 0 : count.intValue();
     }
@@ -82,8 +115,16 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         String unreadSelect = unreadColumnsAvailable()
                 ? "cc.unread_count_a, cc.unread_count_b,"
                 : "0 as unread_count_a, 0 as unread_count_b,";
+        String managementSelect = managementColumnsAvailable()
+                ? "cc.is_pinned_a, cc.is_pinned_b, cc.is_muted_a, cc.is_muted_b, cc.deleted_by_a_at, cc.deleted_by_b_at,"
+                : "FALSE as is_pinned_a, FALSE as is_pinned_b, FALSE as is_muted_a, FALSE as is_muted_b, NULL as deleted_by_a_at, NULL as deleted_by_b_at,";
+        String autoReplySelect = autoReplyColumnsAvailable()
+                ? "cc.auto_replied_to_a_at, cc.auto_replied_to_b_at,"
+                : "NULL as auto_replied_to_a_at, NULL as auto_replied_to_b_at,";
         StringBuilder sql = new StringBuilder("""
             SELECT cc.id, cc.type, cc.product_id, cc.shop_id, cc.user_a_id, cc.user_b_id,
+                   %s
+                   %s
                    %s
                    cc.last_message_at, cc.created_at,
                    ua.id as user_a_id, ua.username as user_a_username, ua.nickname as user_a_nickname, ua.avatar as user_a_avatar,
@@ -92,7 +133,7 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
             LEFT JOIN users ua ON cc.user_a_id = ua.id
             LEFT JOIN users ub ON cc.user_b_id = ub.id
             WHERE cc.user_a_id = ? AND cc.user_b_id = ?
-            """.formatted(unreadSelect));
+            """.formatted(unreadSelect, managementSelect, autoReplySelect));
 
         List<Object> params = new ArrayList<>();
         params.add(userAId);
@@ -176,17 +217,99 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         if (!unreadColumnsAvailable()) {
             return 0;
         }
-        String sql = """
-            SELECT COALESCE(SUM(CASE
-                WHEN user_a_id = ? THEN unread_count_a
-                WHEN user_b_id = ? THEN unread_count_b
-                ELSE 0
-            END), 0)
-            FROM chat_conversations
-            WHERE user_a_id = ? OR user_b_id = ?
-            """;
+        String sql = managementColumnsAvailable()
+                ? """
+                    SELECT COALESCE(SUM(CASE
+                        WHEN user_a_id = ? AND is_muted_a = FALSE AND deleted_by_a_at IS NULL THEN unread_count_a
+                        WHEN user_b_id = ? AND is_muted_b = FALSE AND deleted_by_b_at IS NULL THEN unread_count_b
+                        ELSE 0
+                    END), 0)
+                    FROM chat_conversations
+                    WHERE (user_a_id = ? AND deleted_by_a_at IS NULL)
+                       OR (user_b_id = ? AND deleted_by_b_at IS NULL)
+                    """
+                : """
+                    SELECT COALESCE(SUM(CASE
+                        WHEN user_a_id = ? THEN unread_count_a
+                        WHEN user_b_id = ? THEN unread_count_b
+                        ELSE 0
+                    END), 0)
+                    FROM chat_conversations
+                    WHERE user_a_id = ? OR user_b_id = ?
+                    """;
         Long count = jdbcTemplate.queryForObject(sql, Long.class, userId, userId, userId, userId);
         return count == null ? 0 : count.intValue();
+    }
+
+    @Override
+    public int updatePinStatus(Long id, Long userId, boolean pinned) {
+        if (!managementColumnsAvailable()) {
+            return 0;
+        }
+        String sql = """
+            UPDATE chat_conversations
+            SET is_pinned_a = CASE WHEN user_a_id = ? THEN ? ELSE is_pinned_a END,
+                is_pinned_b = CASE WHEN user_b_id = ? THEN ? ELSE is_pinned_b END
+            WHERE id = ? AND (user_a_id = ? OR user_b_id = ?)
+            """;
+        return jdbcTemplate.update(sql, userId, pinned, userId, pinned, id, userId, userId);
+    }
+
+    @Override
+    public int updateMuteStatus(Long id, Long userId, boolean muted) {
+        if (!managementColumnsAvailable()) {
+            return 0;
+        }
+        String sql = """
+            UPDATE chat_conversations
+            SET is_muted_a = CASE WHEN user_a_id = ? THEN ? ELSE is_muted_a END,
+                is_muted_b = CASE WHEN user_b_id = ? THEN ? ELSE is_muted_b END
+            WHERE id = ? AND (user_a_id = ? OR user_b_id = ?)
+            """;
+        return jdbcTemplate.update(sql, userId, muted, userId, muted, id, userId, userId);
+    }
+
+    @Override
+    public int softDelete(Long id, Long userId) {
+        if (!managementColumnsAvailable()) {
+            return 0;
+        }
+        String sql = """
+            UPDATE chat_conversations
+            SET deleted_by_a_at = CASE WHEN user_a_id = ? THEN CURRENT_TIMESTAMP ELSE deleted_by_a_at END,
+                deleted_by_b_at = CASE WHEN user_b_id = ? THEN CURRENT_TIMESTAMP ELSE deleted_by_b_at END
+            WHERE id = ? AND (user_a_id = ? OR user_b_id = ?)
+            """;
+        return jdbcTemplate.update(sql, userId, userId, id, userId, userId);
+    }
+
+    @Override
+    public int restoreForUser(Long id, Long userId) {
+        if (!managementColumnsAvailable()) {
+            return 0;
+        }
+        String sql = """
+            UPDATE chat_conversations
+            SET deleted_by_a_at = CASE WHEN user_a_id = ? THEN NULL ELSE deleted_by_a_at END,
+                deleted_by_b_at = CASE WHEN user_b_id = ? THEN NULL ELSE deleted_by_b_at END
+            WHERE id = ? AND (user_a_id = ? OR user_b_id = ?)
+            """;
+        return jdbcTemplate.update(sql, userId, userId, id, userId, userId);
+    }
+
+    @Override
+    public int updateAutoRepliedAt(Long id, Long targetUserId, LocalDateTime repliedAt) {
+        if (!autoReplyColumnsAvailable()) {
+            return 0;
+        }
+        String sql = """
+            UPDATE chat_conversations
+            SET auto_replied_to_a_at = CASE WHEN user_a_id = ? THEN ? ELSE auto_replied_to_a_at END,
+                auto_replied_to_b_at = CASE WHEN user_b_id = ? THEN ? ELSE auto_replied_to_b_at END
+            WHERE id = ? AND (user_a_id = ? OR user_b_id = ?)
+            """;
+        Timestamp timestamp = Timestamp.valueOf(repliedAt);
+        return jdbcTemplate.update(sql, targetUserId, timestamp, targetUserId, timestamp, id, targetUserId, targetUserId);
     }
 
     private Map<String, Object> normalizeConversation(Map<String, Object> raw) {
@@ -199,6 +322,14 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         normalized.put("userBId", raw.get("user_b_id"));
         normalized.put("unreadCountA", raw.get("unread_count_a"));
         normalized.put("unreadCountB", raw.get("unread_count_b"));
+        normalized.put("isPinnedA", raw.get("is_pinned_a"));
+        normalized.put("isPinnedB", raw.get("is_pinned_b"));
+        normalized.put("isMutedA", raw.get("is_muted_a"));
+        normalized.put("isMutedB", raw.get("is_muted_b"));
+        normalized.put("deletedByAAt", raw.get("deleted_by_a_at"));
+        normalized.put("deletedByBAt", raw.get("deleted_by_b_at"));
+        normalized.put("autoRepliedToAAt", raw.get("auto_replied_to_a_at"));
+        normalized.put("autoRepliedToBAt", raw.get("auto_replied_to_b_at"));
         normalized.put("lastMessageAt", raw.get("last_message_at"));
         normalized.put("createdAt", raw.get("created_at"));
 
@@ -226,6 +357,26 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
                     && columnExists("chat_conversations", "unread_count_b");
         }
         return unreadColumnsAvailable;
+    }
+
+    private boolean managementColumnsAvailable() {
+        if (managementColumnsAvailable == null) {
+            managementColumnsAvailable = columnExists("chat_conversations", "is_pinned_a")
+                    && columnExists("chat_conversations", "is_pinned_b")
+                    && columnExists("chat_conversations", "is_muted_a")
+                    && columnExists("chat_conversations", "is_muted_b")
+                    && columnExists("chat_conversations", "deleted_by_a_at")
+                    && columnExists("chat_conversations", "deleted_by_b_at");
+        }
+        return managementColumnsAvailable;
+    }
+
+    private boolean autoReplyColumnsAvailable() {
+        if (autoReplyColumnsAvailable == null) {
+            autoReplyColumnsAvailable = columnExists("chat_conversations", "auto_replied_to_a_at")
+                    && columnExists("chat_conversations", "auto_replied_to_b_at");
+        }
+        return autoReplyColumnsAvailable;
     }
 
     private boolean columnExists(String tableName, String columnName) {

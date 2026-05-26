@@ -270,6 +270,17 @@ export default {
       }
     },
     {
+      path: 'settings/auto-reply',
+      name: 'app-settings-auto-reply',
+      component: () => import('@/views/app/SettingsAutoReplyView.vue'),
+      meta: {
+        title: '自动回复设置',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/settings'
+      }
+    },
+    {
       path: 'preferences',
       name: 'app-preferences',
       component: () => import('@/views/app/PreferenceSettingsView.vue'),

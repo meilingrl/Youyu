@@ -178,3 +178,47 @@ Content-Type: application/json
   "content": "Not allowed.",
   "sortOrder": 0
 }
+
+### 24. Search chat messages
+GET {{baseUrl}}/api/chat/messages/search?keyword=book&page=0&size=10
+Authorization: Bearer {{user1Token}}
+
+### 25. Pin conversation
+POST {{baseUrl}}/api/chat/conversations/1/pin
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "pinned": true
+}
+
+### 26. Mute conversation
+POST {{baseUrl}}/api/chat/conversations/1/mute
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "muted": true
+}
+
+### 27. Recall message
+POST {{baseUrl}}/api/chat/messages/1/recall
+Authorization: Bearer {{user1Token}}
+
+### 28. Get auto-reply settings
+GET {{baseUrl}}/api/chat/auto-reply
+Authorization: Bearer {{user2Token}}
+
+### 29. Update auto-reply settings
+PUT {{baseUrl}}/api/chat/auto-reply
+Authorization: Bearer {{user2Token}}
+Content-Type: application/json
+
+{
+  "isEnabled": true,
+  "replyContent": "I am away for the moment and will reply later."
+}
+
+### 30. Delete conversation for current user
+DELETE {{baseUrl}}/api/chat/conversations/1
+Authorization: Bearer {{user1Token}}

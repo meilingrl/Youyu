@@ -1,3 +1,27 @@
+## [2026-05-27] - Message Center P2 Experience Tools
+
+### feat
+- Added chat message search with keyword/time filtering, pagination, and deleted-conversation filtering.
+- Added per-user conversation pin, mute, and soft-delete management.
+- Added 2-minute sender-only message recall with recalled-message rendering metadata.
+- Added auto-reply settings and automatic reply insertion with 24-hour per-conversation throttling.
+- Expanded Zhang San message seed data with 16 conversations and 44 messages for unread, preview, search, and bubble-direction testing.
+
+### frontend
+- Rebuilt the message center with search, conversation action menu, differentiated left/right bubbles, stable conversation switching, and full list previews.
+- Added categorized quick replies for buyer, seller, support, and custom scenarios.
+- Added the auto-reply settings page and route.
+
+### docs
+- Updated chat API spec and HTTP smoke requests for P2 endpoints.
+- Archived completed P2 message-center task documents.
+
+### test
+- Added backend controller coverage for message search, pin/mute/delete, recall, and auto-reply trigger behavior.
+- Verified `backend\\mvnw.cmd test`, `frontend\\npm test`, and `frontend\\npm run build`.
+
+---
+
 ## [2026-05-26] - Message Center P1 E-commerce Tools
 
 ### feat

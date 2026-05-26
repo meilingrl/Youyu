@@ -227,9 +227,17 @@
 
 完成后,向头 Agent 报告:
 
-- [ ] 所有验收标准已满足
-- [ ] 所有测试通过
-- [ ] 文档已更新
-- [ ] CHANGELOG.md 已更新
-- [ ] 代码已提交到分支
-- [ ] 遇到的问题和解决方案(如有)
+- [x] 所有验收标准已满足
+- [x] 所有测试通过
+- [x] 文档已更新
+- [x] CHANGELOG.md 已更新
+- [x] 代码已提交到分支
+- [x] 遇到的问题和解决方案(如有)
+
+## Completion Notes
+
+- Status: completed
+- Completed at: 2026-05-27
+- Implemented per-user pin, mute, and soft-delete fields and endpoints.
+- Added conversation menu controls, muted/pinned state rendering, stable conversation switching, and list previews for all conversations.
+- Verification: `backend\mvnw.cmd test`, `frontend\npm test`, `frontend\npm run build`.

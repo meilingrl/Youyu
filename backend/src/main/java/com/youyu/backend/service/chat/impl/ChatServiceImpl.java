@@ -2,10 +2,13 @@ package com.youyu.backend.service.chat.impl;
 
 import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.mapper.chat.AutoReplySettingsMapper;
 import com.youyu.backend.mapper.chat.ChatConversationMapper;
 import com.youyu.backend.mapper.chat.ChatMessageMapper;
 import com.youyu.backend.service.chat.ChatService;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -23,6 +26,10 @@ public class ChatServiceImpl implements ChatService {
     private static final int MAX_DATA_IMAGE_URL_LENGTH = 7 * 1024 * 1024;
     private static final int MAX_PAGE_SIZE_CONVERSATIONS = 50;
     private static final int MAX_PAGE_SIZE_MESSAGES = 100;
+    private static final int AUTO_REPLY_MAX_LENGTH = 500;
+    private static final Duration RECALL_WINDOW = Duration.ofMinutes(2);
+    private static final Duration AUTO_REPLY_WINDOW = Duration.ofHours(24);
+    private static final String DEFAULT_AUTO_REPLY = "您好，我现在不方便及时回复，稍后看到消息会尽快联系您。";
     private static final String MESSAGE_TYPE_TEXT = "text";
     private static final String MESSAGE_TYPE_IMAGE = "image";
     private static final String MESSAGE_TYPE_PRODUCT_CARD = "product_card";
@@ -30,10 +37,14 @@ public class ChatServiceImpl implements ChatService {
 
     private final ChatConversationMapper conversationMapper;
     private final ChatMessageMapper messageMapper;
+    private final AutoReplySettingsMapper autoReplySettingsMapper;
 
-    public ChatServiceImpl(ChatConversationMapper conversationMapper, ChatMessageMapper messageMapper) {
+    public ChatServiceImpl(ChatConversationMapper conversationMapper,
+                           ChatMessageMapper messageMapper,
+                           AutoReplySettingsMapper autoReplySettingsMapper) {
         this.conversationMapper = conversationMapper;
         this.messageMapper = messageMapper;
+        this.autoReplySettingsMapper = autoReplySettingsMapper;
     }
 
     @Override
@@ -128,6 +139,34 @@ public class ChatServiceImpl implements ChatService {
     }
 
     @Override
+    public Map<String, Object> searchMessages(Long currentUserId, String keyword, String startTime, String endTime, int page, int size) {
+        requireLogin(currentUserId);
+
+        page = Math.max(0, page);
+        size = Math.min(MAX_PAGE_SIZE_MESSAGES, Math.max(1, size));
+        int offset = page * size;
+        LocalDateTime start = parseDateTime(startTime, "startTime");
+        LocalDateTime end = parseDateTime(endTime, "endTime");
+        if (start != null && end != null && start.isAfter(end)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "startTime cannot be after endTime");
+        }
+
+        List<Map<String, Object>> messages = messageMapper.searchByUser(currentUserId, normalizeNullableKeyword(keyword), start, end, offset, size);
+        int total = messageMapper.countSearchByUser(currentUserId, normalizeNullableKeyword(keyword), start, end);
+        int totalPages = (int) Math.ceil((double) total / size);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("content", messages);
+        result.put("total", total);
+        result.put("totalElements", total);
+        result.put("totalPages", totalPages);
+        result.put("page", page);
+        result.put("number", page);
+        result.put("size", size);
+        return result;
+    }
+
+    @Override
     @Transactional
     public Map<String, Object> sendMessage(Long conversationId, Long currentUserId, String body, String messageType, String mediaUrl, Long productId, Long orderId) {
         requireLogin(currentUserId);
@@ -161,6 +200,7 @@ public class ChatServiceImpl implements ChatService {
 
         Long recipientUserId = currentUserId.equals(userAId) ? userBId : userAId;
         conversationMapper.incrementUnreadCount(conversationId, recipientUserId);
+        maybeSendAutoReply(conversation, currentUserId, recipientUserId, now);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", messageId);
@@ -196,6 +236,71 @@ public class ChatServiceImpl implements ChatService {
 
         messageMapper.markMessagesRead(conversationId, currentUserId, LocalDateTime.now());
         conversationMapper.clearUnreadCount(conversationId, currentUserId);
+    }
+
+    @Override
+    @Transactional
+    public void updatePinStatus(Long conversationId, Long currentUserId, boolean pinned) {
+        requireLogin(currentUserId);
+        requireParticipant(conversationId, currentUserId);
+        conversationMapper.updatePinStatus(conversationId, currentUserId, pinned);
+    }
+
+    @Override
+    @Transactional
+    public void updateMuteStatus(Long conversationId, Long currentUserId, boolean muted) {
+        requireLogin(currentUserId);
+        requireParticipant(conversationId, currentUserId);
+        conversationMapper.updateMuteStatus(conversationId, currentUserId, muted);
+    }
+
+    @Override
+    @Transactional
+    public void deleteConversation(Long conversationId, Long currentUserId) {
+        requireLogin(currentUserId);
+        requireParticipant(conversationId, currentUserId);
+        conversationMapper.softDelete(conversationId, currentUserId);
+        conversationMapper.clearUnreadCount(conversationId, currentUserId);
+    }
+
+    @Override
+    @Transactional
+    public void recallMessage(Long messageId, Long currentUserId) {
+        requireLogin(currentUserId);
+        Map<String, Object> message = messageMapper.findById(messageId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Message not found"));
+        requireParticipant(toLong(message.get("conversationId")), currentUserId);
+        if (!Objects.equals(toLong(message.get("senderUserId")), currentUserId)) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "Only the sender can recall this message");
+        }
+        if (toBoolean(message.get("isRecalled"))) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Message has already been recalled");
+        }
+        LocalDateTime createdAt = toLocalDateTime(message.get("createdAt"));
+        if (createdAt == null || createdAt.isBefore(LocalDateTime.now().minus(RECALL_WINDOW))) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Only messages sent within 2 minutes can be recalled");
+        }
+        messageMapper.recall(messageId, LocalDateTime.now());
+    }
+
+    @Override
+    public Map<String, Object> getAutoReplySettings(Long currentUserId) {
+        requireLogin(currentUserId);
+        return autoReplySettingsMapper.findByUserId(currentUserId)
+                .map(this::normalizeAutoReplySettings)
+                .orElseGet(() -> {
+                    Map<String, Object> defaults = new LinkedHashMap<>();
+                    defaults.put("isEnabled", false);
+                    defaults.put("replyContent", DEFAULT_AUTO_REPLY);
+                    return defaults;
+                });
+    }
+
+    @Override
+    @Transactional
+    public void updateAutoReplySettings(Long currentUserId, Boolean enabled, String replyContent) {
+        requireLogin(currentUserId);
+        autoReplySettingsMapper.upsert(currentUserId, Boolean.TRUE.equals(enabled), normalizeAutoReplyContent(replyContent));
     }
 
     private Map<String, Object> requireParticipant(Long conversationId, Long currentUserId) {
@@ -243,12 +348,50 @@ public class ChatServiceImpl implements ChatService {
         result.put("productId", conversation.get("productId"));
         result.put("shopId", conversation.get("shopId"));
         result.put("peerUser", peerUser);
-        result.put("unreadCount", currentUserId.equals(userAId)
+        boolean isMuted = currentUserId.equals(userAId)
+                ? toBoolean(conversation.get("isMutedA"))
+                : toBoolean(conversation.get("isMutedB"));
+        result.put("unreadCount", isMuted ? 0 : (currentUserId.equals(userAId)
                 ? toInt(conversation.get("unreadCountA"))
-                : toInt(conversation.get("unreadCountB")));
+                : toInt(conversation.get("unreadCountB"))));
+        result.put("isPinned", currentUserId.equals(userAId)
+                ? toBoolean(conversation.get("isPinnedA"))
+                : toBoolean(conversation.get("isPinnedB")));
+        result.put("isMuted", isMuted);
+        result.put("deletedAt", currentUserId.equals(userAId)
+                ? conversation.get("deletedByAAt")
+                : conversation.get("deletedByBAt"));
+        Map<String, Object> lastMessage = latestMessage((Long) conversation.get("id"));
+        result.put("lastMessage", lastMessage);
+        result.put("lastMessagePreview", previewFor(lastMessage));
+        result.put("lastMessageType", lastMessage == null ? null : lastMessage.get("messageType"));
         result.put("lastMessageAt", conversation.get("lastMessageAt"));
         result.put("createdAt", conversation.get("createdAt"));
         return result;
+    }
+
+    private Map<String, Object> latestMessage(Long conversationId) {
+        List<Map<String, Object>> messages = messageMapper.findByConversationId(conversationId, 0, 1);
+        return messages.isEmpty() ? null : messages.get(0);
+    }
+
+    private String previewFor(Map<String, Object> message) {
+        if (message == null) {
+            return "开始对话";
+        }
+        if (toBoolean(message.get("isRecalled"))) {
+            return "消息已撤回";
+        }
+        String type = String.valueOf(message.getOrDefault("messageType", MESSAGE_TYPE_TEXT));
+        return switch (type) {
+            case MESSAGE_TYPE_IMAGE -> "[图片]";
+            case MESSAGE_TYPE_PRODUCT_CARD -> "[商品卡片]";
+            case MESSAGE_TYPE_ORDER_CARD -> "[订单卡片]";
+            default -> {
+                String body = String.valueOf(message.getOrDefault("body", ""));
+                yield body.isBlank() ? "开始对话" : body;
+            }
+        };
     }
 
     private String normalizeMessageType(String messageType) {
@@ -260,6 +403,26 @@ public class ChatServiceImpl implements ChatService {
 
     private String normalizeBody(String body) {
         return body == null ? "" : body.trim();
+    }
+
+    private String normalizeNullableKeyword(String keyword) {
+        String normalized = keyword == null ? "" : keyword.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private LocalDateTime parseDateTime(String value, String fieldName) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            String normalized = value.trim();
+            if (normalized.endsWith("Z")) {
+                return java.time.OffsetDateTime.parse(normalized).toLocalDateTime();
+            }
+            return LocalDateTime.parse(normalized);
+        } catch (DateTimeParseException e) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, fieldName + " must be ISO-8601 datetime");
+        }
     }
 
     private String normalizeMediaUrl(String mediaUrl) {
@@ -384,6 +547,16 @@ public class ChatServiceImpl implements ChatService {
         return Integer.parseInt(value.toString());
     }
 
+    private boolean toBoolean(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        if (value instanceof Number number) {
+            return number.intValue() != 0;
+        }
+        return value != null && Boolean.parseBoolean(value.toString());
+    }
+
     private Long toLong(Object value) {
         if (value instanceof Number number) {
             return number.longValue();
@@ -392,5 +565,68 @@ public class ChatServiceImpl implements ChatService {
             return null;
         }
         return Long.parseLong(value.toString());
+    }
+
+    private LocalDateTime toLocalDateTime(Object value) {
+        if (value instanceof LocalDateTime localDateTime) {
+            return localDateTime;
+        }
+        if (value instanceof java.sql.Timestamp timestamp) {
+            return timestamp.toLocalDateTime();
+        }
+        if (value == null) {
+            return null;
+        }
+        return LocalDateTime.parse(value.toString().replace(" ", "T"));
+    }
+
+    private Map<String, Object> normalizeAutoReplySettings(Map<String, Object> raw) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("isEnabled", toBoolean(raw.get("isEnabled")));
+        result.put("replyContent", raw.getOrDefault("replyContent", DEFAULT_AUTO_REPLY));
+        result.put("updatedAt", raw.get("updatedAt"));
+        return result;
+    }
+
+    private String normalizeAutoReplyContent(String content) {
+        String text = content == null ? "" : content.trim();
+        if (text.isBlank()) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "replyContent is required");
+        }
+        if (text.length() > AUTO_REPLY_MAX_LENGTH) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "replyContent cannot exceed " + AUTO_REPLY_MAX_LENGTH + " characters");
+        }
+        return text;
+    }
+
+    private void maybeSendAutoReply(Map<String, Object> conversation, Long senderUserId, Long autoReplyUserId, LocalDateTime originalMessageAt) {
+        Map<String, Object> settings = autoReplySettingsMapper.findByUserId(autoReplyUserId).orElse(null);
+        if (settings == null || !toBoolean(settings.get("isEnabled"))) {
+            return;
+        }
+        Long conversationId = toLong(conversation.get("id"));
+        LocalDateTime lastAutoReplyAt = senderUserId.equals(conversation.get("userAId"))
+                ? toLocalDateTime(conversation.get("autoRepliedToAAt"))
+                : toLocalDateTime(conversation.get("autoRepliedToBAt"));
+        if (lastAutoReplyAt != null && lastAutoReplyAt.isAfter(originalMessageAt.minus(AUTO_REPLY_WINDOW))) {
+            return;
+        }
+
+        LocalDateTime replyAt = originalMessageAt.plusNanos(1);
+        Map<String, Object> autoMessage = new LinkedHashMap<>();
+        autoMessage.put("conversationId", conversationId);
+        autoMessage.put("senderUserId", autoReplyUserId);
+        autoMessage.put("body", settings.getOrDefault("replyContent", DEFAULT_AUTO_REPLY));
+        autoMessage.put("messageType", MESSAGE_TYPE_TEXT);
+        autoMessage.put("mediaUrl", null);
+        autoMessage.put("productId", null);
+        autoMessage.put("orderId", null);
+        autoMessage.put("isRead", false);
+        autoMessage.put("readAt", null);
+        autoMessage.put("createdAt", replyAt);
+        messageMapper.insert(autoMessage);
+        conversationMapper.incrementUnreadCount(conversationId, senderUserId);
+        conversationMapper.updateAutoRepliedAt(conversationId, senderUserId, replyAt);
+        conversationMapper.updateLastMessageAt(conversationId, replyAt.toString());
     }
 }

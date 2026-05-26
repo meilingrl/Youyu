@@ -24,6 +24,7 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
     private Boolean messageTypeColumnsAvailable;
     private Boolean readStatusColumnsAvailable;
     private Boolean cardReferenceColumnsAvailable;
+    private Boolean recallColumnsAvailable;
 
     public JdbcChatMessageMapper(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -37,11 +38,15 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
         String readSelect = readStatusColumnsAvailable()
                 ? "is_read, read_at,"
                 : "FALSE as is_read, NULL as read_at,";
+        String recallSelect = recallColumnsAvailable()
+                ? "is_recalled, recalled_at,"
+                : "FALSE as is_recalled, NULL as recalled_at,";
         if (cardReferenceColumnsAvailable()) {
-            return findByConversationIdWithCardRefs(conversationId, offset, limit, typeSelect, readSelect);
+            return findByConversationIdWithCardRefs(conversationId, offset, limit, typeSelect, readSelect, recallSelect);
         }
         String sql = """
             SELECT id, conversation_id, sender_user_id, body,
+                   %s
                    %s
                    %s
                    created_at
@@ -49,7 +54,7 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
             WHERE conversation_id = ?
             ORDER BY created_at DESC
             LIMIT ? OFFSET ?
-            """.formatted(typeSelect, readSelect);
+            """.formatted(typeSelect, readSelect, recallSelect);
         return jdbcTemplate.queryForList(sql, conversationId, limit, offset).stream()
                 .map(this::normalizeMessage)
                 .toList();
@@ -59,6 +64,94 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
     public int countByConversationId(Long conversationId) {
         String sql = "SELECT COUNT(*) FROM chat_messages WHERE conversation_id = ?";
         Long count = jdbcTemplate.queryForObject(sql, Long.class, conversationId);
+        return count == null ? 0 : count.intValue();
+    }
+
+    @Override
+    public Optional<Map<String, Object>> findById(Long messageId) {
+        String typeSelect = messageTypeColumnsAvailable()
+                ? "m.message_type, m.media_url,"
+                : "'text' as message_type, NULL as media_url,";
+        String readSelect = readStatusColumnsAvailable()
+                ? "m.is_read, m.read_at,"
+                : "FALSE as is_read, NULL as read_at,";
+        String recallSelect = recallColumnsAvailable()
+                ? "m.is_recalled, m.recalled_at,"
+                : "FALSE as is_recalled, NULL as recalled_at,";
+        String refSelect = cardReferenceColumnsAvailable()
+                ? "m.product_id, m.order_id,"
+                : "NULL as product_id, NULL as order_id,";
+        String sql = """
+            SELECT m.id, m.conversation_id, m.sender_user_id, m.body,
+                   %s
+                   %s
+                   %s
+                   %s
+                   m.created_at
+            FROM chat_messages m
+            WHERE m.id = ?
+            """.formatted(typeSelect, readSelect, recallSelect, refSelect);
+        return jdbcTemplate.queryForList(sql, messageId).stream()
+                .findFirst()
+                .map(this::normalizeMessage);
+    }
+
+    @Override
+    public List<Map<String, Object>> searchByUser(
+            Long userId, String keyword, LocalDateTime startTime, LocalDateTime endTime, int offset, int limit) {
+        String typeSelect = messageTypeColumnsAvailable()
+                ? "m.message_type, m.media_url,"
+                : "'text' as message_type, NULL as media_url,";
+        String readSelect = readStatusColumnsAvailable()
+                ? "m.is_read, m.read_at,"
+                : "FALSE as is_read, NULL as read_at,";
+        String recallSelect = recallColumnsAvailable()
+                ? "m.is_recalled, m.recalled_at,"
+                : "FALSE as is_recalled, NULL as recalled_at,";
+        String refSelect = cardReferenceColumnsAvailable()
+                ? "m.product_id, m.order_id,"
+                : "NULL as product_id, NULL as order_id,";
+
+        StringBuilder sql = new StringBuilder("""
+            SELECT m.id, m.conversation_id, m.sender_user_id, m.body,
+                   %s
+                   %s
+                   %s
+                   %s
+                   m.created_at
+            FROM chat_messages m
+            INNER JOIN chat_conversations c ON c.id = m.conversation_id
+            WHERE ((c.user_a_id = ? AND c.deleted_by_a_at IS NULL)
+               OR (c.user_b_id = ? AND c.deleted_by_b_at IS NULL))
+            """.formatted(typeSelect, readSelect, recallSelect, refSelect));
+        java.util.ArrayList<Object> params = new java.util.ArrayList<>();
+        params.add(userId);
+        params.add(userId);
+        appendSearchFilters(sql, params, keyword, startTime, endTime);
+        sql.append(" ORDER BY m.created_at DESC LIMIT ? OFFSET ?");
+        params.add(limit);
+        params.add(offset);
+
+        return jdbcTemplate.queryForList(sql.toString(), params.toArray()).stream()
+                .map(this::normalizeMessage)
+                .toList();
+    }
+
+    @Override
+    public int countSearchByUser(Long userId, String keyword, LocalDateTime startTime, LocalDateTime endTime) {
+        StringBuilder sql = new StringBuilder("""
+            SELECT COUNT(*)
+            FROM chat_messages m
+            INNER JOIN chat_conversations c ON c.id = m.conversation_id
+            WHERE ((c.user_a_id = ? AND c.deleted_by_a_at IS NULL)
+               OR (c.user_b_id = ? AND c.deleted_by_b_at IS NULL))
+            """);
+        java.util.ArrayList<Object> params = new java.util.ArrayList<>();
+        params.add(userId);
+        params.add(userId);
+        appendSearchFilters(sql, params, keyword, startTime, endTime);
+
+        Long count = jdbcTemplate.queryForObject(sql.toString(), Long.class, params.toArray());
         return count == null ? 0 : count.intValue();
     }
 
@@ -87,6 +180,19 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
             return ps;
         }, keyHolder);
         return JdbcGeneratedKey.requiredLong(keyHolder, "message_id");
+    }
+
+    @Override
+    public int recall(Long messageId, LocalDateTime recalledAt) {
+        if (!recallColumnsAvailable()) {
+            return 0;
+        }
+        String sql = """
+            UPDATE chat_messages
+            SET is_recalled = TRUE, recalled_at = ?
+            WHERE id = ? AND is_recalled = FALSE
+            """;
+        return jdbcTemplate.update(sql, Timestamp.valueOf(recalledAt), messageId);
     }
 
     @Override
@@ -143,9 +249,10 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
     }
 
     private List<Map<String, Object>> findByConversationIdWithCardRefs(
-            Long conversationId, int offset, int limit, String typeSelect, String readSelect) {
+            Long conversationId, int offset, int limit, String typeSelect, String readSelect, String recallSelect) {
         String sql = """
             SELECT m.id, m.conversation_id, m.sender_user_id, m.body,
+                   %s
                    %s
                    %s
                    m.product_id, m.order_id, m.created_at,
@@ -166,7 +273,7 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
             WHERE m.conversation_id = ?
             ORDER BY m.created_at DESC
             LIMIT ? OFFSET ?
-            """.formatted(prefixColumns("m.", typeSelect), prefixColumns("m.", readSelect));
+            """.formatted(prefixColumns("m.", typeSelect), prefixColumns("m.", readSelect), prefixColumns("m.", recallSelect));
         return jdbcTemplate.queryForList(sql, conversationId, limit, offset).stream()
                 .map(this::normalizeMessage)
                 .toList();
@@ -186,8 +293,26 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
         normalized.put("order", normalizeOrderFromMessage(raw));
         normalized.put("isRead", raw.get("is_read"));
         normalized.put("readAt", raw.get("read_at"));
+        normalized.put("isRecalled", raw.get("is_recalled"));
+        normalized.put("recalledAt", raw.get("recalled_at"));
         normalized.put("createdAt", raw.get("created_at"));
         return normalized;
+    }
+
+    private void appendSearchFilters(
+            StringBuilder sql, java.util.List<Object> params, String keyword, LocalDateTime startTime, LocalDateTime endTime) {
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            sql.append(" AND LOWER(m.body) LIKE ?");
+            params.add("%" + keyword.trim().toLowerCase(java.util.Locale.ROOT) + "%");
+        }
+        if (startTime != null) {
+            sql.append(" AND m.created_at >= ?");
+            params.add(Timestamp.valueOf(startTime));
+        }
+        if (endTime != null) {
+            sql.append(" AND m.created_at <= ?");
+            params.add(Timestamp.valueOf(endTime));
+        }
     }
 
     private Long insertWithMessageMetadata(Map<String, Object> message) {
@@ -271,7 +396,9 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
                 .replace("message_type", prefix + "message_type")
                 .replace("media_url", prefix + "media_url")
                 .replace("is_read", prefix + "is_read")
-                .replace("read_at", prefix + "read_at");
+                .replace("read_at", prefix + "read_at")
+                .replace("is_recalled", prefix + "is_recalled")
+                .replace("recalled_at", prefix + "recalled_at");
     }
 
     private Map<String, Object> normalizeProduct(Map<String, Object> raw) {
@@ -354,6 +481,14 @@ public class JdbcChatMessageMapper implements ChatMessageMapper {
                     && columnExists("chat_messages", "order_id");
         }
         return cardReferenceColumnsAvailable;
+    }
+
+    private boolean recallColumnsAvailable() {
+        if (recallColumnsAvailable == null) {
+            recallColumnsAvailable = columnExists("chat_messages", "is_recalled")
+                    && columnExists("chat_messages", "recalled_at");
+        }
+        return recallColumnsAvailable;
     }
 
     private boolean columnExists(String tableName, String columnName) {

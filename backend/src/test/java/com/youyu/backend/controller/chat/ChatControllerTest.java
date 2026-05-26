@@ -13,9 +13,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -29,6 +32,7 @@ class ChatControllerTest {
 
     private static Long conversationId;
     private static Long orderConversationId;
+    private static Long recalledMessageId;
 
     @Test
     @Order(1)
@@ -415,5 +419,145 @@ class ChatControllerTest {
                                 {"messageType": "order_card", "orderId": 8001}
                                 """))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Order(23)
+    void searchMessagesFindsSeedConversationMessages() throws Exception {
+        String token = "mock-1001-USER";
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"body": "Unique P2 search target"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/chat/messages/search")
+                        .header("Authorization", "Bearer " + token)
+                        .param("keyword", "Unique P2 search target")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content[0].body").value("Unique P2 search target"))
+                .andExpect(jsonPath("$.data.totalElements").value(greaterThanOrEqualTo(1)));
+    }
+
+    @Test
+    @Order(24)
+    void pinAndMuteConversationWork() throws Exception {
+        String token = "mock-1001-USER";
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/pin")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"pinned": true}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/mute")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"muted": true}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/chat/conversations")
+                        .header("Authorization", "Bearer " + token)
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].id").value(conversationId));
+    }
+
+    @Test
+    @Order(25)
+    void recallOwnMessageWithinWindowWorks() throws Exception {
+        String token = "mock-1001-USER";
+        String response = mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"body": "Please keep this private for a minute"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn().getResponse().getContentAsString();
+
+        recalledMessageId = ((Number) JsonPath.read(response, "$.data.id")).longValue();
+
+        mockMvc.perform(post("/api/chat/messages/" + recalledMessageId + "/recall")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + token)
+                        .param("page", "0")
+                        .param("size", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].id").value(recalledMessageId))
+                .andExpect(jsonPath("$.data.content[0].isRecalled").value(true));
+    }
+
+    @Test
+    @Order(26)
+    void autoReplySettingsAndTriggerWork() throws Exception {
+        String sellerToken = "mock-1002-USER";
+        mockMvc.perform(put("/api/chat/auto-reply")
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"isEnabled": true, "replyContent": "您好，我稍后查看后回复您"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/chat/auto-reply")
+                        .header("Authorization", "Bearer " + sellerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.isEnabled").value(true))
+                .andExpect(jsonPath("$.data.replyContent").value("您好，我稍后查看后回复您"));
+
+        String buyerToken = "mock-1001-USER";
+        mockMvc.perform(post("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + buyerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"body": "请问这个周末还能自提吗？"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/chat/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + buyerToken)
+                .param("page", "0")
+                .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[?(@.senderUserId == 1002)].body", hasItem("您好，我稍后查看后回复您")));
+    }
+
+    @Test
+    @Order(27)
+    void deleteConversationRemovesItFromList() throws Exception {
+        String token = "mock-1001-USER";
+        mockMvc.perform(delete("/api/chat/conversations/" + conversationId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/chat/conversations")
+                        .header("Authorization", "Bearer " + token)
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[*].id", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(conversationId.intValue()))));
     }
 }

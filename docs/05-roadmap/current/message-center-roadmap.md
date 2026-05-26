@@ -4,6 +4,13 @@
 
 ---
 
+## P2 Completion Update
+
+- Date: 2026-05-27
+- Status: P2 experience optimization is complete.
+- Completed scope: message search, conversation pin/mute/delete, message recall, auto-reply settings and trigger flow.
+- Verification: backend tests, frontend tests, and frontend production build passed.
+
 ## 当前状态
 
 **已完成**：
