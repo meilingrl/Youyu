@@ -159,6 +159,18 @@ export default {
       }
     },
     {
+      path: 'orders/:orderId',
+      name: 'app-order-detail',
+      component: () => import('@/views/app/OrderDetailView.vue'),
+      meta: {
+        title: '订单详情',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/trade',
+        hiddenInNav: true
+      }
+    },
+    {
       path: 'reviews/pending',
       name: 'app-reviews-pending',
       component: () => import('@/views/app/PendingReviewsView.vue'),
