@@ -3,10 +3,10 @@
 ## Metadata
 
 - ID: platform-mediation-boundary-definition
-- Status: blocked (unblocks when `chat-mvp-scope-definition` is archived)
+- Status: blocked (archived `chat-mvp-scope-definition` exists, but required `docs/02-requirements/chat-mvp-scope.md` is missing)
 - Owner: unassigned
 - Track: feature
-- Depends on: archived `chat-mvp-scope-definition` (its delivered scope doc anchors the mediation boundary)
+- Depends on: archived `chat-mvp-scope-definition` plus `docs/02-requirements/chat-mvp-scope.md` (the delivered scope doc anchors the mediation boundary)
 - Priority: medium
 - Planned date: 2026-05-22
 - Completed date:
@@ -19,7 +19,7 @@ Produce two artifacts: a requirements scope document and an execution-ready impl
 
 ## Background
 
-The report flow already exists (`POST /api/reports`, admin processing, archived `order-after-sales-ux-hardening` extended its visibility). The chat MVP scope is being decided in parallel by `chat-mvp-scope-definition`. Mediation is currently undefined — `open-questions.md` item 2 captures the three pending decisions:
+The report flow already exists (`POST /api/reports`, admin processing, archived `order-after-sales-ux-hardening` extended its visibility). The chat MVP implementation now exists in code, and `docs/08-tasks/archived/chat-mvp-scope-definition.md` exists, but the required delivered scope artifact `docs/02-requirements/chat-mvp-scope.md` is not present in this worktree. Mediation remains blocked until that scope artifact is restored or recreated. `open-questions.md` item 2 captures the three pending decisions:
 
 - whether mediation rides on top of a chat conversation or stands alone
 - whether mediation is parallel to report or a state escalation of it

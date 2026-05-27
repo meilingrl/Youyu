@@ -1,3 +1,12 @@
+## [2026-05-27] - Admin Module Goal Task Scoping
+
+### docs
+- Scoped the admin governance action-consistency task into an execution-ready cross-cutting backend/frontend contract task.
+- Added a documentation-only support-console contract task to keep `/admin/support` development bounded before implementation.
+- Corrected current roadmap and mediation-task notes so platform mediation remains blocked on the missing `chat-mvp-scope.md` artifact, not merely on archived task status.
+
+---
+
 ## [2026-05-27] - Message Center P2 Experience Tools
 
 ### feat

@@ -8,8 +8,8 @@
 
 | 功能线 | 状态 | 当前说明 |
 |---|---|---|
-| 聊天 MVP | 范围定义中 | 下一条主要业务扩展线，当前任务为 `docs/08-tasks/active/chat-mvp-scope-definition.md` |
-| 平台调解 | 阻塞中 | 强依赖聊天 MVP 范围定义，当前边界任务需等聊天 scope 归档后执行 |
+| 聊天 MVP | 已实现，范围文档需补齐 | 代码与变更记录显示聊天 MVP、P1、P2 已落地；`docs/08-tasks/archived/chat-mvp-scope-definition.md` 已存在，但其要求交付的 `docs/02-requirements/chat-mvp-scope.md` 当前缺失 |
+| 平台调解 | 阻塞中 | 当前边界任务仍需等待 `docs/02-requirements/chat-mvp-scope.md` 补齐后执行，不能仅凭归档任务继续推进 |
 | 前端包体积治理 | 进行中 | 第二轮治理任务已就绪：见 `docs/08-tasks/active/frontend-bundle-second-pass.md`，目标将 element-plus 首屏 chunk 从 296 KB 压降至 ≤ 240 KB（移除管理端专属组件的饥饿注册） |
 
 ## 已完成但不再作为当前主线展开的能力
