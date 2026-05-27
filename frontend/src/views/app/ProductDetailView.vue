@@ -113,6 +113,12 @@ const relatedProducts = computed(() =>
   recommendStore.alsoBoughtList.filter((item) => String(item.id) !== String(product.value?.id))
 )
 
+const reviewEntryDescription = computed(() =>
+  authStore.isLoggedIn
+    ? '只有已完成且归属于你的订单商品会出现在待评价列表。本页不能直接判断你是否购买过当前商品，请以待评价列表为准。'
+    : '登录后可查看自己的待评价列表。只有已完成且归属于你的订单商品可以评价，未购买或未完成订单不会开放评价。'
+)
+
 function requireLogin(actionLabel) {
   if (authStore.isLoggedIn) {
     return true
@@ -265,6 +271,26 @@ function handleGoShop() {
     return
   }
   router.push(`/app/shops/${detailModel.value.shopId}`)
+}
+
+function handleGoPendingReviews() {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('查看待评价前请先登录')
+    router.push({
+      path: '/login',
+      query: {
+        redirect: '/app/reviews/pending'
+      }
+    })
+    return
+  }
+
+  router.push({
+    path: '/app/reviews/pending',
+    query: {
+      productId: String(detailModel.value?.id || '')
+    }
+  })
 }
 
 function handleContactSupport() {
@@ -441,6 +467,17 @@ onMounted(loadProduct)
               <span class="product-detail__trust-dot" />
               <p>{{ item }}</p>
             </article>
+          </div>
+
+          <div class="product-detail__review-entry">
+            <div>
+              <span class="product-detail__review-kicker">评价资格</span>
+              <h2>写评价从待评价列表进入</h2>
+              <p>{{ reviewEntryDescription }}</p>
+            </div>
+            <el-button type="primary" plain @click="handleGoPendingReviews">
+              {{ authStore.isLoggedIn ? '查看待评价' : '登录后查看待评价' }}
+            </el-button>
           </div>
         </aside>
       </section>
@@ -814,6 +851,36 @@ onMounted(loadProduct)
   flex: none;
 }
 
+.product-detail__review-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid rgba(var(--cm-primary-rgb), 0.24);
+  border-radius: var(--cm-radius-md);
+  background: rgba(var(--cm-primary-rgb), 0.06);
+}
+
+.product-detail__review-entry h2 {
+  margin: 4px 0 8px;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.product-detail__review-entry p {
+  margin: 0;
+  color: var(--cm-text-secondary);
+  line-height: 1.6;
+}
+
+.product-detail__review-kicker {
+  color: var(--cm-text-tertiary);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .product-detail__mobile-bar {
   display: none;
 }
@@ -903,9 +970,14 @@ onMounted(loadProduct)
   }
 
   .product-detail__seller,
-  .product-detail__quantity {
+  .product-detail__quantity,
+  .product-detail__review-entry {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .product-detail__review-entry {
+    grid-template-columns: 1fr;
   }
 
   .product-detail__mobile-bar {

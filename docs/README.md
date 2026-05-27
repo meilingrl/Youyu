@@ -91,7 +91,9 @@ Formal API specification documents.
 - current module specs:
   - `admin.md`
   - `auth.md`
+  - `cart.md`
   - `order.md`
+  - `payment.md`
   - `product.md`
   - `recommend.md`
   - `report.md`

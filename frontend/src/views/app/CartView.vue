@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { getCart, removeCartItem, updateCartItem } from '@/api/modules/order'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
+import TradeMobileActionBar from '@/components/trade/TradeMobileActionBar.vue'
 import TradeMetricStrip from '@/components/trade/TradeMetricStrip.vue'
 import TradePageShell from '@/components/trade/TradePageShell.vue'
 import { formatCurrency } from '@/components/trade/trade-meta'
@@ -17,7 +18,11 @@ const pendingKeys = ref([])
 
 const selectedItems = computed(() => cart.value.items.filter((item) => item.selected))
 const hasSelectedItems = computed(() => selectedItems.value.length > 0)
+const selectedCount = computed(() => Number(cart.value.summary.selectedCount || selectedItems.value.length || 0))
 const selectedAmount = computed(() => Number(cart.value.summary.selectedAmount || 0))
+const mobileActionHelper = computed(() =>
+  hasSelectedItems.value ? `已选 ${selectedCount.value} 件，可进入结算` : '先勾选商品再结算'
+)
 
 const metrics = computed(() => [
   {
@@ -229,6 +234,16 @@ onMounted(loadCart)
       >
         <el-button type="primary" @click="$router.push('/app/products')">去逛商品</el-button>
       </EmptyState>
+
+      <TradeMobileActionBar
+        v-if="cart.items.length && !loadError"
+        eyebrow="本次结算"
+        :value="formatCurrency(selectedAmount)"
+        :helper="mobileActionHelper"
+        action-label="去结算"
+        :disabled="!hasSelectedItems"
+        @primary="goCheckout"
+      />
     </TradePageShell>
   </div>
 </template>

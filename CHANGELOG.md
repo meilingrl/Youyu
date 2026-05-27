@@ -236,6 +236,85 @@
 
 ---
 
+## [2026-05-27] - Trade mobile primary action bar
+
+### feat
+- Added a reusable mobile-only trade action bar for cart, checkout, and payment flows.
+- Cart mobile now keeps selected count, selected amount, and the `去结算` action fixed above the bottom navigation.
+- Checkout mobile now keeps payable amount, fulfillment context, and the guarded `提交订单` action fixed above the bottom navigation.
+- Payment mobile now keeps payable amount, payment/order status, and the payable-only mock payment action fixed above the bottom navigation.
+
+### docs
+- Completed and archived `docs/08-tasks/archived/trade-mobile-primary-action-bar.md`.
+
+### test
+- Head-agent verification after installing frontend dependencies: `npm test` passed with 7 test files and 30 tests.
+- `npm run build` passed.
+
+---
+
+## [2026-05-27] - Cart and payment API spec alignment
+
+### docs
+- Added formal cart and payment API specifications for the current trade-flow endpoints.
+- Split cart and payment HTTP smoke examples into dedicated `cart.http` and `payment.http` files.
+- Corrected `order.http` to remove unsupported status-filter examples and include current order creation requirements.
+- Archived the completed cart/payment API spec alignment task record.
+
+---
+
+## [2026-05-27] - Review entry and seed demo bridge
+
+### feat
+- Added an honest product-detail review entry that routes users to `/app/reviews/pending` without implying review eligibility before completed purchase validation.
+
+### docs
+- Updated the review HTTP validation asset with the seedbuyer completed-order path for exercising pending/product review behavior.
+- Archived the review-entry task record with completion notes.
+
+### test
+- `backend\\.\\mvnw.cmd test` passed with 100 tests.
+- Head-agent verification after installing frontend dependencies: `npm test` passed with 7 test files and 30 tests.
+- `npm run build` passed.
+
+---
+
+## [2026-05-27] - Order detail dedicated experience
+
+### feat
+- Added `/app/orders/:orderId` as an authenticated buyer order-detail route with direct refresh support.
+- Moved buyer-side order detail sections into `OrderDetailView.vue`, covering status, items, fulfillment, digital assets, payments, refunds, reports, and message entry points.
+- Added mobile-stable primary actions for pay, cancel, receipt confirmation, offline confirmation, and refund actions while preserving `availableActions` gating.
+
+### refactor
+- Simplified `OrdersView.vue` back to list, metrics, filters, payment shortcut, and detail-route navigation.
+- Preserved `/app/orders?orderId=` compatibility by redirecting legacy query links to the dedicated detail route.
+
+### test
+- Head-agent verification after installing frontend dependencies: `npm test` passed with 7 test files and 30 tests.
+- `npm run build` passed.
+
+### docs
+- Archived the completed order-detail task record with implementation and verification notes.
+
+---
+
+## [2026-05-27] - Trade center live status dashboard
+
+### feat
+- Reworked `/app/trade` into a live transaction dashboard using the existing cart, order, and pending-review APIs.
+- Added real counts for cart items, selected cart items, pending payment, pending receipt, refund in progress, completed orders, and pending reviews.
+- Added prioritized next-action cards plus partial error, retry, loading, and all-empty states while preserving quick navigation to cart, orders, pending reviews, and my reviews.
+
+### docs
+- Completed and archived `docs/08-tasks/archived/trade-center-live-status-dashboard.md`.
+
+### test
+- Head-agent verification after installing frontend dependencies: `npm test` passed with 7 test files and 30 tests.
+- `npm run build` passed.
+
+---
+
 ## [2026-05-25] - Chat MVP Frontend Integration
 
 ### feat

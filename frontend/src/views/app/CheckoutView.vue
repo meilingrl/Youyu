@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { createOrder, previewOrder } from '@/api/modules/order'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
+import TradeMobileActionBar from '@/components/trade/TradeMobileActionBar.vue'
 import TradeMetricStrip from '@/components/trade/TradeMetricStrip.vue'
 import TradePageShell from '@/components/trade/TradePageShell.vue'
 import TradeStatusTag from '@/components/trade/TradeStatusTag.vue'
@@ -30,6 +31,11 @@ const selectedIds = computed(() =>
     .map((item) => Number(item))
     .filter(Boolean)
 )
+const checkoutMobileHelper = computed(() => {
+  const count = preview.value?.items?.length || selectedIds.value.length || 0
+  const fulfillmentLabel = getFulfillmentTypeMeta(form.fulfillmentType || preview.value?.selectedFulfillmentType).label
+  return `${count} 件 · ${fulfillmentLabel}`
+})
 
 const metrics = computed(() => [
   {
@@ -265,6 +271,17 @@ onMounted(() => loadPreview())
           </div>
         </section>
       </template>
+
+      <TradeMobileActionBar
+        v-if="preview && !loadError"
+        eyebrow="应付金额"
+        :value="formatCurrency(preview.payableAmount)"
+        :helper="checkoutMobileHelper"
+        action-label="提交订单"
+        :loading="submitting"
+        :disabled="submitting || !preview"
+        @primary="submitOrder"
+      />
     </TradePageShell>
   </div>
 </template>

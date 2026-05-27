@@ -69,7 +69,9 @@ function isNavigable(route) {
     </nav>
 
     <slot name="metrics" />
-    <slot />
+    <div class="trade-page-shell__body">
+      <slot />
+    </div>
   </div>
 </template>
 
@@ -89,6 +91,13 @@ function isNavigable(route) {
   gap: 12px;
   justify-content: flex-end;
   align-items: center;
+}
+
+.trade-page-shell__body {
+  display: grid;
+  gap: 28px;
+  min-height: clamp(320px, 40vh, 480px);
+  align-content: start;
 }
 
 .trade-route-nav {
@@ -163,6 +172,10 @@ function isNavigable(route) {
 }
 
 @media (max-width: 768px) {
+  .trade-page-shell__body {
+    min-height: 260px;
+  }
+
   .trade-page-shell__actions {
     justify-content: stretch;
   }

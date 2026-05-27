@@ -6,6 +6,7 @@ import { getOrderDetail } from '@/api/modules/order'
 import { completeMockPayment, getPaymentGateway, initiatePayment } from '@/api/modules/payment'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
+import TradeMobileActionBar from '@/components/trade/TradeMobileActionBar.vue'
 import TradeMetricStrip from '@/components/trade/TradeMetricStrip.vue'
 import TradePageShell from '@/components/trade/TradePageShell.vue'
 import TradeStatusTag from '@/components/trade/TradeStatusTag.vue'
@@ -31,6 +32,11 @@ const paymentStatusMeta = computed(() => getPaymentStatusMeta(order.value?.payme
 const fulfillmentMeta = computed(() => getFulfillmentTypeMeta(order.value?.fulfillmentType))
 const isPaid = computed(() => order.value?.paymentStatus === 'paid')
 const canPay = computed(() => order.value?.orderStatus === 'pending_payment')
+const mobileActionLabel = computed(() => (canPay.value ? '模拟支付成功' : '返回订单'))
+const mobileActionHelper = computed(() =>
+  canPay.value ? `支付状态：${paymentStatusMeta.value.label}` : `当前状态：${orderStatusMeta.value.label}`
+)
+const mobileActionDisabled = computed(() => canPay.value && (initiating.value || confirming.value))
 
 const metrics = computed(() => [
   {
@@ -100,6 +106,15 @@ async function handleSuccess() {
   } finally {
     confirming.value = false
   }
+}
+
+function handleMobilePrimary() {
+  if (canPay.value) {
+    handleSuccess()
+    return
+  }
+
+  router.push('/app/orders')
 }
 
 onMounted(loadOrder)
@@ -221,6 +236,17 @@ onMounted(loadOrder)
           </article>
         </section>
       </template>
+
+      <TradeMobileActionBar
+        v-if="order && !loadError"
+        eyebrow="应付金额"
+        :value="formatCurrency(order.payableAmount)"
+        :helper="mobileActionHelper"
+        :action-label="mobileActionLabel"
+        :loading="canPay && confirming"
+        :disabled="mobileActionDisabled"
+        @primary="handleMobilePrimary"
+      />
     </TradePageShell>
   </div>
 </template>
