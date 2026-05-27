@@ -49,6 +49,10 @@ function onSearch() {
   loadReports()
 }
 
+function canProcessReport(row) {
+  return ['pending', 'processing'].includes(row.status)
+}
+
 async function process(row, status) {
   try {
     const result = await ElMessageBox.prompt('请填写处理结论', '举报处理', {
@@ -119,7 +123,7 @@ onMounted(loadReports)
               标记处理中
             </el-button>
             <el-button
-              v-if="row.status !== 'resolved'"
+              v-if="canProcessReport(row)"
               link
               type="success"
               @click="process(row, 'resolved')"
@@ -127,13 +131,14 @@ onMounted(loadReports)
               处理完成
             </el-button>
             <el-button
-              v-if="row.status !== 'rejected'"
+              v-if="canProcessReport(row)"
               link
               type="danger"
               @click="process(row, 'rejected')"
             >
               驳回举报
             </el-button>
+            <el-tag v-if="!canProcessReport(row)" type="info" effect="plain">无需操作</el-tag>
           </template>
         </el-table-column>
       </el-table>

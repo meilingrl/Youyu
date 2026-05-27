@@ -172,7 +172,8 @@ public class AdminController {
                         shopId,
                         payload.getOrDefault("status", ""),
                         payload.getOrDefault("reviewStatus", ""),
-                        payload.getOrDefault("rejectReason", "")
+                        payload.getOrDefault("rejectReason", ""),
+                        currentAdminUserId()
                 ),
                 traceId(request)
         );

@@ -27,6 +27,11 @@ public class AdminServiceImpl implements AdminService {
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 100;
+    private static final List<String> USER_STATUSES = List.of("active", "disabled", "locked");
+    private static final List<String> PRODUCT_STATUSES = List.of("draft", "on_sale", "off_sale", "closed");
+    private static final List<String> SHOP_STATUSES = List.of("active", "inactive", "disabled");
+    private static final List<String> SHOP_REVIEW_STATUSES = List.of("pending_review", "approved", "rejected");
+    private static final List<String> REPORT_STATUSES = List.of("pending", "processing", "resolved", "rejected");
 
     private final UserMapper userMapper;
     private final StudentVerificationMapper studentVerificationMapper;
@@ -163,11 +168,9 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public Map<String, Object> updateUserStatus(Long userId, String status, String restrictionReason) {
-        if (isBlank(status)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "用户状态不能为空");
-        }
-        boolean restricted = "disabled".equals(status) || "locked".equals(status);
-        userMapper.updateStatus(userId, status);
+        String normalizedStatus = requireAllowed(status, USER_STATUSES, "Unsupported user status");
+        boolean restricted = "disabled".equals(normalizedStatus) || "locked".equals(normalizedStatus);
+        userMapper.updateStatus(userId, normalizedStatus);
         userMapper.updateRestriction(userId, restricted, restricted ? defaultString(restrictionReason) : "");
         return linkedMap("user", copy(findUser(userId)));
     }
@@ -225,11 +228,9 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public Map<String, Object> updateProductStatus(Long productId, String status) {
-        if (isBlank(status)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "商品状态不能为空");
-        }
+        String normalizedStatus = requireAllowed(status, PRODUCT_STATUSES, "Unsupported product status");
         findProduct(productId);
-        productMapper.updateStatus(productId, status);
+        productMapper.updateStatus(productId, normalizedStatus);
         return linkedMap("product", copy(findProduct(productId)));
     }
 
@@ -297,19 +298,35 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public Map<String, Object> updateShopStatus(Long shopId, String status, String reviewStatus, String rejectReason) {
+    public Map<String, Object> updateShopStatus(Long shopId, String status, String reviewStatus, String rejectReason, Long adminUserId) {
         findShop(shopId);
-        if ("rejected".equals(reviewStatus)) {
+        String normalizedStatus = optionalAllowed(status, SHOP_STATUSES, "Unsupported shop status");
+        String normalizedReviewStatus = optionalAllowed(reviewStatus, SHOP_REVIEW_STATUSES, "Unsupported shop review status");
+
+        if (isBlank(normalizedStatus) && isBlank(normalizedReviewStatus)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Shop status or reviewStatus is required");
+        }
+        if ("approved".equals(normalizedReviewStatus)) {
+            normalizedStatus = defaultIfBlank(normalizedStatus, "active");
+            if (!"active".equals(normalizedStatus)) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Approved shops must be active");
+            }
+        } else if ("rejected".equals(normalizedReviewStatus)) {
+            normalizedStatus = defaultIfBlank(normalizedStatus, "inactive");
+            if (!"inactive".equals(normalizedStatus)) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Rejected shops must be inactive");
+            }
             if (isBlank(rejectReason)) {
                 throw new BusinessException(ResultCode.BAD_REQUEST, "Shop reject reason is required");
             }
-        } else if ("approved".equals(reviewStatus)) {
-            if (isBlank(status)) {
-                status = "active";
+        } else if ("pending_review".equals(normalizedReviewStatus)) {
+            normalizedStatus = defaultIfBlank(normalizedStatus, "inactive");
+            if (!"inactive".equals(normalizedStatus)) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "Pending-review shops must be inactive");
             }
         }
-        shopMapper.updateStatus(shopId, status, reviewStatus, null,
-                "rejected".equals(reviewStatus) ? rejectReason : "");
+        shopMapper.updateStatus(shopId, normalizedStatus, normalizedReviewStatus, adminUserId,
+                "rejected".equals(normalizedReviewStatus) ? rejectReason : "");
         return linkedMap("shop", copy(findShop(shopId)));
     }
 
@@ -327,10 +344,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public Map<String, Object> processReport(Long reportId, String status, String resolution, Long adminUserId) {
-        if (isBlank(status)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "举报处理状态不能为空");
-        }
-        reportMapper.updateStatus(reportId, status, "管理员#" + adminUserId, defaultString(resolution));
+        String normalizedStatus = requireAllowed(status, REPORT_STATUSES, "Unsupported report status");
+        reportMapper.updateStatus(reportId, normalizedStatus, "管理员#" + adminUserId, defaultString(resolution));
         return linkedMap("report", copy(findReport(reportId)));
     }
 
@@ -450,6 +465,25 @@ public class AdminServiceImpl implements AdminService {
 
     private String defaultIfBlank(String value, String defaultValue) {
         return isBlank(value) ? defaultValue : value;
+    }
+
+    private String requireAllowed(String value, List<String> allowedValues, String message) {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.isBlank() || !allowedValues.contains(normalized)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, message);
+        }
+        return normalized;
+    }
+
+    private String optionalAllowed(String value, List<String> allowedValues, String message) {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.isBlank()) {
+            return "";
+        }
+        if (!allowedValues.contains(normalized)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, message);
+        }
+        return normalized;
     }
 
     private Long toLong(Object value) {

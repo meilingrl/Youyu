@@ -81,6 +81,17 @@ Content-Type: application/json
   "restrictionReason": ""
 }
 
+###
+
+### Reject unsupported user status - expect 400 BAD_REQUEST
+PUT {{baseUrl}}/api/admin/users/1003/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "suspended"
+}
+
 # ─────────────────────────────────────────────
 # STUDENT VERIFICATION
 # ─────────────────────────────────────────────
@@ -154,6 +165,17 @@ Authorization: Bearer {{adminToken}}
 ### List products — digital type
 GET {{baseUrl}}/api/admin/products?productType=digital&page=1&pageSize=10
 Authorization: Bearer {{adminToken}}
+
+###
+
+### Reject unsupported product status - expect 400 BAD_REQUEST
+PUT {{baseUrl}}/api/admin/products/3010/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "shadow_hidden"
+}
 
 # ─────────────────────────────────────────────
 # REVIEW TASKS
@@ -230,6 +252,18 @@ Content-Type: application/json
   "reviewStatus": "approved"
 }
 
+###
+
+### Reject invalid shop status/reviewStatus combination - expect 400 BAD_REQUEST
+PUT {{baseUrl}}/api/admin/shops/4003/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "disabled",
+  "reviewStatus": "approved"
+}
+
 # ─────────────────────────────────────────────
 # REPORT MANAGEMENT
 # ─────────────────────────────────────────────
@@ -266,3 +300,15 @@ Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {}
+
+###
+
+### Process report with unsupported status - expect 400 BAD_REQUEST
+PUT {{baseUrl}}/api/admin/reports/6001/process
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "ignored",
+  "resolution": "invalid status smoke"
+}

@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: admin-governance-action-consistency
-- Status: active
+- Status: archived
 - Owner: unassigned
 - Track: cross-cutting
 - Depends on: current admin governance baseline; archived `admin-governance-ui-consistency`; archived `admin-query-pagination-hardening`
 - Priority: high
 - Planned date: 2026-05-27
-- Completed date:
+- Completed date: 2026-05-27
 
 ## Objective
 
@@ -163,16 +163,16 @@ No database schema change is expected.
 
 ## Acceptance Criteria
 
-- [ ] A state/action matrix is recorded in Completion Notes or an implementation summary before archiving.
-- [ ] Backend rejects unsupported report statuses, product statuses, user statuses, shop status/reviewStatus combinations, verification actions, and review-task actions with clear `BAD_REQUEST` messages.
-- [ ] Existing valid admin actions continue to work.
-- [ ] Frontend action buttons on the scoped admin pages map only to backend-supported transitions.
-- [ ] Terminal or non-actionable rows are understandable instead of silently inconsistent.
-- [ ] Backend tests cover at least one invalid transition for report, product, user, and shop governance.
-- [ ] `docs/09-api-spec/admin.md` and `docs/06-http/admin.http` are updated if accepted values or failure examples are clarified.
-- [ ] `CHANGELOG.md` has a new top entry for the delivered change.
-- [ ] Verification commands listed above are run and recorded.
-- [ ] This task is archived only after all applicable criteria pass.
+- [x] A state/action matrix is recorded in Completion Notes or an implementation summary before archiving.
+- [x] Backend rejects unsupported report statuses, product statuses, user statuses, shop status/reviewStatus combinations, verification actions, and review-task actions with clear `BAD_REQUEST` messages.
+- [x] Existing valid admin actions continue to work.
+- [x] Frontend action buttons on the scoped admin pages map only to backend-supported transitions.
+- [x] Terminal or non-actionable rows are understandable instead of silently inconsistent.
+- [x] Backend tests cover at least one invalid transition for report, product, user, and shop governance.
+- [x] `docs/09-api-spec/admin.md` and `docs/06-http/admin.http` are updated if accepted values or failure examples are clarified.
+- [x] `CHANGELOG.md` has a new top entry for the delivered change.
+- [x] Verification commands listed above are run and recorded.
+- [x] This task is archived only after all applicable criteria pass.
 
 ## Sub-agent Instructions
 
@@ -194,4 +194,46 @@ You are implementing this task in the `codex/admin-module-goal` worktree.
 
 ## Completion Notes
 
-(Filled in after implementation and head-Agent acceptance.)
+Implementation pass completed and accepted on 2026-05-27.
+
+State/action matrix used for alignment:
+
+| Surface | Current states / accepted values | Visible admin actions | Backend validation outcome |
+|---|---|---|---|
+| Student verification | `pending_review`, `approved`, `rejected`; actions `approve`, `reject` | `pending_review` rows can approve or reject; terminal rows show no action | Unsupported actions and reject without reason return `BAD_REQUEST` |
+| Product review task | `pending_review`, `approved`, `rejected`; actions `approve`, `reject` | `pending_review` rows can approve-and-list or reject; terminal rows show no action | Unsupported actions and reject without reason return `BAD_REQUEST` |
+| Shop governance | status `active`, `inactive`, `disabled`; reviewStatus `pending_review`, `approved`, `rejected` | Pending shops can approve or reject; active shops can be disabled; detail remains available | Invalid values and inconsistent combinations, such as `approved` + `disabled`, return `BAD_REQUEST`; reviewer id is recorded |
+| Report processing | `pending`, `processing`, `resolved`, `rejected` | `pending` can move to processing/resolved/rejected; `processing` can resolve/reject; terminal rows show no action | Missing or unsupported status returns `BAD_REQUEST` |
+| Product status | `draft`, `on_sale`, `off_sale`, `closed` | Approved/not-required non-closed products can be listed; on-sale products can be taken off sale; pending/rejected/closed rows show no action | Missing or unsupported status returns `BAD_REQUEST` |
+| User status | `active`, `disabled`, `locked` | Non-active users can be enabled; non-disabled users can be disabled | Missing or unsupported status returns `BAD_REQUEST`; disabled/locked users are marked restricted |
+
+Files changed in this implementation pass:
+
+- `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java`
+- `backend/src/main/java/com/youyu/backend/service/admin/AdminService.java`
+- `backend/src/main/java/com/youyu/backend/service/admin/impl/AdminServiceImpl.java`
+- `backend/src/test/java/com/youyu/backend/admin/AdminGovernanceTest.java`
+- `frontend/src/views/admin/VerificationManageView.vue`
+- `frontend/src/views/admin/ReviewTaskManageView.vue`
+- `frontend/src/views/admin/ProductManageView.vue`
+- `frontend/src/views/admin/ReportManageView.vue`
+- `docs/09-api-spec/admin.md`
+- `docs/06-http/admin.http`
+- `CHANGELOG.md`
+- `docs/08-tasks/archived/admin-governance-action-consistency.md`
+
+Verification notes:
+
+- Pre-change targeted backend check passed: `backend\mvnw.cmd -Dtest=AdminGovernanceTest test` (21 tests).
+- Post-change targeted backend check passed: `backend\mvnw.cmd -Dtest=AdminGovernanceTest test` (27 tests).
+- Full backend check passed: `backend\mvnw.cmd test` (125 tests).
+- Frontend dependency install was needed because `node_modules` was absent; after `frontend\npm ci`, `frontend\npm test` passed (30 tests across 7 files).
+- Frontend production build passed: `frontend\npm run build`.
+
+Head-Agent acceptance:
+
+- Reviewed backend, frontend, HTTP, API spec, changelog, and task diffs.
+- Re-ran `backend\mvnw.cmd -Dtest=AdminGovernanceTest test`: passed, 27 tests.
+- Re-ran `backend\mvnw.cmd test`: passed, 125 tests.
+- Re-ran `frontend\npm test`: passed, 30 tests across 7 files.
+- Re-ran `frontend\npm run build`: passed; Vite emitted the existing `@vueuse/core` Rollup annotation warnings.

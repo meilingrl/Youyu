@@ -129,6 +129,7 @@ onMounted(loadVerifications)
             >
               驳回
             </el-button>
+            <el-tag v-if="row.verificationStatus !== 'pending_review'" type="info" effect="plain">无需操作</el-tag>
           </template>
         </el-table-column>
       </el-table>

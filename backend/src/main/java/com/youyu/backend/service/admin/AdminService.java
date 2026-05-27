@@ -30,7 +30,7 @@ public interface AdminService {
 
     Map<String, Object> shopDetail(Long shopId);
 
-    Map<String, Object> updateShopStatus(Long shopId, String status, String reviewStatus, String rejectReason);
+    Map<String, Object> updateShopStatus(Long shopId, String status, String reviewStatus, String rejectReason, Long adminUserId);
 
     Map<String, Object> listReports(String keyword, String status, String targetType, int page, int pageSize);
 

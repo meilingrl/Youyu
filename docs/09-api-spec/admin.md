@@ -11,7 +11,7 @@
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - request sample: `docs/06-http/admin.http`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
-- Last updated: 2026-05-17
+- Last updated: 2026-05-27
 
 ## Scope
 
@@ -164,7 +164,7 @@ This endpoint uses `UpdateUserStatusRequest` with `@Valid`.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `status` | yes | string | `@NotBlank` |
+| `status` | yes | string | One of `active`, `disabled`, `locked` |
 | `restrictionReason` | no | string | Max 255 |
 
 #### Response
@@ -287,7 +287,7 @@ Update admin-managed product state.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `status` | yes | string | Passed through map-style payload |
+| `status` | yes | string | One of `draft`, `on_sale`, `off_sale`, `closed` |
 
 #### Response
 
@@ -434,9 +434,18 @@ This endpoint currently accepts a map-style payload.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `status` | yes | string | Shop availability state |
-| `reviewStatus` | yes | string | Review outcome state |
+| `status` | yes when `reviewStatus` is omitted | string | One of `active`, `inactive`, `disabled`; may be omitted when `reviewStatus` supplies an approval/rejection transition |
+| `reviewStatus` | no | string | One of `pending_review`, `approved`, `rejected` |
 | `rejectReason` | no | string | Required by business rules in rejection flows |
+
+Valid `status` / `reviewStatus` combinations:
+
+| Flow | Accepted payload |
+|---|---|
+| Approve shop | `reviewStatus=approved` with omitted status or `status=active` |
+| Reject shop | `reviewStatus=rejected` with omitted status or `status=inactive`; `rejectReason` required |
+| Keep pending review | `reviewStatus=pending_review` with omitted status or `status=inactive` |
+| Disable / enable availability only | omit `reviewStatus`, set `status` to `active`, `inactive`, or `disabled` |
 
 #### Response
 
@@ -495,7 +504,7 @@ This endpoint currently accepts a map-style payload.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `status` | yes | string | Processing outcome |
+| `status` | yes | string | One of `pending`, `processing`, `resolved`, `rejected` |
 | `resolution` | no | string | Resolution note |
 
 #### Response
@@ -653,8 +662,13 @@ Browse paginated search logs from the admin view.
 
 ## Shared Types / Enumerations
 
-- Verification review `action`: current flow expects `approve` or `reject`
-- Review-task `action`: current flow expects `approve` or `reject`
+- User `status`: `active`, `disabled`, `locked`
+- Verification review `action`: `approve`, `reject`
+- Product `status`: `draft`, `on_sale`, `off_sale`, `closed`
+- Review-task `action`: `approve`, `reject`
+- Shop `status`: `active`, `inactive`, `disabled`
+- Shop `reviewStatus`: `pending_review`, `approved`, `rejected`
+- Report `status`: `pending`, `processing`, `resolved`, `rejected`
 - Search governance `ruleType`: current examples use `SENSITIVE_WORD` and `HIDE_KEYWORD`
 - Several admin mutation endpoints still accept map-style payloads rather than dedicated DTOs
 

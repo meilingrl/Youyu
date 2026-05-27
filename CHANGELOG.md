@@ -1,3 +1,19 @@
+## [2026-05-27] - Admin Governance Action Consistency
+
+### fix
+- Added explicit admin governance allow-lists for user, product, report, and shop status mutations.
+- Validated shop `status` / `reviewStatus` combinations and propagated the current admin reviewer through shop status updates.
+- Aligned admin product, report, verification, and review-task action columns with supported backend transitions.
+
+### docs
+- Clarified admin API accepted values and added negative admin HTTP smoke examples for unsupported governance states.
+- Recorded the state/action matrix in the active task completion notes.
+
+### test
+- Added backend regression coverage for invalid user, product, shop, and report governance transitions.
+
+---
+
 ## [2026-05-27] - Admin Module Goal Task Scoping
 
 ### docs
