@@ -295,10 +295,14 @@ Reading order for agents: `AGENTS.md` -> `CLAUDE.md` -> `docs/README.md` -> rele
 ### Before starting a task
 
 1. Read `AGENTS.md` first, then this file, then `docs/README.md`.
-2. Find your task spec in `docs/08-tasks/active/` or `docs/08-tasks/drafts/`. If none exists, ask the human.
-3. Read every file listed in the task spec's "Files to read" section.
-4. Run `mvnw.cmd test` (backend) before making changes. If it fails before your changes, report it.
-5. Identify the exact files to modify. Any file not in the task spec's "Changes" section is out of scope.
+2. Review system architecture constraints:
+   - `docs/03-architecture/data-management-and-privacy.md` — data storage, privacy compliance, security requirements
+   - `docs/03-architecture/performance-and-scalability.md` — performance baselines, optimization strategies
+   - `docs/04-standards/operations-and-deployment.md` — deployment requirements, operational procedures
+3. Find your task spec in `docs/08-tasks/active/` or `docs/08-tasks/drafts/`. If none exists, ask the human.
+4. Read every file listed in the task spec's "Files to read" section.
+5. Run `mvnw.cmd test` (backend) before making changes. If it fails before your changes, report it.
+6. Identify the exact files to modify. Any file not in the task spec's "Changes" section is out of scope.
 
 ### During implementation
 

@@ -89,6 +89,98 @@
 - Verified backend tests, frontend tests, and frontend production build.
 
 ---
+
+## [2026-05-26] - Message Center Acceptance Fixes
+
+### fix
+- Added seed unread chat counters and notification rows so red-dot/read-state behavior is visible in acceptance data.
+- Moved notifications out of top-level app navigation and embedded them under the message center.
+- Stabilized conversation switching by scrolling only the message thread container and removing thread/bubble entrance animations.
+
+### test
+- Added backend coverage for chat unread count and mark-read behavior.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
+
+## [2026-05-25] - Message Center P0 Completion
+
+### feat
+- Added chat unread counts, conversation read-state tracking, and global message unread badges.
+- Added image messages with Base64 fallback upload, image bubbles, failure placeholders, and full-screen preview.
+- Added in-app notification module with unread counts, notification list, read/read-all actions, and order-status notification hooks.
+
+### backend
+- Extended chat conversation/message persistence for unread counts, read timestamps, message type, and media payloads.
+- Added notification controller, service, mapper, entity, and schema table.
+- Integrated order and mock-payment status transitions with best-effort notification delivery.
+
+### frontend
+- Updated message center store and view for unread synchronization and image messages.
+- Added notification API module, Pinia store, route, and notification list page.
+- Added desktop and mobile navigation badges for chat and notifications.
+
+### docs
+- Added chat and notification API specs.
+- Updated chat and notification HTTP smoke collections.
+- Archived completed P0 message-center task documents.
+
+### test
+- Sub-agents reported passing backend tests, frontend tests, and frontend build before final integration.
+- Final integrated verification rerun is recorded in the task completion response.
+
+---
+
+## [2026-05-25] - System Architecture and Launch Preparation Roadmap
+
+### docs
+- Created comprehensive data management and privacy compliance guide (`docs/03-architecture/data-management-and-privacy.md`)
+- Created performance and scalability guide with optimization roadmap (`docs/03-architecture/performance-and-scalability.md`)
+- Created operations and deployment standards document (`docs/04-standards/operations-and-deployment.md`)
+- Created launch preparation roadmap with 4-phase implementation plan (`docs/05-roadmap/current/launch-preparation-roadmap.md`)
+- Updated documentation index to include new architecture and standards documents
+- Updated stage and feature roadmaps to reflect launch preparation focus
+
+### architecture
+- Documented data storage strategy and browser storage limitations
+- Defined privacy compliance requirements (PIPL, user rights, legal documents)
+- Outlined performance baselines and known bottlenecks (recommendation engine, media storage, search logging)
+- Established three-phase optimization roadmap (pre-launch, post-launch, scale-out)
+- Specified security hardening requirements (HTTPS, JWT secrets, CORS, input validation)
+- Defined deployment architecture with containerization and CI/CD enhancement
+
+### standards
+- Established pre-launch deployment checklist with security requirements
+- Documented backup strategy, logging configuration, and monitoring setup
+- Created operational procedures (deployment runbook, incident response, database migration)
+- Defined compliance requirements (ICP filing, data residency, cost optimization)
+- Added cost estimation for three growth phases (¥400/month → ¥1000/month → ¥3800/month)
+
+### compliance
+- Specified required legal documents (privacy policy, user agreement, cookie policy)
+- Defined user rights implementation (data export, account deletion, consent logging)
+- Outlined database schema additions for consent tracking and soft deletion
+- Documented frontend changes for cookie consent and legal document pages
+
+### roadmap
+- Established 4-phase launch preparation plan (13 weeks total):
+  - Phase 0 (P0, 2-3 weeks): Security hardening, privacy compliance, infrastructure, containerization
+  - Phase 1 (P1, 3-4 weeks): Performance optimization, messaging features, user personalization
+  - Phase 2 (P2, 3-4 weeks): Admin features, marketing (coupons, promotions), data analytics
+  - Phase 3 (P3, 2-3 weeks): UI/UX improvements, frontend bundle optimization
+  - Phase 4 (P0, 1 week): Full testing, operations documentation, compliance verification
+- Defined parallel work streams and dependency relationships
+- Estimated cloud service costs: ¥400/month (Phase 0-1) → ¥1000/month (Phase 2-3) → ¥1000-3800/month (post-launch)
+- Identified high-risk items: Redis caching strategy, OSS migration, coupon concurrency, UI/UX requirements clarity
+
+### agent-protocol
+- Updated `CLAUDE.md` to require agents read system architecture constraints before starting tasks
+- Added references to data management, performance, and operations documents in pre-task checklist
+- Updated stage roadmap to reflect "launch preparation and engineering governance" phase
+- Updated feature roadmap with current status of all major features (security, compliance, performance, admin, marketing, UI/UX)
+
+---
+
 ## [2026-05-25] - Home and Explore UX Bundle Update
 
 ### feat
