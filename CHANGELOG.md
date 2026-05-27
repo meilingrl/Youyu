@@ -1,3 +1,12 @@
+## [2026-05-27] - Admin Support Console Scope Contract
+
+### docs
+- Added the admin support console scope contract, including lane ownership, reusable endpoints, missing endpoints, non-goals, and mediation blockage.
+- Created the implementation-ready frontend-only support context dashboard task.
+- Clarified that `/admin/support` is a frontend route and does not currently define an `/api/admin/support/**` namespace.
+
+---
+
 ## [2026-05-27] - Admin Governance Action Consistency
 
 ### fix

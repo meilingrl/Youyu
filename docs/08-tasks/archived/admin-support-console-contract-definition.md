@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: admin-support-console-contract-definition
-- Status: active
+- Status: archived
 - Owner: unassigned
 - Track: cross-cutting
 - Depends on: current `/admin/support` placeholder; current chat/message backend baseline; current report/order/refund governance baseline
 - Priority: medium
 - Planned date: 2026-05-27
-- Completed date:
+- Completed date: 2026-05-27
 
 ## Objective
 
@@ -127,13 +127,13 @@ If the scope document determines that existing endpoints are enough for v1, list
 
 ## Acceptance Criteria
 
-- [ ] `docs/02-requirements/admin-support-console-scope.md` exists.
-- [ ] The scope document clearly separates support console v1 from report processing, platform mediation, and chat MVP/P2 features.
-- [ ] The scope document lists existing reusable endpoints and explicitly marks missing endpoints.
-- [ ] If `admin-support-console-implementation.md` is created, it is executable by a sub-agent without additional product-design decisions.
-- [ ] No backend, frontend, schema, or seed file is modified.
-- [ ] `CHANGELOG.md` has a new top entry for the documentation change.
-- [ ] This task is archived only after the docs are complete.
+- [x] `docs/02-requirements/admin-support-console-scope.md` exists.
+- [x] The scope document clearly separates support console v1 from report processing, platform mediation, and chat MVP/P2 features.
+- [x] The scope document lists existing reusable endpoints and explicitly marks missing endpoints.
+- [x] If `admin-support-console-implementation.md` is created, it is executable by a sub-agent without additional product-design decisions.
+- [x] No backend, frontend, schema, or seed file is modified.
+- [x] `CHANGELOG.md` has a new top entry for the documentation change.
+- [x] This task is archived only after the docs are complete.
 
 ## Sub-agent Instructions
 
@@ -153,4 +153,16 @@ You are executing a documentation-only task in the `codex/admin-module-goal` wor
 
 ## Completion Notes
 
-(Filled in after documentation delivery and head-Agent acceptance.)
+- Created `docs/02-requirements/admin-support-console-scope.md` with v1 support-console boundaries, lane ownership, reusable endpoints, missing endpoint inventory, non-goals, and explicit mediation blockage.
+- Created `docs/08-tasks/active/admin-support-console-implementation.md` because the v1 support context dashboard is implementation-ready using existing frontend admin route structure and existing admin/report/order/search endpoints, without backend or schema changes.
+- Updated `docs/09-api-spec/admin.md` with an ownership note clarifying that `/admin/support` is a frontend route and no `/api/admin/support/**` namespace currently exists.
+- Prepended `CHANGELOG.md` with the documentation change.
+- Verified platform mediation remains blocked because `docs/02-requirements/platform-mediation-scope.md` is absent; `docs/02-requirements/chat-mvp-scope.md` is also absent in this worktree.
+- No backend, frontend, schema, seed, or `CLAUDE.md` files were modified.
+
+Head-Agent acceptance:
+
+- Reviewed `docs/02-requirements/admin-support-console-scope.md` and confirmed v1 is limited to an admin support context dashboard.
+- Reviewed `docs/08-tasks/active/admin-support-console-implementation.md` and confirmed it is frontend-only, uses existing admin-owned APIs, and keeps missing mediation/chat/group lanes blocked.
+- Reviewed `docs/09-api-spec/admin.md` ownership note and `CHANGELOG.md`.
+- Ran `git diff --check`: passed.

@@ -28,6 +28,8 @@ This document covers governance and operational endpoints under `/api/admin`:
 
 It does not cover admin login under `/api/admin/auth` or admin order operations under `/api/admin/orders`.
 
+`/admin/support` is a frontend admin route, not an admin API namespace. The v1 support console scope reuses existing admin/report/order/search endpoints for context and does not introduce `/api/admin/support/**`; see `docs/02-requirements/admin-support-console-scope.md`.
+
 ## Authentication And Roles
 
 - All endpoints in this module require admin role access.
