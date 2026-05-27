@@ -1,0 +1,21 @@
+### Notification API Smoke Tests
+
+### Variables
+@baseUrl = http://localhost:8080
+@userToken = mock-1001-USER
+
+### 1. Get notification list
+GET {{baseUrl}}/api/notifications?page=0&size=20
+Authorization: Bearer {{userToken}}
+
+### 2. Get unread notification count
+GET {{baseUrl}}/api/notifications/unread-count
+Authorization: Bearer {{userToken}}
+
+### 3. Mark one notification read
+POST {{baseUrl}}/api/notifications/1/read
+Authorization: Bearer {{userToken}}
+
+### 4. Mark all notifications read
+POST {{baseUrl}}/api/notifications/read-all
+Authorization: Bearer {{userToken}}

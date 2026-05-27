@@ -321,7 +321,7 @@
 - HTTP smoke tests: `docs/06-http/chat.http` with 14 request examples
 
 ### docs
-- Task document: `docs/08-tasks/drafts/chat-mvp-backend-implementation.md`
+- Task document: `docs/08-tasks/archived/chat-mvp-backend-implementation.md`
 
 ### constraints
 - MVP scope: Text messages only, no WebSocket, no unread counts, no file attachments

@@ -215,6 +215,17 @@ export default {
       }
     },
     {
+      path: 'notifications',
+      name: 'app-notifications',
+      component: () => import('@/views/app/NotificationsView.vue'),
+      meta: {
+        title: '通知中心',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/messages'
+      }
+    },
+    {
       path: 'me',
       name: 'app-me',
       component: () => import('@/views/app/ProfileView.vue'),
@@ -253,6 +264,17 @@ export default {
       component: () => import('@/views/app/PreferenceSettingsView.vue'),
       meta: {
         title: '偏好设置',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/settings'
+      }
+    },
+    {
+      path: 'settings/auto-reply',
+      name: 'app-settings-auto-reply',
+      component: () => import('@/views/app/SettingsAutoReplyView.vue'),
+      meta: {
+        title: '自动回复设置',
         requiresAuth: true,
         role: 'user',
         navKey: '/app/settings'

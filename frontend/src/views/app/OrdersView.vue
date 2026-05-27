@@ -1,7 +1,7 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   accessDigitalAsset,
   applyRefund,
@@ -25,8 +25,13 @@ import {
   getOrderStatusMeta,
   getPaymentStatusMeta
 } from '@/components/trade/trade-meta'
+import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
 
+const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
+const chatStore = useChatStore()
 const loading = ref(false)
 const loadError = ref('')
 const orders = ref([])
@@ -39,6 +44,7 @@ const detail = ref(null)
 const activeDetailOrderId = ref(null)
 
 const actionLoading = ref(false)
+const messageActionLoading = ref(false)
 const refundForm = reactive({
   refundReason: ''
 })
@@ -107,6 +113,9 @@ async function loadOrders() {
   try {
     const response = await getOrderList()
     orders.value = response.data || []
+    if (route.query.orderId) {
+      await openDetail(route.query.orderId)
+    }
   } catch (error) {
     loadError.value = error?.response?.data?.message || error?.message || '订单列表加载失败'
     ElMessage.error(loadError.value)
@@ -240,7 +249,66 @@ async function handleSubmitReport() {
   }
 }
 
+function resolvePeerUserId(order) {
+  if (!order) return null
+  const currentUserId = String(authStore.currentUser?.id || '')
+  const candidates = [
+    order.peerUserId,
+    order.counterpartyUserId,
+    order.sellerId,
+    order.sellerUserId,
+    order.buyerId,
+    order.buyerUserId
+  ].filter((id) => id !== undefined && id !== null && id !== '')
+
+  return candidates.find((id) => String(id) !== currentUserId) || null
+}
+
+async function ensureOrderForMessage(order) {
+  if (!order?.id) return null
+  if (resolvePeerUserId(order)) {
+    return order
+  }
+  const response = await getOrderDetail(order.id)
+  return response.data
+}
+
+async function handleContactOrder(order = detail.value) {
+  if (!order?.id || messageActionLoading.value) return
+
+  messageActionLoading.value = true
+  try {
+    const sourceOrder = await ensureOrderForMessage(order)
+    const peerUserId = resolvePeerUserId(sourceOrder)
+    if (!peerUserId) {
+      ElMessage.error('订单缺少对方用户字段，无法创建会话')
+      return
+    }
+
+    const conversation = await chatStore.findOrCreateConversation(
+      Number(peerUserId),
+      null,
+      sourceOrder.shopId || sourceOrder.shop_id || null
+    )
+    await chatStore.sendOrderCardMessage(conversation.id, Number(sourceOrder.id))
+    ElMessage.success('已发送订单卡片')
+    router.push({
+      name: 'app-message-detail',
+      params: { conversationId: String(conversation.id) }
+    })
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || error?.message || '订单卡片发送失败')
+  } finally {
+    messageActionLoading.value = false
+  }
+}
+
 function openOrderMessage(intent = 'after_sales') {
+  if (intent !== 'support') {
+    handleContactOrder(detail.value)
+    return
+  }
+
   router.push({
     path: '/app/messages',
     query: {
@@ -253,6 +321,15 @@ function openOrderMessage(intent = 'after_sales') {
     }
   })
 }
+
+watch(
+  () => route.query.orderId,
+  (orderId) => {
+    if (orderId && String(orderId) !== String(activeDetailOrderId.value || '')) {
+      openDetail(orderId)
+    }
+  }
+)
 
 onMounted(() => {
   loadOrders()
@@ -334,6 +411,7 @@ onBeforeUnmount(() => {
               :order="order"
             >
               <el-button plain @click="openDetail(order.id)">查看详情</el-button>
+              <el-button plain :loading="messageActionLoading" @click="handleContactOrder(order)">联系对方</el-button>
               <el-button
                 v-if="order.orderStatus === 'pending_payment'"
                 type="primary"
@@ -519,8 +597,13 @@ onBeforeUnmount(() => {
             <el-button type="danger" plain :disabled="actionLoading" @click="openReportDialog">
               提交举报
             </el-button>
-            <el-button plain :disabled="actionLoading" @click="openOrderMessage()">
-              进入售后消息入口
+            <el-button
+              plain
+              :loading="messageActionLoading"
+              :disabled="actionLoading || messageActionLoading"
+              @click="openOrderMessage()"
+            >
+              发送订单卡片
             </el-button>
             <el-button plain :disabled="actionLoading" @click="openOrderMessage('support')">
               联系平台客服

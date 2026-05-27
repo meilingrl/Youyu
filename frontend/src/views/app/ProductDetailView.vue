@@ -35,6 +35,9 @@ const activeMediaIndex = ref(0)
 const addToCartLoading = ref(false)
 const buyNowLoading = ref(false)
 const favoriteLoading = ref(false)
+const shareDialogVisible = ref(false)
+const shareLoading = ref(false)
+const selectedShareConversationId = ref('')
 const reviewPage = ref(1)
 const product = ref(null)
 
@@ -202,14 +205,57 @@ async function handleContactSeller() {
   }
 
   try {
-    await chatStore.findOrCreateConversation(
+    const conversation = await chatStore.findOrCreateConversation(
       detailModel.value.sellerId,
       detailModel.value.id,
       null
     )
-    router.push('/app/messages')
+    router.push({
+      name: 'app-message-detail',
+      params: { conversationId: String(conversation.id) }
+    })
   } catch (error) {
     ElMessage.error('无法发起会话，请稍后重试')
+  }
+}
+
+async function openShareDialog() {
+  if (!requireLogin('分享到聊天') || !detailModel.value || shareLoading.value) {
+    return
+  }
+
+  shareLoading.value = true
+  try {
+    await chatStore.fetchConversations()
+    selectedShareConversationId.value =
+      String(chatStore.activeConversationId || chatStore.conversations[0]?.id || '')
+    shareDialogVisible.value = true
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || error?.message || '会话列表加载失败')
+  } finally {
+    shareLoading.value = false
+  }
+}
+
+async function handleShareProductCard() {
+  if (!selectedShareConversationId.value || !detailModel.value || shareLoading.value) {
+    return
+  }
+
+  shareLoading.value = true
+  try {
+    const conversationId = Number(selectedShareConversationId.value)
+    await chatStore.sendProductCardMessage(conversationId, Number(detailModel.value.id))
+    shareDialogVisible.value = false
+    ElMessage.success('已分享到聊天')
+    router.push({
+      name: 'app-message-detail',
+      params: { conversationId: String(conversationId) }
+    })
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || error?.message || '商品卡片发送失败')
+  } finally {
+    shareLoading.value = false
   }
 }
 
@@ -385,6 +431,7 @@ onMounted(loadProduct)
                 {{ isFavorite ? '已收藏' : '收藏商品' }}
               </el-button>
               <el-button plain size="large" @click="handleContactSeller">联系卖家</el-button>
+              <el-button plain size="large" :loading="shareLoading" @click="openShareDialog">分享到聊天</el-button>
               <el-button plain size="large" @click="handleContactSupport">联系平台客服</el-button>
             </div>
           </div>
@@ -405,6 +452,7 @@ onMounted(loadProduct)
         </div>
         <div class="product-detail__mobile-actions">
           <el-button plain @click="handleToggleFavorite">收藏</el-button>
+          <el-button plain :loading="shareLoading" @click="openShareDialog">分享</el-button>
           <el-button type="primary" @click="pushCartFlow('buy')">购买</el-button>
         </div>
       </div>
@@ -495,6 +543,46 @@ onMounted(loadProduct)
         </EmptyState>
       </PageSection>
     </template>
+
+    <el-dialog
+      v-model="shareDialogVisible"
+      title="分享到聊天"
+      width="420px"
+      :close-on-click-modal="false"
+    >
+      <div class="product-share-dialog">
+        <p>{{ detailModel?.title }}</p>
+        <el-select
+          v-model="selectedShareConversationId"
+          class="product-share-dialog__select"
+          placeholder="选择会话"
+          :disabled="shareLoading || !chatStore.conversations.length"
+        >
+          <el-option
+            v-for="conversation in chatStore.conversations"
+            :key="conversation.id"
+            :label="conversation.peerUser?.nickname || conversation.peerUser?.username || `会话 ${conversation.id}`"
+            :value="String(conversation.id)"
+          />
+        </el-select>
+        <EmptyState
+          v-if="!chatStore.conversations.length"
+          title="暂无可分享会话"
+          description="请先联系卖家或从消息中心创建会话。"
+        />
+      </div>
+      <template #footer>
+        <el-button @click="shareDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="shareLoading"
+          :disabled="!selectedShareConversationId"
+          @click="handleShareProductCard"
+        >
+          发送商品卡片
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -728,6 +816,21 @@ onMounted(loadProduct)
 
 .product-detail__mobile-bar {
   display: none;
+}
+
+.product-share-dialog {
+  display: grid;
+  gap: 14px;
+}
+
+.product-share-dialog p {
+  margin: 0;
+  color: var(--cm-text-secondary);
+  line-height: 1.6;
+}
+
+.product-share-dialog__select {
+  width: 100%;
 }
 
 .product-detail__content-grid,

@@ -10,4 +10,12 @@ public interface ChatConversationMapper {
     Map<String, Object> findByParticipants(Long userAId, Long userBId, Long productId, Long shopId);
     Long insert(Map<String, Object> conversation);
     int updateLastMessageAt(Long id, String lastMessageAt);
+    int incrementUnreadCount(Long id, Long recipientUserId);
+    int clearUnreadCount(Long id, Long userId);
+    int sumUnreadCountByUserId(Long userId);
+    int updatePinStatus(Long id, Long userId, boolean pinned);
+    int updateMuteStatus(Long id, Long userId, boolean muted);
+    int softDelete(Long id, Long userId);
+    int restoreForUser(Long id, Long userId);
+    int updateAutoRepliedAt(Long id, Long targetUserId, java.time.LocalDateTime repliedAt);
 }
