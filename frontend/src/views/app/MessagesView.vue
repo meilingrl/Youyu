@@ -5,7 +5,8 @@ import { ElImageViewer } from 'element-plus/es/components/image-viewer/index.mjs
 import 'element-plus/es/components/image-viewer/style/css'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import EmptyState from '@/components/common/EmptyState.vue'
-import ConversationMenu from '@/components/chat/ConversationMenu.vue'
+import ChatSwipeConversationRow from '@/components/chat/ChatSwipeConversationRow.vue'
+import EmojiStickerPanel from '@/components/chat/EmojiStickerPanel.vue'
 import ImageUploader from '@/components/chat/ImageUploader.vue'
 import MessageSearch from '@/components/chat/MessageSearch.vue'
 import OrderCardMessage from '@/components/chat/OrderCardMessage.vue'
@@ -32,6 +33,7 @@ const notificationStore = useNotificationStore()
 const selectedCategory = ref('trade')
 const searchOpen = ref(false)
 const quickReplyOpen = ref(false)
+const emojiOpen = ref(false)
 const messageInput = ref('')
 const threadRef = ref(null)
 const inputRef = ref(null)
@@ -50,7 +52,10 @@ const categories = [
 const isMobile = computed(() => windowWidth.value < 900)
 const activeConversation = computed(() => chatStore.activeConversation)
 const showMobileDetail = computed(() => isMobile.value && activeConversation.value && selectedCategory.value !== 'notifications')
-const visibleConversations = computed(() => selectedCategory.value === 'notifications' ? [] : chatStore.conversations)
+const visibleConversations = computed(() => {
+  if (selectedCategory.value === 'notifications') return []
+  return chatStore.conversations.filter((conversation) => categoryFor(conversation) === selectedCategory.value)
+})
 
 const conversationRows = computed(() => {
   return visibleConversations.value.map((conversation) => {
@@ -61,6 +66,7 @@ const conversationRows = computed(() => {
       preview: conversation.lastMessagePreview || '开始对话',
       time: formatTime(conversation.lastMessageAt || conversation.createdAt),
       unread: conversation.isMuted ? '' : formatUnread(conversation.unreadCount),
+      categoryLabel: labelForCategory(categoryFor(conversation)),
       isPinned: conversation.isPinned,
       isMuted: conversation.isMuted
     }
@@ -96,9 +102,25 @@ function formatUnread(count) {
 }
 
 function categoryUnread(categoryId) {
-  if (categoryId === 'trade') return formatUnread(chatStore.unreadCount)
+  if (categoryId !== 'notifications') {
+    const count = chatStore.conversations
+      .filter((conversation) => categoryFor(conversation) === categoryId && !conversation.isMuted)
+      .reduce((total, conversation) => total + Number(conversation.unreadCount || 0), 0)
+    return formatUnread(count)
+  }
   if (categoryId === 'notifications') return formatUnread(notificationStore.unreadCount)
   return ''
+}
+
+function categoryFor(conversation = {}) {
+  const type = conversation.type || ''
+  if (type === 'shop_inquiry' || conversation.shopId) return 'shop'
+  if (type === 'direct') return 'support'
+  return 'trade'
+}
+
+function labelForCategory(categoryId) {
+  return categories.find((item) => item.id === categoryId)?.label || ''
 }
 
 function formatTime(timestamp) {
@@ -111,6 +133,18 @@ function formatTime(timestamp) {
     return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
   return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
+}
+
+function formatMessageTime(timestamp) {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 function canRecall(message) {
@@ -127,9 +161,12 @@ function openCategory(categoryId) {
   selectedCategory.value = categoryId
   searchOpen.value = false
   quickReplyOpen.value = false
+  emojiOpen.value = false
   if (categoryId === 'notifications') {
     chatStore.activeConversationId = null
-  } else if (!isMobile.value && !chatStore.activeConversationId && visibleConversations.value.length) {
+  } else if (!isMobile.value && visibleConversations.value.length) {
+    const activeVisible = visibleConversations.value.some((item) => String(item.id) === String(chatStore.activeConversationId))
+    if (activeVisible) return
     openConversation(visibleConversations.value[0].id)
   }
 }
@@ -137,6 +174,7 @@ function openCategory(categoryId) {
 async function openConversation(conversationId, options = {}) {
   chatStore.activeConversationId = conversationId
   quickReplyOpen.value = false
+  emojiOpen.value = false
   highlightedMessageId.value = options.messageId || null
   try {
     await chatStore.fetchMessages(conversationId)
@@ -162,6 +200,7 @@ async function sendText() {
   if (!body || !chatStore.activeConversationId || chatStore.sending) return
   messageInput.value = ''
   quickReplyOpen.value = false
+  emojiOpen.value = false
   try {
     await chatStore.sendMessage(chatStore.activeConversationId, { body, messageType: 'text' })
     scrollToBottom()
@@ -174,9 +213,10 @@ async function sendText() {
 async function sendImage(image) {
   if (!chatStore.activeConversationId || chatStore.sending) return
   quickReplyOpen.value = false
+  emojiOpen.value = false
   try {
     await chatStore.sendMessage(chatStore.activeConversationId, {
-      body: image.fileName || '',
+      body: '',
       messageType: 'image',
       mediaUrl: image.mediaUrl
     })
@@ -189,7 +229,49 @@ async function sendImage(image) {
 function selectQuickReply(content) {
   messageInput.value = content
   quickReplyOpen.value = false
+  emojiOpen.value = false
   nextTick(() => inputRef.value?.focus())
+}
+
+function insertEmoji(emoji) {
+  messageInput.value = `${messageInput.value}${emoji}`
+  nextTick(() => inputRef.value?.focus())
+}
+
+async function sendSticker(sticker) {
+  if (!chatStore.activeConversationId || chatStore.sending) return
+  emojiOpen.value = false
+  quickReplyOpen.value = false
+  const label = sticker.label || '表情包'
+  const mediaUrl = createStickerDataUrl(sticker)
+  try {
+    await chatStore.sendMessage(chatStore.activeConversationId, {
+      body: label,
+      messageType: 'image',
+      mediaUrl
+    })
+    scrollToBottom()
+  } catch (error) {
+    ElMessage.error('发送表情包失败')
+  }
+}
+
+function createStickerDataUrl(sticker) {
+  const label = escapeSvg(sticker.label || 'OK')
+  const icon = escapeSvg(sticker.icon || '👍')
+  const color = /^#[0-9a-fA-F]{6}$/.test(sticker.color || '') ? sticker.color : '#ea580c'
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160"><rect width="240" height="160" rx="24" fill="#fff7ed"/><circle cx="120" cy="62" r="40" fill="${color}" fill-opacity=".14"/><text x="120" y="76" text-anchor="middle" font-size="46">${icon}</text><text x="120" y="122" text-anchor="middle" font-size="24" font-family="Arial, sans-serif" font-weight="700" fill="#1f2937">${label}</text></svg>`
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
+}
+
+function escapeSvg(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char])
 }
 
 async function togglePin(conversationId) {
@@ -320,35 +402,16 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-else-if="conversationRows.length" class="messages-conversation-list">
-          <article
+          <ChatSwipeConversationRow
             v-for="item in conversationRows"
             :key="item.id"
-            class="messages-conversation"
-            :class="{ 'is-active': activeConversation?.id === item.id, 'is-pinned': item.isPinned, 'is-muted': item.isMuted }"
-          >
-            <button type="button" class="messages-conversation__select" @click="openConversation(item.id)">
-              <div class="messages-avatar">{{ item.title.slice(0, 1) }}</div>
-              <div class="messages-conversation__content">
-                <div class="messages-conversation__top">
-                  <strong>{{ item.title }}</strong>
-                  <span class="messages-time">{{ item.time }}</span>
-                </div>
-                <p class="messages-preview">{{ item.preview }}</p>
-                <div v-if="item.isPinned || item.isMuted" class="messages-states">
-                  <span v-if="item.isPinned">置顶</span>
-                  <span v-if="item.isMuted">静音</span>
-                </div>
-              </div>
-              <span v-if="item.unread" class="messages-unread">{{ item.unread }}</span>
-            </button>
-            <ConversationMenu
-              :is-pinned="item.isPinned"
-              :is-muted="item.isMuted"
-              @pin="togglePin(item.id)"
-              @mute="toggleMute(item.id)"
-              @delete="deleteConversation(item.id)"
-            />
-          </article>
+            :item="item"
+            :active="activeConversation?.id === item.id"
+            @select="openConversation(item.id)"
+            @pin="togglePin(item.id)"
+            @mute="toggleMute(item.id)"
+            @delete="deleteConversation(item.id)"
+          />
         </div>
 
         <EmptyState
@@ -402,10 +465,6 @@ onBeforeUnmount(() => {
               ]"
               :data-message-id="message.id"
             >
-              <button v-if="message.canRecall" type="button" class="messages-recall-btn" @click="recallMessage(message)">
-                撤回
-              </button>
-
               <p v-if="message.isRecalled" class="messages-recalled-text">{{ message.recalledText }}</p>
 
               <template v-else-if="message.messageType === 'image'">
@@ -434,6 +493,13 @@ onBeforeUnmount(() => {
                 @open="openOrder"
               />
               <p v-else>{{ message.body }}</p>
+
+              <div class="messages-bubble__hoverbar">
+                <time>{{ formatMessageTime(message.createdAt) }}</time>
+                <button v-if="message.canRecall" type="button" @click="recallMessage(message)">
+                  撤回
+                </button>
+              </div>
             </article>
           </div>
 
@@ -444,8 +510,23 @@ onBeforeUnmount(() => {
               :scenario="quickReplyScenario"
               @select="selectQuickReply"
             />
+            <EmojiStickerPanel
+              v-if="emojiOpen"
+              class="messages-emoji-panel"
+              @emoji="insertEmoji"
+              @sticker="sendSticker"
+            />
             <div class="messages-composer">
               <ImageUploader @selected="sendImage" />
+              <button
+                type="button"
+                class="messages-tool-btn"
+                :class="{ 'is-active': emojiOpen }"
+                aria-label="表情和表情包"
+                @click="emojiOpen = !emojiOpen; quickReplyOpen = false"
+              >
+                ☺
+              </button>
               <button type="button" class="messages-quick-reply-btn" :class="{ 'is-active': quickReplyOpen }" @click="quickReplyOpen = !quickReplyOpen">
                 快捷
               </button>
@@ -512,7 +593,8 @@ onBeforeUnmount(() => {
 .messages-category,
 .messages-back-btn,
 .messages-send-btn,
-.messages-quick-reply-btn {
+.messages-quick-reply-btn,
+.messages-tool-btn {
   border: none;
   border-radius: 12px;
   font: inherit;
@@ -563,8 +645,7 @@ onBeforeUnmount(() => {
   color: var(--msg-primary);
 }
 
-.messages-category__badge,
-.messages-unread {
+.messages-category__badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -580,39 +661,6 @@ onBeforeUnmount(() => {
 .messages-conversation-list {
   display: grid;
   gap: 10px;
-}
-
-.messages-conversation {
-  display: flex;
-  gap: 6px;
-  padding: 8px;
-  border-radius: 16px;
-  background: transparent;
-  position: relative;
-}
-
-.messages-conversation.is-active,
-.messages-conversation:hover {
-  background: var(--msg-primary-bg);
-}
-
-.messages-conversation.is-pinned {
-  border: 1px solid var(--msg-primary-soft);
-}
-
-.messages-conversation.is-muted {
-  opacity: 0.72;
-}
-
-.messages-conversation__select {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  gap: 12px;
-  border: none;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
 }
 
 .messages-avatar {
@@ -631,34 +679,6 @@ onBeforeUnmount(() => {
 .messages-avatar--large {
   width: 40px;
   height: 40px;
-}
-
-.messages-conversation__content {
-  min-width: 0;
-  flex: 1;
-}
-
-.messages-conversation__top {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.messages-conversation__top strong,
-.messages-preview {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.messages-time,
-.messages-preview {
-  color: var(--msg-muted);
-  font-size: 13px;
-}
-
-.messages-preview {
-  margin: 6px 0 0;
 }
 
 .messages-states {
@@ -734,13 +754,14 @@ onBeforeUnmount(() => {
 
 .messages-bubble--self {
   align-self: flex-end;
-  background: linear-gradient(135deg, #fb923c 0%, var(--msg-primary) 100%);
-  color: #fff;
+  background: var(--msg-primary-bg);
+  color: var(--msg-text);
+  border: 1px solid var(--msg-primary-soft);
   border-bottom-right-radius: 6px;
 }
 
 .messages-bubble--self p {
-  color: #fff;
+  color: var(--msg-text);
 }
 
 .messages-bubble--card,
@@ -761,24 +782,57 @@ onBeforeUnmount(() => {
   outline-offset: 3px;
 }
 
-.messages-recall-btn {
+.messages-bubble__hoverbar {
   position: absolute;
-  top: -28px;
-  right: 0;
-  display: none;
-  height: 24px;
-  padding: 0 9px;
-  border: none;
-  border-radius: 8px;
-  background: rgba(31, 41, 55, 0.85);
-  color: #fff;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.messages-bubble:hover .messages-recall-btn {
+  top: 50%;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(31, 41, 55, 0.88);
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) scale(0.96);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  white-space: nowrap;
+  z-index: 5;
+}
+
+.messages-bubble--self .messages-bubble__hoverbar {
+  right: calc(100% + 8px);
+}
+
+.messages-bubble--other .messages-bubble__hoverbar {
+  left: calc(100% + 8px);
+}
+
+.messages-bubble:hover .messages-bubble__hoverbar,
+.messages-bubble:focus-within .messages-bubble__hoverbar {
+  display: inline-flex;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%) scale(1);
+}
+
+.messages-bubble__hoverbar time {
+  font-size: 12px;
+}
+
+.messages-bubble__hoverbar button {
+  height: 22px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: #fff7ed;
+  color: var(--msg-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .messages-image-btn {
@@ -825,13 +879,35 @@ onBeforeUnmount(() => {
   z-index: 20;
 }
 
+.messages-emoji-panel {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% - 8px);
+  z-index: 21;
+  width: min(360px, calc(100% - 48px));
+  max-width: calc(100% - 48px);
+  transform: translateX(-50%);
+}
+
 .messages-quick-reply-btn,
-.messages-send-btn {
+.messages-send-btn,
+.messages-tool-btn {
   height: 42px;
   padding: 0 16px;
   background: #fff;
   color: var(--msg-primary);
   border: 1px solid var(--msg-primary-soft);
+}
+
+.messages-tool-btn {
+  width: 42px;
+  padding: 0;
+  font-size: 20px;
+}
+
+.messages-tool-btn.is-active,
+.messages-quick-reply-btn.is-active {
+  background: var(--msg-primary-bg);
 }
 
 .messages-send-btn {
@@ -869,6 +945,25 @@ onBeforeUnmount(() => {
 
   .messages-bubble {
     max-width: 86%;
+  }
+
+  .messages-bubble__hoverbar {
+    top: auto;
+    bottom: calc(100% + 6px);
+    transform: translateY(0) scale(0.96);
+  }
+
+  .messages-bubble--self .messages-bubble__hoverbar {
+    right: 0;
+  }
+
+  .messages-bubble--other .messages-bubble__hoverbar {
+    left: 0;
+  }
+
+  .messages-bubble:hover .messages-bubble__hoverbar,
+  .messages-bubble:focus-within .messages-bubble__hoverbar {
+    transform: translateY(0) scale(1);
   }
 }
 </style>

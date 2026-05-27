@@ -1,3 +1,48 @@
+## [2026-05-27] - Message Center Interaction Corrections
+
+### frontend
+- Reworked message search date filtering into a compact trigger with a floating multi-select/range calendar.
+- Centered and constrained the emoji/sticker panel so it no longer spills past the composer.
+- Replaced the hard-to-hit recall button with a hover action rail beside message bubbles.
+- Added hover timestamps for message bubbles.
+
+### test
+- Verified frontend unit tests and frontend production build.
+
+---
+
+## [2026-05-27] - Message Center UI Polish Follow-up
+
+### frontend
+- Removed uploaded image file names from image-message captions.
+- Constrained the emoji/sticker panel width so it stays inside the composer area.
+- Replaced two separate date inputs in message search with a single continuous date-range calendar.
+- Localized and tightened the notification center UI copy.
+
+### data
+- Expanded message-center notification seed rows with Chinese order, review, and system examples.
+
+### test
+- Verified frontend unit tests, frontend production build, and targeted backend chat controller tests.
+
+---
+
+## [2026-05-27] - Message Center UI Swipe and Composer Polish
+
+### frontend
+- Reworked the message conversation list with clearer row hierarchy, active state, category tags, and swipe actions for pin, mute, and delete.
+- Aligned self-message bubbles with the existing restrained message-center palette.
+- Added emoji insertion and lightweight sticker sending from the composer.
+- Updated quick replies to show only current-scenario presets plus user custom replies, with inline custom reply creation and deletion.
+
+### data
+- Added Zhang San custom quick-reply seed rows to `seed-chat-data.sql` for acceptance testing.
+
+### test
+- Verified frontend unit tests, frontend production build, and targeted backend chat controller tests.
+
+---
+
 ## [2026-05-27] - Message Center P2 Experience Tools
 
 ### feat

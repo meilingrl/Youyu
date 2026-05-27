@@ -13,6 +13,8 @@ const props = defineProps({
 const emit = defineEmits(['select'])
 const chatStore = useChatStore()
 const activeCategory = ref(props.scenario)
+const newReply = ref('')
+const saving = ref(false)
 
 const defaults = {
   buyer: [
@@ -38,33 +40,35 @@ const defaults = {
   ]
 }
 
-const categories = computed(() => {
-  const customReplies = chatStore.quickReplies
+const customReplies = computed(() => {
+  return chatStore.quickReplies
     .filter((item) => item.content?.trim())
     .slice(0, 10)
     .map((item) => ({ id: `custom-${item.id}`, content: item.content }))
+})
 
+const presetCategory = computed(() => {
+  const scenario = defaults[props.scenario] ? props.scenario : 'buyer'
+  const labels = {
+    buyer: '买家预设',
+    seller: '卖家预设',
+    support: '客服预设'
+  }
+  return {
+    id: scenario,
+    label: labels[scenario],
+    replies: defaults[scenario].map((content, index) => ({ id: `${scenario}-${index}`, content }))
+  }
+})
+
+const categories = computed(() => {
   return [
     {
       id: 'custom',
       label: '我的',
-      replies: customReplies
+      replies: customReplies.value
     },
-    {
-      id: 'buyer',
-      label: '买家',
-      replies: defaults.buyer.map((content, index) => ({ id: `buyer-${index}`, content }))
-    },
-    {
-      id: 'seller',
-      label: '卖家',
-      replies: defaults.seller.map((content, index) => ({ id: `seller-${index}`, content }))
-    },
-    {
-      id: 'support',
-      label: '客服',
-      replies: defaults.support.map((content, index) => ({ id: `support-${index}`, content }))
-    }
+    presetCategory.value
   ]
 })
 
@@ -83,7 +87,7 @@ onMounted(() => {
 watch(
   () => props.scenario,
   (value) => {
-    activeCategory.value = value || 'buyer'
+    activeCategory.value = defaults[value] ? value : 'buyer'
   },
   { immediate: true }
 )
@@ -92,6 +96,27 @@ function choose(reply) {
   if (reply?.content?.trim()) {
     emit('select', reply.content.trim())
   }
+}
+
+async function createCustomReply() {
+  const content = newReply.value.trim()
+  if (!content || saving.value) return
+  saving.value = true
+  try {
+    await chatStore.createQuickReply({
+      content,
+      sortOrder: chatStore.quickReplies.length + 1
+    })
+    newReply.value = ''
+    activeCategory.value = 'custom'
+  } finally {
+    saving.value = false
+  }
+}
+
+function deleteCustomReply(reply) {
+  const id = String(reply.id || '').replace('custom-', '')
+  if (id) chatStore.deleteQuickReply(id).catch(() => {})
 }
 </script>
 
@@ -114,16 +139,39 @@ function choose(reply) {
       加载中...
     </div>
 
-    <button
-      v-for="reply in activeReplies"
-      :key="reply.id"
-      type="button"
-      class="quick-reply-panel__item"
-      @mousedown.prevent
-      @click="choose(reply)"
-    >
-      {{ reply.content }}
-    </button>
+    <form class="quick-reply-panel__form" @submit.prevent="createCustomReply">
+      <input v-model="newReply" type="text" maxlength="500" placeholder="添加自定义快捷回复" />
+      <button type="submit" :disabled="!newReply.trim() || saving">
+        {{ saving ? '保存中' : '添加' }}
+      </button>
+    </form>
+
+    <div class="quick-reply-panel__list">
+      <div
+        v-for="reply in activeReplies"
+        :key="reply.id"
+        class="quick-reply-panel__row"
+      >
+        <button
+          type="button"
+          class="quick-reply-panel__item"
+          @mousedown.prevent
+          @click="choose(reply)"
+        >
+          {{ reply.content }}
+        </button>
+        <button
+          v-if="activeCategory === 'custom'"
+          type="button"
+          class="quick-reply-panel__delete"
+          aria-label="删除快捷回复"
+          @mousedown.prevent
+          @click="deleteCustomReply(reply)"
+        >
+          删除
+        </button>
+      </div>
+    </div>
 
     <EmptyState
       v-if="!chatStore.quickRepliesLoading && activeReplies.length === 0"
@@ -173,6 +221,7 @@ function choose(reply) {
 
 .quick-reply-panel__item {
   width: 100%;
+  flex: 1;
   display: block;
   padding: 10px 12px;
   border: none;
@@ -197,5 +246,62 @@ function choose(reply) {
   padding: 12px;
   color: #6b7280;
   font-size: 14px;
+}
+
+.quick-reply-panel__form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.quick-reply-panel__form input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #e7e5e4;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.quick-reply-panel__form button,
+.quick-reply-panel__delete {
+  border: none;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quick-reply-panel__form button {
+  height: 34px;
+  padding: 0 12px;
+  background: #ea580c;
+  color: #fff;
+}
+
+.quick-reply-panel__form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quick-reply-panel__list {
+  display: grid;
+  gap: 4px;
+}
+
+.quick-reply-panel__row {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.quick-reply-panel__delete {
+  flex-shrink: 0;
+  padding: 0 10px;
+  background: #fee2e2;
+  color: #b91c1c;
 }
 </style>
