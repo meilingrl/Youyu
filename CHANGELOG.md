@@ -1,3 +1,20 @@
+## [2026-05-27] - Admin Support Context Dashboard
+
+### feat
+- Replaced the reserved `/admin/support` placeholder with a frontend-only support context dashboard.
+- Surfaced report, order/refund, governance, and search context from existing admin-owned APIs only.
+- Kept mediation, admin chat, notifications, group governance, and abnormal-message lanes visibly blocked or missing.
+
+### docs
+- Updated the active admin support console task completion notes with verification results and residual limitations.
+
+### test
+- Ran `frontend\npm test`.
+- Ran `frontend\npm run build`.
+- Ran `git diff --check`.
+
+---
+
 ## [2026-05-27] - Admin Support Console Scope Contract
 
 ### docs

@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: admin-support-console-implementation
-- Status: active
+- Status: archived
 - Owner: unassigned
 - Track: cross-cutting
 - Depends on: `docs/02-requirements/admin-support-console-scope.md`; current `/admin/support` route; current admin/report/order/search API modules
 - Priority: medium
 - Planned date: 2026-05-27
-- Completed date:
+- Completed date: 2026-05-27
 
 ## Objective
 
@@ -158,16 +158,16 @@ Do not add request parameters to `GET /api/admin/orders`; current runtime contro
 
 ## Acceptance Criteria
 
-- [ ] `/admin/support` renders live support context from existing admin endpoints.
-- [ ] The page labels each lane with its owner module and v1 state.
-- [ ] Report, order/refund, governance, and search lanes link to their owner pages.
-- [ ] Chat, notification, group governance, abnormal-message detection, and mediation are not implemented as live support-console features.
-- [ ] No `/api/admin/support/**` endpoint is introduced.
-- [ ] No backend, schema, or seed file is modified.
-- [ ] No user-only `/api/chat/**` or `/api/notifications/**` endpoint is called from the admin support page.
-- [ ] Loading, empty, and error states are visible.
-- [ ] `CHANGELOG.md` is prepended with the completed implementation entry.
-- [ ] Completion Notes record verification commands and any residual limitations.
+- [x] `/admin/support` renders live support context from existing admin endpoints.
+- [x] The page labels each lane with its owner module and v1 state.
+- [x] Report, order/refund, governance, and search lanes link to their owner pages.
+- [x] Chat, notification, group governance, abnormal-message detection, and mediation are not implemented as live support-console features.
+- [x] No `/api/admin/support/**` endpoint is introduced.
+- [x] No backend, schema, or seed file is modified.
+- [x] No user-only `/api/chat/**` or `/api/notifications/**` endpoint is called from the admin support page.
+- [x] Loading, empty, and error states are visible.
+- [x] `CHANGELOG.md` is prepended with the completed implementation entry.
+- [x] Completion Notes record verification commands and any residual limitations.
 
 ## Sub-agent Instructions
 
@@ -179,4 +179,33 @@ If implementation requires a new backend endpoint or product decision, stop and 
 
 ## Completion Notes
 
-(Filled in after implementation delivery and head-Agent acceptance.)
+Implementation delivered and accepted on 2026-05-27.
+
+- Replaced `frontend/src/views/admin/SupportView.vue` with a frontend-only support context dashboard.
+- Fetches only existing admin-owned APIs: dashboard, reports, users, shops, products, review tasks, search logs, and admin order list.
+- Report, order/refund, governance, and search lanes show owner labels, conservative counts, sample previews, loading, empty, and error states.
+- Actions are navigation links to owner pages only; no support-console mutations were added.
+- Mediation, admin chat, notifications, group governance, and abnormal-message detection are labeled blocked or missing with no fake counts.
+- No backend, schema, seed, chat API, notification API, or `/api/admin/support/**` changes were made.
+
+Verification:
+
+- `frontend: npm test` - passed, 7 files / 30 tests.
+- `frontend: npm run build` - passed; Vite emitted existing Rollup annotation warnings from `@vueuse/core`.
+- `git diff --check` - passed.
+
+Residual limitations:
+
+- Admin order list has no pagination or total count, so `/admin/support` labels it as a sample count.
+- Search lane uses search logs only and does not claim abnormal-message detection.
+- Platform mediation remains blocked until a separate scope and backend contract exist.
+
+Head-Agent acceptance:
+
+- Reviewed `frontend/src/views/admin/SupportView.vue` and confirmed it calls only existing admin/order APIs.
+- Confirmed no `/api/admin/support/**`, `/api/chat/**`, or `/api/notifications/**` integration was introduced.
+- Corrected support sample labels for shop names and review-task statuses during acceptance.
+- Re-ran `frontend\npm test`: passed, 30 tests across 7 files.
+- Re-ran `frontend\npm run build`: passed; Vite emitted the existing `@vueuse/core` Rollup annotation warnings.
+- Re-ran `git diff --check`: passed.
+- Manual seeded-backend browser smoke was not run in this acceptance pass.
