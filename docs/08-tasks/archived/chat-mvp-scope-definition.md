@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: chat-mvp-scope-definition
-- Status: active
-- Owner: unassigned
+- Status: completed
+- Owner: Claude
 - Track: feature
 - Depends on: archived `ui-redesign-messages-support` shell + current order/report baseline
 - Priority: high
 - Planned date: 2026-05-22
-- Completed date:
+- Completed date: 2026-05-25
 
 ## Objective
 

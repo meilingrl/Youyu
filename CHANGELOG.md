@@ -1,3 +1,241 @@
+## [2026-05-27] - Message Center Interaction Corrections
+
+### frontend
+- Reworked message search date filtering into a compact trigger with a floating multi-select/range calendar.
+- Centered and constrained the emoji/sticker panel so it no longer spills past the composer.
+- Replaced the hard-to-hit recall button with a hover action rail beside message bubbles.
+- Added hover timestamps for message bubbles.
+
+### test
+- Verified frontend unit tests and frontend production build.
+
+---
+
+## [2026-05-27] - Message Center UI Polish Follow-up
+
+### frontend
+- Removed uploaded image file names from image-message captions.
+- Constrained the emoji/sticker panel width so it stays inside the composer area.
+- Replaced two separate date inputs in message search with a single continuous date-range calendar.
+- Localized and tightened the notification center UI copy.
+
+### data
+- Expanded message-center notification seed rows with Chinese order, review, and system examples.
+
+### test
+- Verified frontend unit tests, frontend production build, and targeted backend chat controller tests.
+
+---
+
+## [2026-05-27] - Message Center UI Swipe and Composer Polish
+
+### frontend
+- Reworked the message conversation list with clearer row hierarchy, active state, category tags, and swipe actions for pin, mute, and delete.
+- Aligned self-message bubbles with the existing restrained message-center palette.
+- Added emoji insertion and lightweight sticker sending from the composer.
+- Updated quick replies to show only current-scenario presets plus user custom replies, with inline custom reply creation and deletion.
+
+### data
+- Added Zhang San custom quick-reply seed rows to `seed-chat-data.sql` for acceptance testing.
+
+### test
+- Verified frontend unit tests, frontend production build, and targeted backend chat controller tests.
+
+---
+
+## [2026-05-27] - Message Center P2 Experience Tools
+
+### feat
+- Added chat message search with keyword/time filtering, pagination, and deleted-conversation filtering.
+- Added per-user conversation pin, mute, and soft-delete management.
+- Added 2-minute sender-only message recall with recalled-message rendering metadata.
+- Added auto-reply settings and automatic reply insertion with 24-hour per-conversation throttling.
+- Expanded Zhang San message seed data with 16 conversations and 44 messages for unread, preview, search, and bubble-direction testing.
+
+### frontend
+- Rebuilt the message center with search, conversation action menu, differentiated left/right bubbles, stable conversation switching, and full list previews.
+- Added categorized quick replies for buyer, seller, support, and custom scenarios.
+- Added the auto-reply settings page and route.
+
+### docs
+- Updated chat API spec and HTTP smoke requests for P2 endpoints.
+- Archived completed P2 message-center task documents.
+
+### test
+- Added backend controller coverage for message search, pin/mute/delete, recall, and auto-reply trigger behavior.
+- Verified `backend\\mvnw.cmd test`, `frontend\\npm test`, and `frontend\\npm run build`.
+
+---
+
+## [2026-05-26] - Message Center P1 E-commerce Tools
+
+### feat
+- Added product card chat messages with product validation, nested product summaries, product detail sharing, and chat bubble rendering.
+- Added order card chat messages with participant validation, nested order summaries, order contact actions, and chat bubble rendering.
+- Added authenticated quick reply CRUD endpoints under `/api/chat/quick-replies`.
+- Added seller quick reply panel in the message composer with default replies when no custom replies exist.
+- Added quick reply API/store integration and click-to-fill composer behavior.
+
+### backend
+- Extended chat message persistence for `product_id` and `order_id` card-message references.
+- Exposed order participant fields in order list items so the frontend can create the correct chat conversation before sending an order card.
+
+### docs
+- Updated message center roadmap, chat HTTP smoke collection, and chat API spec for P1 card messages and quick replies.
+- Archived completed P1 task documents.
+
+### test
+- Added backend controller coverage for product card, order card, and quick reply flows.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
+
+## [2026-05-26] - Message Center Acceptance Fixes
+
+### fix
+- Added seed unread chat counters and notification rows so red-dot/read-state behavior is visible in acceptance data.
+- Moved notifications out of top-level app navigation and embedded them under the message center.
+- Stabilized conversation switching by scrolling only the message thread container and removing thread/bubble entrance animations.
+
+### test
+- Added backend coverage for chat unread count and mark-read behavior.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
+
+## [2026-05-25] - Message Center P0 Completion
+
+### feat
+- Added chat unread counts, conversation read-state tracking, and global message unread badges.
+- Added image messages with Base64 fallback upload, image bubbles, failure placeholders, and full-screen preview.
+- Added in-app notification module with unread counts, notification list, read/read-all actions, and order-status notification hooks.
+
+### backend
+- Extended chat conversation/message persistence for unread counts, read timestamps, message type, and media payloads.
+- Added notification controller, service, mapper, entity, and schema table.
+- Integrated order and mock-payment status transitions with best-effort notification delivery.
+
+### frontend
+- Updated message center store and view for unread synchronization and image messages.
+- Added notification API module, Pinia store, route, and notification list page.
+- Added desktop and mobile navigation badges for chat and notifications.
+
+### docs
+- Added chat and notification API specs.
+- Updated chat and notification HTTP smoke collections.
+- Archived completed P0 message-center task documents.
+
+### test
+- Sub-agents reported passing backend tests, frontend tests, and frontend build before final integration.
+- Final integrated verification rerun is recorded in the task completion response.
+
+---
+
+## [2026-05-25] - System Architecture and Launch Preparation Roadmap
+
+### docs
+- Created comprehensive data management and privacy compliance guide (`docs/03-architecture/data-management-and-privacy.md`)
+- Created performance and scalability guide with optimization roadmap (`docs/03-architecture/performance-and-scalability.md`)
+- Created operations and deployment standards document (`docs/04-standards/operations-and-deployment.md`)
+- Created launch preparation roadmap with 4-phase implementation plan (`docs/05-roadmap/current/launch-preparation-roadmap.md`)
+- Updated documentation index to include new architecture and standards documents
+- Updated stage and feature roadmaps to reflect launch preparation focus
+
+### architecture
+- Documented data storage strategy and browser storage limitations
+- Defined privacy compliance requirements (PIPL, user rights, legal documents)
+- Outlined performance baselines and known bottlenecks (recommendation engine, media storage, search logging)
+- Established three-phase optimization roadmap (pre-launch, post-launch, scale-out)
+- Specified security hardening requirements (HTTPS, JWT secrets, CORS, input validation)
+- Defined deployment architecture with containerization and CI/CD enhancement
+
+### standards
+- Established pre-launch deployment checklist with security requirements
+- Documented backup strategy, logging configuration, and monitoring setup
+- Created operational procedures (deployment runbook, incident response, database migration)
+- Defined compliance requirements (ICP filing, data residency, cost optimization)
+- Added cost estimation for three growth phases (¥400/month → ¥1000/month → ¥3800/month)
+
+### compliance
+- Specified required legal documents (privacy policy, user agreement, cookie policy)
+- Defined user rights implementation (data export, account deletion, consent logging)
+- Outlined database schema additions for consent tracking and soft deletion
+- Documented frontend changes for cookie consent and legal document pages
+
+### roadmap
+- Established 4-phase launch preparation plan (13 weeks total):
+  - Phase 0 (P0, 2-3 weeks): Security hardening, privacy compliance, infrastructure, containerization
+  - Phase 1 (P1, 3-4 weeks): Performance optimization, messaging features, user personalization
+  - Phase 2 (P2, 3-4 weeks): Admin features, marketing (coupons, promotions), data analytics
+  - Phase 3 (P3, 2-3 weeks): UI/UX improvements, frontend bundle optimization
+  - Phase 4 (P0, 1 week): Full testing, operations documentation, compliance verification
+- Defined parallel work streams and dependency relationships
+- Estimated cloud service costs: ¥400/month (Phase 0-1) → ¥1000/month (Phase 2-3) → ¥1000-3800/month (post-launch)
+- Identified high-risk items: Redis caching strategy, OSS migration, coupon concurrency, UI/UX requirements clarity
+
+### agent-protocol
+- Updated `CLAUDE.md` to require agents read system architecture constraints before starting tasks
+- Added references to data management, performance, and operations documents in pre-task checklist
+- Updated stage roadmap to reflect "launch preparation and engineering governance" phase
+- Updated feature roadmap with current status of all major features (security, compliance, performance, admin, marketing, UI/UX)
+
+---
+
+## [2026-05-25] - Home and Explore UX Bundle Update
+
+### feat
+- Added campus scenario carousel to homepage with 6 scenario cards (dorm essentials, study tools, campus life, digital products, second-hand market, campus services)
+- Implemented Stripe-inspired carousel design with gradient backgrounds and smooth animations
+- Added desktop hover navigation menu to app header with category-based navigation
+- Enhanced explore search shell with improved spacing and visual hierarchy
+- Improved homepage stats network animation with better particle distribution
+
+### frontend
+- Created `HomeCampusScenarioCarousel.vue` component with responsive carousel (612 lines)
+- Updated `AppHeader.vue` with hover navigation menu for desktop
+- Enhanced `HomeStatsNetwork.vue` particle animation system
+- Refined `ExploreSearchShell.vue` spacing and layout
+- Updated `HomeView.vue` to integrate campus scenario carousel
+- Added CSS utilities for carousel animations and transitions
+
+### ux
+- Carousel auto-advances every 4 seconds with smooth transitions
+- Hover navigation reveals on desktop, mobile uses existing menu
+- Scenario cards feature gradient backgrounds matching Youyu warm palette
+- Responsive design: 3 cards on desktop, 2 on tablet, 1 on mobile
+- Improved visual hierarchy with consistent spacing (56-80px block spacing)
+
+### test
+- Verified carousel auto-advance and manual navigation
+- Verified hover navigation on desktop and mobile menu fallback
+- Verified responsive behavior at 900px and 640px breakpoints
+- All frontend tests passing
+
+---
+
+## [2026-05-25] - Chat seed data and store fixes
+
+### feat
+- Added chat seed data with 8 conversations and 24 messages for testing
+- Seed data includes product inquiries, shop inquiries, and direct conversations
+- Conversations between existing seed users (zhangsan, lisi, wangwu, zhaoliu)
+
+### fix
+- Fixed chat store API response data access (response.data.data → response.data)
+- Corrected user IDs in seed data to match existing users (1001-1004)
+
+### backend
+- Added `seed/data-chat.sql` with idempotent INSERT statements
+- Seed data loads only with profile `seed`
+- Conversations span multiple days for realistic testing
+
+### test
+- Verified seed data loads without errors
+- Verified conversations appear in messages view
+- Verified message timestamps and ordering
+
+---
+
 ## [2026-05-25] - Chat MVP Frontend Integration
 
 ### feat
