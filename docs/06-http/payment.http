@@ -1,0 +1,66 @@
+### Youyu - Payment
+### Prerequisite: backend started with -Dspring-boot.run.profiles=seed
+### Run an order checkout first, then replace @orderId and @paymentNo as needed.
+
+@baseUrl = http://localhost:8080
+@buyerToken = mock-1001-USER
+@otherUserToken = mock-1004-USER
+@orderId = 1
+@paymentNo = PAY2026052700000001
+
+# ---------------------------------------------------------------------------
+# Gateway
+# ---------------------------------------------------------------------------
+
+### Get payment gateway info
+GET {{baseUrl}}/api/payments/gateway
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Get payment gateway info without auth - expect 401
+GET {{baseUrl}}/api/payments/gateway
+
+# ---------------------------------------------------------------------------
+# Initiation
+# ---------------------------------------------------------------------------
+
+###
+
+### Initiate payment for an order
+POST {{baseUrl}}/api/payments/orders/{{orderId}}/initiate
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Initiate payment as non-buyer - expect 403
+POST {{baseUrl}}/api/payments/orders/{{orderId}}/initiate
+Authorization: Bearer {{otherUserToken}}
+
+###
+
+### Duplicate payment for an order with active payment - expect BUSINESS_ERROR
+POST {{baseUrl}}/api/payments/orders/{{orderId}}/initiate
+Authorization: Bearer {{buyerToken}}
+
+# ---------------------------------------------------------------------------
+# Mock success
+# ---------------------------------------------------------------------------
+
+###
+
+### Complete mock payment success
+POST {{baseUrl}}/api/payments/{{paymentNo}}/mock-success
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Complete mock payment success as non-buyer - expect 403
+POST {{baseUrl}}/api/payments/{{paymentNo}}/mock-success
+Authorization: Bearer {{otherUserToken}}
+
+###
+
+### Duplicate mock success - expect BUSINESS_ERROR
+POST {{baseUrl}}/api/payments/{{paymentNo}}/mock-success
+Authorization: Bearer {{buyerToken}}

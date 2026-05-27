@@ -4,16 +4,27 @@
 @baseUrl = http://localhost:8080
 @userToken = mock-1001-USER
 @adminToken = mock-9001-ADMIN
+@seedReviewToken = mock-1010-USER
+@seedReviewOrderId = 8002
+@seedReviewOrderItemId = 8102
+@seedReviewPaymentNo = REPLACE_WITH_PAYMENT_NO_FROM_INITIATE
+
+# Local/demo review path under seed profile:
+# 1. POST /api/payments/orders/{{seedReviewOrderId}}/initiate with {{seedReviewToken}}.
+# 2. Copy data.payment.paymentNo into {{seedReviewPaymentNo}}.
+# 3. POST /api/payments/{{seedReviewPaymentNo}}/mock-success with {{seedReviewToken}}.
+# 4. POST /api/orders/{{seedReviewOrderId}}/confirm-receipt with {{seedReviewToken}}.
+# 5. GET /api/reviews/pending with {{seedReviewToken}} should include order item {{seedReviewOrderItemId}}.
 
 # ──────────────────── Product Reviews ────────────────────
 
 ### Submit product review (requires completed order — run order flow first)
 POST {{baseUrl}}/api/reviews/products
-Authorization: Bearer {{userToken}}
+Authorization: Bearer {{seedReviewToken}}
 Content-Type: application/json
 
 {
-  "orderItemId": 1,
+  "orderItemId": {{seedReviewOrderItemId}},
   "score": 5,
   "content": "Excellent quality, exactly as described."
 }
@@ -29,11 +40,11 @@ Content-Type: application/json
 
 ### Submit product review - expect BAD_REQUEST (invalid score)
 POST {{baseUrl}}/api/reviews/products
-Authorization: Bearer {{userToken}}
+Authorization: Bearer {{seedReviewToken}}
 Content-Type: application/json
 
 {
-  "orderItemId": 1,
+  "orderItemId": {{seedReviewOrderItemId}},
   "score": 0
 }
 
@@ -41,7 +52,7 @@ Content-Type: application/json
 
 ### Submit shop review (requires completed order from that shop)
 POST {{baseUrl}}/api/reviews/shops
-Authorization: Bearer {{userToken}}
+Authorization: Bearer {{seedReviewToken}}
 Content-Type: application/json
 
 {
@@ -64,19 +75,19 @@ Content-Type: application/json
 
 ### Get pending review items
 GET {{baseUrl}}/api/reviews/pending
-Authorization: Bearer {{userToken}}
+Authorization: Bearer {{seedReviewToken}}
 
 ### Get my reviews (both product and shop)
 GET {{baseUrl}}/api/reviews/mine
-Authorization: Bearer {{userToken}}
+Authorization: Bearer {{seedReviewToken}}
 
 # ──────────────────── Public Endpoints ────────────────────
 
 ### Public: product review list (no auth required)
-GET {{baseUrl}}/api/products/3002/reviews?page=1&pageSize=10
+GET {{baseUrl}}/api/products/3001/reviews?page=1&pageSize=10
 
 ### Public: product review summary (no auth required)
-GET {{baseUrl}}/api/products/3002/review-summary
+GET {{baseUrl}}/api/products/3001/review-summary
 
 ### Public: shop review list (no auth required)
 GET {{baseUrl}}/api/shops/4001/reviews?page=1&pageSize=10
