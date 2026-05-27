@@ -10,7 +10,7 @@
 |---|---|---|
 | 聊天 MVP | 已实现，范围文档需补齐 | 代码与变更记录显示聊天 MVP、P1、P2 已落地；`docs/08-tasks/archived/chat-mvp-scope-definition.md` 已存在，但其要求交付的 `docs/02-requirements/chat-mvp-scope.md` 当前缺失 |
 | 平台调解 | 阻塞中 | 当前边界任务仍需等待 `docs/02-requirements/chat-mvp-scope.md` 补齐后执行，不能仅凭归档任务继续推进 |
-| 前端包体积治理 | 进行中 | 第二轮治理任务已就绪：见 `docs/08-tasks/active/frontend-bundle-second-pass.md`，目标将 element-plus 首屏 chunk 从 296 KB 压降至 ≤ 240 KB（移除管理端专属组件的饥饿注册） |
+| 前端包体积治理 | 已完成第二轮 | 第二轮治理已归档：见 `docs/08-tasks/archived/frontend-bundle-second-pass.md`。管理端表格组件改为管理端布局动态注册，Vite `manualChunks` 已将表格模块留在非首屏预加载的异步 admin chunk 中 |
 
 ## 已完成但不再作为当前主线展开的能力
 

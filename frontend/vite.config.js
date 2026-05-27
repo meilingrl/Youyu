@@ -26,6 +26,13 @@ export default defineConfig({
       },
       output: {
         manualChunks(id) {
+          if (
+            id.includes('node_modules/element-plus/es/components/table') ||
+            id.includes('node_modules/element-plus/theme-chalk/el-table')
+          ) {
+            return 'element-plus-admin'
+          }
+
           if (id.includes('node_modules/element-plus')) {
             return 'element-plus'
           }

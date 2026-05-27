@@ -1,3 +1,21 @@
+## [2026-05-27] - Frontend Bundle Second Pass
+
+### frontend
+- Moved admin table component registration into an admin-only Element Plus plugin loaded by `AdminLayout`.
+- Gated admin child route rendering until the admin Element Plus table plugin finishes registering.
+- Routed Element Plus table/table-column modules and styles into the async admin plugin chunk instead of the eager `element-plus` chunk.
+
+### docs
+- Updated the active bundle task notes and current feature roadmap with final chunk metrics.
+
+### test
+- Ran `frontend\npm test`.
+- Ran `frontend\npm run build`.
+- Checked `frontend\dist\index.html` for admin table chunk `modulepreload`.
+- Ran preview smoke for `/app/home`, `/admin/users`, and `/admin/products` with mocked admin API responses.
+
+---
+
 ## [2026-05-27] - Admin Support Context Dashboard
 
 ### feat
