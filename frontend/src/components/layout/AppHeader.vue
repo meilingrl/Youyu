@@ -1,8 +1,10 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAppStore } from '@/stores/app'
+import { useChatStore } from '@/stores/chat'
+import { useNotificationStore } from '@/stores/notification'
 import { appNavigation } from '@/constants/navigation'
 import MobileNav from '@/components/layout/MobileNav.vue'
 
@@ -17,7 +19,10 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const appStore = useAppStore()
+const chatStore = useChatStore()
+const notificationStore = useNotificationStore()
 const mobileMenuOpen = ref(false)
+const chatUnreadTimer = ref(null)
 
 const visibleNavigation = computed(() =>
   appNavigation.filter((item) => !item.auth || authStore.isLoggedIn)
@@ -36,6 +41,9 @@ function goRegister() {
 }
 
 function handleLogout() {
+  stopUnreadIndicators()
+  chatStore.$reset()
+  notificationStore.unreadCount = 0
   authStore.logout()
   router.push('/app/home')
 }
@@ -51,6 +59,63 @@ function focusExploreSearch() {
   }
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+function formatBadge(count) {
+  const numericCount = Number(count || 0)
+  if (numericCount <= 0) return ''
+  return numericCount > 99 ? '99+' : String(numericCount)
+}
+
+function badgeForPath(path) {
+  if (path === '/app/messages') {
+    return formatBadge(chatStore.unreadCount)
+  }
+  if (path === '/app/notifications') {
+    return formatBadge(notificationStore.unreadCount)
+  }
+  return ''
+}
+
+function startUnreadIndicators() {
+  if (!authStore.isLoggedIn) return
+  chatStore.fetchUnreadCount().catch(() => {})
+  notificationStore.startUnreadPolling()
+  if (chatUnreadTimer.value) {
+    window.clearInterval(chatUnreadTimer.value)
+  }
+  chatUnreadTimer.value = window.setInterval(() => {
+    chatStore.fetchUnreadCount().catch(() => {})
+  }, 60000)
+}
+
+function stopUnreadIndicators() {
+  notificationStore.stopUnreadPolling()
+  if (chatUnreadTimer.value) {
+    window.clearInterval(chatUnreadTimer.value)
+    chatUnreadTimer.value = null
+  }
+}
+
+onMounted(() => {
+  startUnreadIndicators()
+})
+
+onBeforeUnmount(() => {
+  stopUnreadIndicators()
+})
+
+watch(
+  () => authStore.isLoggedIn,
+  (isLoggedIn) => {
+    stopUnreadIndicators()
+    if (isLoggedIn) {
+      startUnreadIndicators()
+    } else {
+      chatStore.unreadCount = 0
+      notificationStore.unreadCount = 0
+    }
+  }
+)
 </script>
 
 <template>
@@ -98,7 +163,10 @@ function focusExploreSearch() {
         class="app-header__link"
         :class="{ 'is-active': isActive(item) }"
       >
-        {{ item.label }}
+        <span>{{ item.label }}</span>
+        <span v-if="badgeForPath(item.path)" class="app-header__badge-count">
+          {{ badgeForPath(item.path) }}
+        </span>
       </router-link>
     </nav>
 
@@ -126,3 +194,27 @@ function focusExploreSearch() {
 
   <MobileNav v-model="mobileMenuOpen" />
 </template>
+
+<style scoped>
+.app-header__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-header__badge-count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #DC2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+</style>

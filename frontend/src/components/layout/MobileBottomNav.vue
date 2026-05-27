@@ -1,11 +1,13 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
 import { mobileBottomNavigation } from '@/constants/navigation'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const chatStore = useChatStore()
 
 function isActive(item) {
   return route.meta?.navKey === item.navKey
@@ -19,6 +21,12 @@ function onTap(item) {
   router.push(item.path)
 }
 
+function badgeForItem(item) {
+  if (item.path !== '/app/messages') return ''
+  const numericCount = Number(chatStore.unreadCount || 0)
+  if (numericCount <= 0) return ''
+  return numericCount > 99 ? '99+' : String(numericCount)
+}
 </script>
 
 <template>
@@ -31,7 +39,12 @@ function onTap(item) {
       :class="{ 'is-active': isActive(item) }"
       @click="onTap(item)"
     >
-      <span class="mobile-bottom-nav__icon" aria-hidden="true">{{ item.icon }}</span>
+      <span class="mobile-bottom-nav__icon-wrap">
+        <span class="mobile-bottom-nav__icon" aria-hidden="true">{{ item.icon }}</span>
+        <span v-if="badgeForItem(item)" class="mobile-bottom-nav__badge">
+          {{ badgeForItem(item) }}
+        </span>
+      </span>
       <span class="mobile-bottom-nav__label">{{ item.label }}</span>
     </button>
   </nav>
@@ -89,6 +102,29 @@ function onTap(item) {
 
 .mobile-bottom-nav__icon {
   font-size: 20px;
+  line-height: 1;
+}
+
+.mobile-bottom-nav__icon-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.mobile-bottom-nav__badge {
+  position: absolute;
+  top: -8px;
+  right: -14px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #DC2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
 }
 

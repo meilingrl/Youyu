@@ -5,6 +5,7 @@ import com.youyu.backend.common.enums.OrderStatus;
 import com.youyu.backend.common.exception.BusinessException;
 import com.youyu.backend.mapper.order.DigitalAccessMapper;
 import com.youyu.backend.mapper.product.ProductMapper;
+import com.youyu.backend.service.notification.NotificationService;
 import com.youyu.backend.service.order.OrderService;
 import com.youyu.backend.service.transaction.support.TransactionDataStore;
 import java.math.BigDecimal;
@@ -23,13 +24,16 @@ public class OrderServiceImpl implements OrderService {
     private final TransactionDataStore transactionDataStore;
     private final ProductMapper productMapper;
     private final DigitalAccessMapper digitalAccessMapper;
+    private final NotificationService notificationService;
 
     public OrderServiceImpl(TransactionDataStore transactionDataStore,
                             ProductMapper productMapper,
-                            DigitalAccessMapper digitalAccessMapper) {
+                            DigitalAccessMapper digitalAccessMapper,
+                            NotificationService notificationService) {
         this.transactionDataStore = transactionDataStore;
         this.productMapper = productMapper;
         this.digitalAccessMapper = digitalAccessMapper;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -190,6 +194,7 @@ public class OrderServiceImpl implements OrderService {
         // 取消原因枚举：buyer_cancelled（买家取消）/ system_cancelled（系统取消）/ payment_timeout（支付超时）。
         // 当前 MVP 仅使用 buyer_cancelled。
         order.put("closedReason", "buyer_cancelled");
+        notifyOrderStatus(order, "cancelled", true);
         return getOrderDetail(userId, orderId, false);
     }
 
@@ -214,6 +219,7 @@ public class OrderServiceImpl implements OrderService {
             fulfillment.put("downloadAccessStatus", "full_access");
             fulfillment.put("fullDownloadOpenedAt", LocalDateTime.now());
         }
+        notifyOrderStatus(order, "completed", true);
         return getOrderDetail(userId, orderId, false);
     }
 
@@ -231,6 +237,7 @@ public class OrderServiceImpl implements OrderService {
         fulfillment.put("sellerConfirmedAt", LocalDateTime.now());
         fulfillment.put("fulfillmentStatus", "pending_buyer_confirm");
         order.put("orderStatus", OrderStatus.PENDING_RECEIPT.getValue());
+        notifyOrderStatus(order, "shipped", false);
         return getOrderDetail((Long) order.get("buyerUserId"), orderId, true);
     }
 
@@ -255,6 +262,9 @@ public class OrderServiceImpl implements OrderService {
         // 若双方均已确认 → 订单立即完成（finalizeOfflineOrder）。
         if (Boolean.TRUE.equals(fulfillment.get("offlineBuyerConfirmed"))) {
             finalizeOfflineOrder(order, fulfillment);
+            notifyOrderStatus(order, "completed", true);
+        } else {
+            notifyOrderStatus(order, "seller confirmed offline delivery", false);
         }
         return getOrderDetail((Long) order.get("buyerUserId"), orderId, true);
     }
@@ -278,6 +288,9 @@ public class OrderServiceImpl implements OrderService {
         // 同上：买家侧对称逻辑，与 sellerConfirmOffline 镜像。
         if (Boolean.TRUE.equals(fulfillment.get("offlineSellerConfirmed"))) {
             finalizeOfflineOrder(order, fulfillment);
+            notifyOrderStatus(order, "completed", true);
+        } else {
+            notifyOrderStatus(order, "buyer confirmed offline receipt", true);
         }
         return getOrderDetail(userId, orderId, false);
     }
@@ -323,6 +336,7 @@ public class OrderServiceImpl implements OrderService {
         );
         order.put("orderStatus", OrderStatus.REFUNDING.getValue());
         order.put("paymentStatus", "refunding");
+        notifyOrderStatus(order, "refund requested", true);
         return getOrderDetail(userId, orderId, false);
     }
 
@@ -339,6 +353,7 @@ public class OrderServiceImpl implements OrderService {
         refund.put("completedAt", LocalDateTime.now());
         order.put("orderStatus", OrderStatus.REFUNDED.getValue());
         order.put("paymentStatus", "refunded");
+        notifyOrderStatus(order, "refunded", true);
         return getOrderDetail((Long) order.get("buyerUserId"), orderId, true);
     }
 
@@ -493,17 +508,20 @@ public class OrderServiceImpl implements OrderService {
     private Map<String, Object> toOrderListItem(Map<String, Object> order) {
         List<Map<String, Object>> items = transactionDataStore.findOrderItems((Long) order.get("id"));
         Map<String, Object> firstItem = items.isEmpty() ? Map.of("productTitleSnapshot", "-") : items.get(0);
-        return Map.of(
-                "id", order.get("id"),
-                "orderNo", order.get("orderNo"),
-                "productTitle", firstItem.get("productTitleSnapshot"),
-                "itemCount", items.size(),
-                "orderStatus", order.get("orderStatus"),
-                "paymentStatus", order.get("paymentStatus"),
-                "fulfillmentType", order.get("fulfillmentType"),
-                "payableAmount", order.get("payableAmount"),
-                "submittedAt", order.get("submittedAt")
-        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", order.get("id"));
+        result.put("orderNo", order.get("orderNo"));
+        result.put("buyerUserId", order.get("buyerUserId"));
+        result.put("sellerUserId", order.get("sellerUserId"));
+        result.put("shopId", order.get("shopId"));
+        result.put("productTitle", firstItem.get("productTitleSnapshot"));
+        result.put("itemCount", items.size());
+        result.put("orderStatus", order.get("orderStatus"));
+        result.put("paymentStatus", order.get("paymentStatus"));
+        result.put("fulfillmentType", order.get("fulfillmentType"));
+        result.put("payableAmount", order.get("payableAmount"));
+        result.put("submittedAt", order.get("submittedAt"));
+        return result;
     }
 
     private List<String> resolveAllowedFulfillmentTypes(Map<String, Object> product) {
@@ -612,6 +630,14 @@ public class OrderServiceImpl implements OrderService {
 
     private boolean isDigitalOrder(Map<String, Object> order) {
         return "digital".equals(order.get("fulfillmentType"));
+    }
+
+    private void notifyOrderStatus(Map<String, Object> order, String statusText, boolean notifySeller) {
+        try {
+            notificationService.createOrderStatusNotification(order, statusText, notifySeller);
+        } catch (RuntimeException ignored) {
+            // Notification delivery must not break the order state transition.
+        }
     }
 
     private void assertBuyer(Map<String, Object> order, Long userId) {

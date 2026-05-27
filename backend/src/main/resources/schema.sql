@@ -441,6 +441,16 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
     shop_id BIGINT,
     user_a_id BIGINT NOT NULL,
     user_b_id BIGINT NOT NULL,
+    unread_count_a INT NOT NULL DEFAULT 0,
+    unread_count_b INT NOT NULL DEFAULT 0,
+    is_pinned_a BOOLEAN NOT NULL DEFAULT FALSE,
+    is_pinned_b BOOLEAN NOT NULL DEFAULT FALSE,
+    is_muted_a BOOLEAN NOT NULL DEFAULT FALSE,
+    is_muted_b BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_by_a_at TIMESTAMP NULL,
+    deleted_by_b_at TIMESTAMP NULL,
+    auto_replied_to_a_at TIMESTAMP NULL,
+    auto_replied_to_b_at TIMESTAMP NULL,
     last_message_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_chat_conv_user_a FOREIGN KEY (user_a_id) REFERENCES users(id),
@@ -449,6 +459,10 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
     CONSTRAINT fk_chat_conv_shop FOREIGN KEY (shop_id) REFERENCES shops(id),
     INDEX idx_user_a_last_message (user_a_id, last_message_at DESC),
     INDEX idx_user_b_last_message (user_b_id, last_message_at DESC),
+    INDEX idx_user_a_unread (user_a_id, unread_count_a),
+    INDEX idx_user_b_unread (user_b_id, unread_count_b),
+    INDEX idx_user_a_pinned (user_a_id, is_pinned_a),
+    INDEX idx_user_b_pinned (user_b_id, is_pinned_b),
     UNIQUE INDEX uk_conversation_pair (user_a_id, user_b_id, product_id, shop_id)
 );
 
@@ -457,8 +471,59 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     conversation_id BIGINT NOT NULL,
     sender_user_id BIGINT NOT NULL,
     body TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMP NULL,
+    message_type VARCHAR(32) NOT NULL DEFAULT 'text',
+    media_url MEDIUMTEXT NULL,
+    product_id BIGINT NULL,
+    order_id BIGINT NULL,
+    is_recalled BOOLEAN NOT NULL DEFAULT FALSE,
+    recalled_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_chat_msg_conversation FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id),
     CONSTRAINT fk_chat_msg_sender FOREIGN KEY (sender_user_id) REFERENCES users(id),
-    INDEX idx_conversation_created (conversation_id, created_at DESC)
+    CONSTRAINT fk_chat_msg_product FOREIGN KEY (product_id) REFERENCES products(id),
+    CONSTRAINT fk_chat_msg_order FOREIGN KEY (order_id) REFERENCES orders(id),
+    INDEX idx_conversation_created (conversation_id, created_at DESC),
+    INDEX idx_conversation_unread (conversation_id, is_read),
+    INDEX idx_conversation_type (conversation_id, message_type),
+    INDEX idx_conversation_recalled (conversation_id, is_recalled),
+    INDEX idx_message_product (product_id),
+    INDEX idx_message_order (order_id)
+);
+
+CREATE TABLE IF NOT EXISTS auto_reply_settings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    reply_content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_auto_reply_user FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE KEY uk_auto_reply_user_id (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS quick_replies (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    content TEXT NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_quick_reply_user FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_quick_reply_user_sort (user_id, sort_order, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(32) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    body TEXT NOT NULL,
+    action_url VARCHAR(512),
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX idx_notification_user_read (user_id, is_read),
+    INDEX idx_notification_user_created (user_id, created_at DESC)
 );

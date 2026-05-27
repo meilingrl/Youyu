@@ -64,23 +64,42 @@ Content-Type: application/json
   "body": "在的,书还在。什么时候方便面交?"
 }
 
-### 7. Get messages in conversation
+### 7. Send image message
+POST {{baseUrl}}/api/chat/conversations/1/messages
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "messageType": "image",
+  "mediaUrl": "https://example.com/demo-image.jpg",
+  "body": "商品细节图"
+}
+
+### 8. Get unread count
+GET {{baseUrl}}/api/chat/unread-count
+Authorization: Bearer {{user2Token}}
+
+### 9. Mark conversation read
+POST {{baseUrl}}/api/chat/conversations/1/read
+Authorization: Bearer {{user2Token}}
+
+### 10. Get messages in conversation
 GET {{baseUrl}}/api/chat/conversations/1/messages?page=0&size=20
 Authorization: Bearer {{user1Token}}
 
-### 8. Get messages with pagination
+### 11. Get messages with pagination
 GET {{baseUrl}}/api/chat/conversations/1/messages?page=0&size=1
 Authorization: Bearer {{user1Token}}
 
-### 9. Get conversations list
+### 12. Get conversations list
 GET {{baseUrl}}/api/chat/conversations?page=0&size=20
 Authorization: Bearer {{user1Token}}
 
-### 10. Get conversations list (peer user)
+### 13. Get conversations list (peer user)
 GET {{baseUrl}}/api/chat/conversations?page=0&size=20
 Authorization: Bearer {{user2Token}}
 
-### 11. Try to send message as non-participant (should fail)
+### 14. Try to send message as non-participant (should fail)
 POST {{baseUrl}}/api/chat/conversations/1/messages
 Authorization: Bearer {{user3Token}}
 Content-Type: application/json
@@ -89,11 +108,11 @@ Content-Type: application/json
   "body": "Unauthorized message"
 }
 
-### 12. Try to get messages as non-participant (should fail)
+### 15. Try to get messages as non-participant (should fail)
 GET {{baseUrl}}/api/chat/conversations/1/messages
 Authorization: Bearer {{user3Token}}
 
-### 13. Try to send empty message (should fail)
+### 16. Try to send empty message (should fail)
 POST {{baseUrl}}/api/chat/conversations/1/messages
 Authorization: Bearer {{user1Token}}
 Content-Type: application/json
@@ -102,7 +121,17 @@ Content-Type: application/json
   "body": ""
 }
 
-### 14. Try to create conversation with self (should fail)
+### 17. Try to send image without mediaUrl (should fail)
+POST {{baseUrl}}/api/chat/conversations/1/messages
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "messageType": "image",
+  "body": "missing media"
+}
+
+### 18. Try to create conversation with self (should fail)
 POST {{baseUrl}}/api/chat/conversations
 Authorization: Bearer {{user1Token}}
 Content-Type: application/json
@@ -110,3 +139,86 @@ Content-Type: application/json
 {
   "peerUserId": 1001
 }
+
+### 19. List quick replies
+GET {{baseUrl}}/api/chat/quick-replies
+Authorization: Bearer {{user1Token}}
+
+### 20. Create quick reply
+# @name createQuickReply
+POST {{baseUrl}}/api/chat/quick-replies
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "content": "Thanks for your message.",
+  "sortOrder": 1
+}
+
+### 21. Update quick reply
+PUT {{baseUrl}}/api/chat/quick-replies/1
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "content": "I will check and reply soon.",
+  "sortOrder": 0
+}
+
+### 22. Delete quick reply
+DELETE {{baseUrl}}/api/chat/quick-replies/1
+Authorization: Bearer {{user1Token}}
+
+### 23. Try to update another user's quick reply (should fail)
+PUT {{baseUrl}}/api/chat/quick-replies/1
+Authorization: Bearer {{user2Token}}
+Content-Type: application/json
+
+{
+  "content": "Not allowed.",
+  "sortOrder": 0
+}
+
+### 24. Search chat messages
+GET {{baseUrl}}/api/chat/messages/search?keyword=book&page=0&size=10
+Authorization: Bearer {{user1Token}}
+
+### 25. Pin conversation
+POST {{baseUrl}}/api/chat/conversations/1/pin
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "pinned": true
+}
+
+### 26. Mute conversation
+POST {{baseUrl}}/api/chat/conversations/1/mute
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "muted": true
+}
+
+### 27. Recall message
+POST {{baseUrl}}/api/chat/messages/1/recall
+Authorization: Bearer {{user1Token}}
+
+### 28. Get auto-reply settings
+GET {{baseUrl}}/api/chat/auto-reply
+Authorization: Bearer {{user2Token}}
+
+### 29. Update auto-reply settings
+PUT {{baseUrl}}/api/chat/auto-reply
+Authorization: Bearer {{user2Token}}
+Content-Type: application/json
+
+{
+  "isEnabled": true,
+  "replyContent": "I am away for the moment and will reply later."
+}
+
+### 30. Delete conversation for current user
+DELETE {{baseUrl}}/api/chat/conversations/1
+Authorization: Bearer {{user1Token}}

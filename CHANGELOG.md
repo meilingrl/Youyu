@@ -1,3 +1,149 @@
+## [2026-05-27] - Message Center Interaction Corrections
+
+### frontend
+- Reworked message search date filtering into a compact trigger with a floating multi-select/range calendar.
+- Centered and constrained the emoji/sticker panel so it no longer spills past the composer.
+- Replaced the hard-to-hit recall button with a hover action rail beside message bubbles.
+- Added hover timestamps for message bubbles.
+
+### test
+- Verified frontend unit tests and frontend production build.
+
+---
+
+## [2026-05-27] - Message Center UI Polish Follow-up
+
+### frontend
+- Removed uploaded image file names from image-message captions.
+- Constrained the emoji/sticker panel width so it stays inside the composer area.
+- Replaced two separate date inputs in message search with a single continuous date-range calendar.
+- Localized and tightened the notification center UI copy.
+
+### data
+- Expanded message-center notification seed rows with Chinese order, review, and system examples.
+
+### test
+- Verified frontend unit tests, frontend production build, and targeted backend chat controller tests.
+
+---
+
+## [2026-05-27] - Message Center UI Swipe and Composer Polish
+
+### frontend
+- Reworked the message conversation list with clearer row hierarchy, active state, category tags, and swipe actions for pin, mute, and delete.
+- Aligned self-message bubbles with the existing restrained message-center palette.
+- Added emoji insertion and lightweight sticker sending from the composer.
+- Updated quick replies to show only current-scenario presets plus user custom replies, with inline custom reply creation and deletion.
+
+### data
+- Added Zhang San custom quick-reply seed rows to `seed-chat-data.sql` for acceptance testing.
+
+### test
+- Verified frontend unit tests, frontend production build, and targeted backend chat controller tests.
+
+---
+
+## [2026-05-27] - Message Center P2 Experience Tools
+
+### feat
+- Added chat message search with keyword/time filtering, pagination, and deleted-conversation filtering.
+- Added per-user conversation pin, mute, and soft-delete management.
+- Added 2-minute sender-only message recall with recalled-message rendering metadata.
+- Added auto-reply settings and automatic reply insertion with 24-hour per-conversation throttling.
+- Expanded Zhang San message seed data with 16 conversations and 44 messages for unread, preview, search, and bubble-direction testing.
+
+### frontend
+- Rebuilt the message center with search, conversation action menu, differentiated left/right bubbles, stable conversation switching, and full list previews.
+- Added categorized quick replies for buyer, seller, support, and custom scenarios.
+- Added the auto-reply settings page and route.
+
+### docs
+- Updated chat API spec and HTTP smoke requests for P2 endpoints.
+- Archived completed P2 message-center task documents.
+
+### test
+- Added backend controller coverage for message search, pin/mute/delete, recall, and auto-reply trigger behavior.
+- Verified `backend\\mvnw.cmd test`, `frontend\\npm test`, and `frontend\\npm run build`.
+
+---
+
+## [2026-05-26] - Message Center P1 E-commerce Tools
+
+### feat
+- Added product card chat messages with product validation, nested product summaries, product detail sharing, and chat bubble rendering.
+- Added order card chat messages with participant validation, nested order summaries, order contact actions, and chat bubble rendering.
+- Added authenticated quick reply CRUD endpoints under `/api/chat/quick-replies`.
+- Added seller quick reply panel in the message composer with default replies when no custom replies exist.
+- Added quick reply API/store integration and click-to-fill composer behavior.
+
+### backend
+- Extended chat message persistence for `product_id` and `order_id` card-message references.
+- Exposed order participant fields in order list items so the frontend can create the correct chat conversation before sending an order card.
+
+### docs
+- Updated message center roadmap, chat HTTP smoke collection, and chat API spec for P1 card messages and quick replies.
+- Archived completed P1 task documents.
+
+### test
+- Added backend controller coverage for product card, order card, and quick reply flows.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
+## [2026-05-25] - Home and Explore UX Bundle Update
+
+### feat
+- Added campus scenario carousel to homepage with 6 scenario cards (dorm essentials, study tools, campus life, digital products, second-hand market, campus services)
+- Implemented Stripe-inspired carousel design with gradient backgrounds and smooth animations
+- Added desktop hover navigation menu to app header with category-based navigation
+- Enhanced explore search shell with improved spacing and visual hierarchy
+- Improved homepage stats network animation with better particle distribution
+
+### frontend
+- Created `HomeCampusScenarioCarousel.vue` component with responsive carousel (612 lines)
+- Updated `AppHeader.vue` with hover navigation menu for desktop
+- Enhanced `HomeStatsNetwork.vue` particle animation system
+- Refined `ExploreSearchShell.vue` spacing and layout
+- Updated `HomeView.vue` to integrate campus scenario carousel
+- Added CSS utilities for carousel animations and transitions
+
+### ux
+- Carousel auto-advances every 4 seconds with smooth transitions
+- Hover navigation reveals on desktop, mobile uses existing menu
+- Scenario cards feature gradient backgrounds matching Youyu warm palette
+- Responsive design: 3 cards on desktop, 2 on tablet, 1 on mobile
+- Improved visual hierarchy with consistent spacing (56-80px block spacing)
+
+### test
+- Verified carousel auto-advance and manual navigation
+- Verified hover navigation on desktop and mobile menu fallback
+- Verified responsive behavior at 900px and 640px breakpoints
+- All frontend tests passing
+
+---
+
+## [2026-05-25] - Chat seed data and store fixes
+
+### feat
+- Added chat seed data with 8 conversations and 24 messages for testing
+- Seed data includes product inquiries, shop inquiries, and direct conversations
+- Conversations between existing seed users (zhangsan, lisi, wangwu, zhaoliu)
+
+### fix
+- Fixed chat store API response data access (response.data.data → response.data)
+- Corrected user IDs in seed data to match existing users (1001-1004)
+
+### backend
+- Added `seed/data-chat.sql` with idempotent INSERT statements
+- Seed data loads only with profile `seed`
+- Conversations span multiple days for realistic testing
+
+### test
+- Verified seed data loads without errors
+- Verified conversations appear in messages view
+- Verified message timestamps and ordering
+
+---
+
 ## [2026-05-25] - Chat MVP Frontend Integration
 
 ### feat
@@ -83,7 +229,7 @@
 - HTTP smoke tests: `docs/06-http/chat.http` with 14 request examples
 
 ### docs
-- Task document: `docs/08-tasks/drafts/chat-mvp-backend-implementation.md`
+- Task document: `docs/08-tasks/archived/chat-mvp-backend-implementation.md`
 
 ### constraints
 - MVP scope: Text messages only, no WebSocket, no unread counts, no file attachments
