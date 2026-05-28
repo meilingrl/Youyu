@@ -38,9 +38,21 @@ and `/api/admin/mediation-cases/**` are documented in `docs/09-api-spec/mediatio
 
 ## Authentication And Roles
 
-- All endpoints in this module require admin role access.
-- `AdminController` uses class-level `@LoginRequired(roles = {UserRole.ADMIN})`.
-- Current project samples use Bearer tokens such as `mock-9001-ADMIN`.
+- All endpoints in this module require an admin staff role and, for protected actions, a backend `AdminPermission`.
+- Legacy `ADMIN` remains a full-access compatibility role and is treated like `SUPER_ADMIN`.
+- Supported admin staff roles are `SUPER_ADMIN`, `SUPPORT_AGENT`, `REVIEWER`, `OPERATOR`, and `ORDER_ADMIN`.
+- Current project samples use Bearer tokens such as `mock-9001-ADMIN`, `mock-9101-SUPER_ADMIN`, and `mock-9103-REVIEWER`.
+- Frontend navigation mirrors these capabilities, but backend permission checks are the source of enforcement.
+
+### Admin Permission Matrix
+
+| Role | Capabilities |
+|---|---|
+| `ADMIN` / `SUPER_ADMIN` | All admin permissions including audit logs and final mediation decisions |
+| `SUPPORT_AGENT` | Dashboard, support context, user/product/shop context, reports, search logs, order read, mediation handling except final decisions |
+| `REVIEWER` | Dashboard, student verification, product context, product review tasks, shop context and shop review/status handling |
+| `OPERATOR` | Dashboard, product context, search governance, search logs |
+| `ORDER_ADMIN` | Dashboard, order read/manage, mediation handling except final decisions |
 
 ## Response Envelope
 
@@ -736,7 +748,7 @@ Browse durable admin operation logs for sensitive backend actions.
 |---|---|---|
 | `id` | number | Audit log ID |
 | `operatorUserId` | number | Admin user ID from the authenticated request |
-| `operatorRole` | string | Current role label, initially `ADMIN` |
+| `operatorRole` | string | Current role label, e.g. `ADMIN`, `SUPER_ADMIN`, or specialist staff role |
 | `action` | string | Stable action identifier |
 | `targetType` | string | Stable target category |
 | `targetId` | number | Mutated target ID |

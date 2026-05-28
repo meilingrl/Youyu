@@ -265,7 +265,7 @@ public class AdminServiceImpl implements AdminService {
                 unavailableMetric(
                         "role_permission_alerts",
                         "角色权限异常",
-                        "五角色权限模型尚未实现；本任务不推断权限告警。"
+                        "五角色权限已由后端校验；异常告警聚合尚无独立数据源。"
                 )
         );
 

@@ -1,3 +1,20 @@
+## [2026-05-28] - Admin Role Permission Model
+
+### feat
+- Added five admin staff roles with backend capability enforcement and legacy `ADMIN` full-access compatibility.
+- Restricted admin governance, order, mediation, search, and audit endpoints by backend permission.
+- Aligned frontend admin route guards and sidebar visibility with the role-permission matrix.
+- Added seed staff accounts for local role verification.
+
+### docs
+- Documented admin role semantics in API specs, HTTP smoke examples, and backend seed credentials.
+
+### test
+- Added backend role-permission coverage and frontend guard coverage.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
+
 ## [2026-05-28] - Admin Audit Log Foundation
 
 ### feat

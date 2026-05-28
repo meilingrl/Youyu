@@ -1,6 +1,7 @@
 package com.youyu.backend.controller.order;
 
 import com.youyu.backend.common.api.ApiResponse;
+import com.youyu.backend.common.auth.AdminPermission;
 import com.youyu.backend.common.auth.LoginRequired;
 import com.youyu.backend.common.auth.UserRole;
 import com.youyu.backend.common.support.RequestContext;
@@ -27,16 +28,19 @@ public class AdminOrderController {
     }
 
     @GetMapping
+    @LoginRequired(permissions = {AdminPermission.ADMIN_ORDERS_READ})
     public ApiResponse<List<Map<String, Object>>> list(HttpServletRequest request) {
         return ApiResponse.success(orderService.listAdminOrders(), traceId(request));
     }
 
     @GetMapping("/{orderId}")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_ORDERS_READ})
     public ApiResponse<Map<String, Object>> detail(@PathVariable Long orderId, HttpServletRequest request) {
         return ApiResponse.success(orderService.getOrderDetail(null, orderId, true), traceId(request));
     }
 
     @PostMapping("/{orderId}/ship")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_ORDERS_MANAGE})
     public ApiResponse<Map<String, Object>> ship(@PathVariable Long orderId,
                                                  @RequestBody Map<String, Object> command,
                                                  HttpServletRequest request) {
@@ -44,12 +48,14 @@ public class AdminOrderController {
     }
 
     @PostMapping("/{orderId}/offline/seller-confirm")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_ORDERS_MANAGE})
     public ApiResponse<Map<String, Object>> sellerConfirmOffline(@PathVariable Long orderId,
                                                                  HttpServletRequest request) {
         return ApiResponse.success(orderService.sellerConfirmOffline(orderId), traceId(request));
     }
 
     @PostMapping("/{orderId}/refunds/{refundId}/complete")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_ORDERS_MANAGE})
     public ApiResponse<Map<String, Object>> completeRefund(@PathVariable Long orderId,
                                                            @PathVariable Long refundId,
                                                            HttpServletRequest request) {

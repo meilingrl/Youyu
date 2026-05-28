@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: admin-role-permission-model
-- Status: blocked
-- Owner: unassigned
+- Status: completed
+- Owner: Codex
 - Track: cross-cutting
 - Depends on: admin module roadmap role model, current auth baseline
 - Priority: medium
 - Planned date: 2026-05-28
-- Completed date:
+- Completed date: 2026-05-28
 
 ## Objective
 
@@ -89,16 +89,16 @@ Auth and authorization semantics will change. Update API docs where role require
 
 ## Acceptance Criteria
 
-- [ ] Five admin roles are represented consistently in data/auth code.
-- [ ] `super_admin` keeps full admin access.
-- [ ] Specialist roles have restricted backend access.
-- [ ] Frontend admin navigation reflects role permissions.
-- [ ] Unauthorized role access is rejected by backend tests.
-- [ ] Seed data includes representative admin staff accounts.
-- [ ] Required tests/build pass.
-- [ ] API/auth docs are updated.
-- [ ] `CHANGELOG.md` is updated.
-- [ ] Completion notes are filled before archive.
+- [x] Five admin roles are represented consistently in data/auth code.
+- [x] `super_admin` keeps full admin access.
+- [x] Specialist roles have restricted backend access.
+- [x] Frontend admin navigation reflects role permissions.
+- [x] Unauthorized role access is rejected by backend tests.
+- [x] Seed data includes representative admin staff accounts.
+- [x] Required tests/build pass.
+- [x] API/auth docs are updated.
+- [x] `CHANGELOG.md` is updated.
+- [x] Completion notes are filled before archive.
 
 ## Sub-agent Instructions
 
@@ -120,10 +120,32 @@ Return:
 ## Documentation Updates Required
 
 - [x] `CHANGELOG.md`
-- [ ] relevant files in `docs/06-http/` if auth/API samples change
-- [ ] `docs/09-api-spec/` if role requirements change
+- [x] relevant files in `docs/06-http/` if auth/API samples change
+- [x] `docs/09-api-spec/` if role requirements change
 - [x] task status and archive move
+
+## Head Agent Notes
+
+- 2026-05-28: Unblocked after `admin-audit-log-foundation` was completed and committed. Current auth baseline is `LoginRequired` plus `UserRole`, and the five-role model is defined in `docs/05-roadmap/current/admin-module-goal-roadmap.md`.
 
 ## Completion Notes
 
-(Filled in by implementing sub-agent and accepted by head Agent.)
+- Added backend role/capability model:
+  - legacy `ADMIN`: full access compatibility role
+  - `SUPER_ADMIN`: full access
+  - `SUPPORT_AGENT`: dashboard, support context, user/product/shop context, reports, search logs, order read, mediation handling except final decisions
+  - `REVIEWER`: dashboard, verification review, product context/review, shop context/manage
+  - `OPERATOR`: dashboard, product context, search governance, search logs
+  - `ORDER_ADMIN`: dashboard, order read/manage, mediation handling except final decisions
+- Extended `@LoginRequired` with backend `AdminPermission` checks and annotated admin governance, order, mediation, search, and audit endpoints.
+- Preserved legacy `ADMIN` mock tokens and login behavior while adding underscore-role mock tokens such as `mock-9103-REVIEWER`.
+- Added frontend admin permission helpers, route guard enforcement, and sidebar filtering so visible navigation matches backend capabilities.
+- Added seed staff accounts: `superadmin`, `supportagent`, `reviewer`, `operator`, and `orderadmin`, all using seed password `admin123`.
+- Updated `docs/09-api-spec/admin.md`, `docs/09-api-spec/auth.md`, `docs/09-api-spec/order.md`, `docs/09-api-spec/mediation.md`, `docs/06-http/admin.http`, `docs/06-http/auth.http`, `backend/README.md`, and `CHANGELOG.md`.
+- Verification:
+  - `backend/ .\mvnw.cmd test` passed, 141 tests.
+  - `frontend/ npm test` passed, 38 tests.
+  - `frontend/ npm run build` passed.
+- Remaining endpoint coverage gaps:
+  - Tests cover representative allowed/forbidden endpoints for every role, but not every endpoint/role pair exhaustively.
+  - No UI page for managing staff roles; this remains out of scope for the current task.

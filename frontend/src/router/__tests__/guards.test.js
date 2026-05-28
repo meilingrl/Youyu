@@ -6,11 +6,12 @@ import adminRoutes from '../modules/admin'
 import { setupRouterGuards } from '../guards'
 import { useAuthStore } from '@/stores/auth'
 import { getAuthStorage } from '@/utils/auth'
+import { isAdminRole } from '@/utils/admin-permissions'
 
 const AUTH_STORAGE_KEY = 'youyu-auth'
 
 function resolveRootEntry() {
-  return String(getAuthStorage()?.role || '').toLowerCase() === 'admin' ? '/admin/dashboard' : '/app/home'
+  return isAdminRole(getAuthStorage()?.role) ? '/admin/dashboard' : '/app/home'
 }
 
 const routes = [
@@ -149,6 +150,33 @@ describe('router guards', () => {
     await navigate(router, '/')
 
     expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('allows specialist admin roles to enter the dashboard', async () => {
+    setSession('reviewer')
+    const router = createTestRouter()
+
+    await navigate(router, '/')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('redirects specialist admin roles away from unavailable admin pages', async () => {
+    setSession('reviewer')
+    const router = createTestRouter()
+
+    await navigate(router, '/admin/orders')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('allows specialist admin roles to visit permitted admin pages', async () => {
+    setSession('order_admin')
+    const router = createTestRouter()
+
+    await navigate(router, '/admin/orders')
+
+    expect(router.currentRoute.value.path).toBe('/admin/orders')
   })
 
   it('redirects an admin away from user-only app pages to the admin dashboard', async () => {

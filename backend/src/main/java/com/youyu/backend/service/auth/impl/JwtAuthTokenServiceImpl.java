@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 public class JwtAuthTokenServiceImpl implements AuthTokenService {
 
     private static final String BEARER_PREFIX = "Bearer ";
-    private static final Pattern MOCK_TOKEN_PATTERN = Pattern.compile("mock-\\d+-[A-Z]+");
+    private static final Pattern MOCK_TOKEN_PATTERN = Pattern.compile("mock-\\d+-[A-Z_]+");
 
     private final SecretKey signingKey;
     private final long expirationHours;

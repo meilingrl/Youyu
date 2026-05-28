@@ -10,5 +10,6 @@ import java.lang.annotation.Target;
 public @interface LoginRequired {
 
     UserRole[] roles() default {UserRole.USER, UserRole.ADMIN};
-}
 
+    AdminPermission[] permissions() default {};
+}

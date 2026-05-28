@@ -4,6 +4,11 @@
 
 @baseUrl = http://localhost:8080
 @adminToken = mock-9001-ADMIN
+@superAdminToken = mock-9101-SUPER_ADMIN
+@supportToken = mock-9102-SUPPORT_AGENT
+@reviewerToken = mock-9103-REVIEWER
+@operatorToken = mock-9104-OPERATOR
+@orderAdminToken = mock-9105-ORDER_ADMIN
 @userToken = mock-1001-USER
 
 # ─────────────────────────────────────────────
@@ -402,3 +407,41 @@ Authorization: Bearer {{adminToken}}
 ### Audit logs with USER token - expect 403
 GET {{baseUrl}}/api/admin/audit-logs
 Authorization: Bearer {{userToken}}
+
+# ROLE PERMISSION SMOKE
+
+###
+
+### Reviewer can access verification queue
+GET {{baseUrl}}/api/admin/verifications?page=1&pageSize=10
+Authorization: Bearer {{reviewerToken}}
+
+###
+
+### Reviewer cannot access order admin queue - expect 403
+GET {{baseUrl}}/api/admin/orders
+Authorization: Bearer {{reviewerToken}}
+
+###
+
+### Operator can access search governance
+GET {{baseUrl}}/api/admin/search/governance-rules
+Authorization: Bearer {{operatorToken}}
+
+###
+
+### Support agent cannot record final mediation decisions - expect 403
+POST {{baseUrl}}/api/admin/mediation-cases/70001/decision
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "decisionCategory": "order_completion_required",
+  "decisionSummary": "Permission smoke should be rejected."
+}
+
+###
+
+### Order admin can access order queue
+GET {{baseUrl}}/api/admin/orders
+Authorization: Bearer {{orderAdminToken}}

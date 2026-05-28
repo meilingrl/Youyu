@@ -1,6 +1,7 @@
 package com.youyu.backend.controller.mediation;
 
 import com.youyu.backend.common.api.ApiResponse;
+import com.youyu.backend.common.auth.AdminPermission;
 import com.youyu.backend.common.auth.AuthContextHolder;
 import com.youyu.backend.common.auth.LoginRequired;
 import com.youyu.backend.common.auth.UserRole;
@@ -29,6 +30,7 @@ public class AdminMediationController {
     }
 
     @PostMapping("/reports/{reportId}/escalate-to-mediation")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MEDIATION_HANDLE})
     public ApiResponse<Map<String, Object>> escalateReport(@PathVariable Long reportId,
                                                            @RequestBody(required = false) Map<String, String> payload,
                                                            HttpServletRequest request) {
@@ -40,6 +42,7 @@ public class AdminMediationController {
     }
 
     @GetMapping("/mediation-cases")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MEDIATION_HANDLE})
     public ApiResponse<Map<String, Object>> listCases(@RequestParam(defaultValue = "") String status,
                                                       @RequestParam(defaultValue = "") String decisionCategory,
                                                       @RequestParam(required = false) Long reportId,
@@ -55,12 +58,14 @@ public class AdminMediationController {
     }
 
     @GetMapping("/mediation-cases/{caseId}")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MEDIATION_HANDLE})
     public ApiResponse<Map<String, Object>> caseDetail(@PathVariable Long caseId,
                                                        HttpServletRequest request) {
         return ApiResponse.success(mediationService.caseDetail(caseId), traceId(request));
     }
 
     @PutMapping("/mediation-cases/{caseId}/status")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MEDIATION_HANDLE})
     public ApiResponse<Map<String, Object>> updateStatus(@PathVariable Long caseId,
                                                          @RequestBody Map<String, String> payload,
                                                          HttpServletRequest request) {
@@ -75,6 +80,7 @@ public class AdminMediationController {
     }
 
     @PostMapping("/mediation-cases/{caseId}/decision")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MEDIATION_DECIDE})
     public ApiResponse<Map<String, Object>> recordDecision(@PathVariable Long caseId,
                                                            @RequestBody Map<String, String> payload,
                                                            HttpServletRequest request) {

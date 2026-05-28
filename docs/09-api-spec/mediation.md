@@ -23,7 +23,11 @@ It does not add ticketing, assignment, SLA, appeals, admin chat participation, o
 
 ## Authentication
 
-All endpoints require admin role access through the existing `@LoginRequired(roles = {UserRole.ADMIN})` protection.
+All endpoints require an admin staff role plus backend mediation permissions.
+
+- `ADMIN` / `SUPER_ADMIN`: all mediation handling and final-decision actions.
+- `SUPPORT_AGENT` and `ORDER_ADMIN`: mediation list/detail/escalation/status handling, excluding final decisions.
+- Other roles receive `403 FORBIDDEN` for mediation APIs unless explicitly granted later.
 
 ## Data Contract
 

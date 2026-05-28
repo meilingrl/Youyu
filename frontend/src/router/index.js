@@ -3,9 +3,10 @@ import appRoutes from './modules/app'
 import adminRoutes from './modules/admin'
 import { setupRouterGuards } from './guards'
 import { getAuthStorage } from '@/utils/auth'
+import { isAdminRole } from '@/utils/admin-permissions'
 
 function resolveRootEntry() {
-  return String(getAuthStorage()?.role || '').toLowerCase() === 'admin' ? '/admin/dashboard' : '/app/home'
+  return isAdminRole(getAuthStorage()?.role) ? '/admin/dashboard' : '/app/home'
 }
 
 const routes = [

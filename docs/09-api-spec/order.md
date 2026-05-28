@@ -7,7 +7,7 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/order/OrderController.java`
   - controller: `backend/src/main/java/com/youyu/backend/controller/order/AdminOrderController.java`
   - request sample: `docs/06-http/order.http`
-- Last updated: 2026-05-16
+- Last updated: 2026-05-28
 
 ## Scope
 
@@ -21,7 +21,10 @@ It does not cover cart endpoints or payment endpoints.
 ## Authentication
 
 - Buyer endpoints under `/api/orders/**`: login required
-- Admin endpoints under `/api/admin/orders/**`: admin role required
+- Admin endpoints under `/api/admin/orders/**`: admin staff role plus backend order permission required.
+  - `ADMIN` / `SUPER_ADMIN`: all order admin actions.
+  - `ORDER_ADMIN`: order read and order manage actions.
+  - `SUPPORT_AGENT`: order read context only.
 
 ## Response Envelope
 
@@ -225,7 +228,7 @@ List all orders from the admin view.
 #### Error Cases
 
 - `401`: not logged in
-- `403`: not an admin
+- `403`: current role lacks order read permission
 
 ### `GET /api/admin/orders/{orderId}`
 
@@ -252,6 +255,7 @@ Mark a logistics order as shipped.
 #### Error Cases
 
 - `400`: not a logistics order, missing tracking number
+- `403`: current role lacks order manage permission
 - business error: current order state does not allow shipping
 
 ### `POST /api/admin/orders/{orderId}/offline/seller-confirm`
@@ -262,6 +266,7 @@ Seller/admin confirms offline handoff from the seller side.
 
 #### Error Cases
 
+- `403`: current role lacks order manage permission
 - business error: order is not offline or state transition is invalid
 
 ### `POST /api/admin/orders/{orderId}/refunds/{refundId}/complete`
@@ -273,6 +278,7 @@ Mark a refund as completed from the admin side.
 #### Error Cases
 
 - `404`: refund does not exist
+- `403`: current role lacks order manage permission
 - business error: refund or order state does not allow completion
 
 ## Shared Types / Enumerations
