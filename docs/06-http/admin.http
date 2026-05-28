@@ -26,6 +26,12 @@ GET {{baseUrl}}/api/admin/dashboard
 ###
 
 ### Dashboard overview
+### Expected data fields:
+### - summary
+### - queueMetrics[] with stable id/source/target/available fields
+### - governanceSignals[]
+### - statusBreakdowns.orders[] and statusBreakdowns.mediation[]
+### - unavailableMetrics[] for non-instrumented metrics
 GET {{baseUrl}}/api/admin/dashboard
 Authorization: Bearer {{adminToken}}
 

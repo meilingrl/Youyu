@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: admin-dashboard-observability
-- Status: blocked
-- Owner: unassigned
+- Status: completed
+- Owner: Codex
 - Track: cross-cutting
 - Depends on: admin entry workbench, current admin dashboard endpoint, mediation contract if mediation counts are included
 - Priority: medium
 - Planned date: 2026-05-28
-- Completed date:
+- Completed date: 2026-05-28
 
 ## Objective
 
@@ -88,13 +88,13 @@ If the dashboard response changes, update `docs/09-api-spec/admin.md` and `docs/
 
 ## Acceptance Criteria
 
-- [ ] Dashboard shows pending-work signals for available admin queues.
-- [ ] Every metric links to a responsible admin page or is explicitly marked unavailable.
-- [ ] No fake operational data is presented as real.
-- [ ] API docs and HTTP samples are updated if the dashboard contract changes.
-- [ ] Required tests/build pass.
-- [ ] `CHANGELOG.md` is updated.
-- [ ] Completion notes are filled before archive.
+- [x] Dashboard shows pending-work signals for available admin queues.
+- [x] Every metric links to a responsible admin page or is explicitly marked unavailable.
+- [x] No fake operational data is presented as real.
+- [x] API docs and HTTP samples are updated if the dashboard contract changes.
+- [x] Required tests/build pass.
+- [x] `CHANGELOG.md` is updated.
+- [x] Completion notes are filled before archive.
 
 ## Sub-agent Instructions
 
@@ -115,10 +115,25 @@ Return:
 ## Documentation Updates Required
 
 - [x] `CHANGELOG.md`
-- [ ] relevant files in `docs/06-http/` if dashboard API changes
-- [ ] `docs/09-api-spec/` if dashboard API changes
+- [x] relevant files in `docs/06-http/` if dashboard API changes
+- [x] `docs/09-api-spec/` if dashboard API changes
 - [x] task status and archive move
 
 ## Completion Notes
 
-(Filled in by implementing sub-agent and accepted by head Agent.)
+- Confirmed mediation implementation is present and used `mediation_cases` counts for dashboard metrics.
+- Extended `/api/admin/dashboard` with stable `summary`, `queueMetrics`, `governanceSignals`, `statusBreakdowns`, and `unavailableMetrics` fields while retaining legacy `cards`, `shortcuts`, and `todo`.
+- Implemented dashboard metrics from real backend sources:
+  - `student_verifications.verification_status = pending_review`
+  - `product_review_tasks.review_status = pending_review`
+  - `reports.status = pending` / `processing`
+  - `shops.review_status = pending_review`
+  - `orders.order_status = pending_fulfillment`, `pending_receipt`, `refunding`
+  - `mediation_cases.status = opened`, `evidence_review`, `decision_pending`
+  - `users.status = disabled`, `student_verifications.risk_flag = true`, `products.review_status = rejected`
+- Marked audit-log and role-permission alert metrics unavailable instead of inventing data.
+- Updated `docs/09-api-spec/admin.md`, `docs/06-http/admin.http`, `CHANGELOG.md`, and backend dashboard test coverage.
+- Verification:
+  - `backend/ .\mvnw.cmd test` passed.
+  - `frontend/ npm test` passed.
+  - `frontend/ npm run build` passed.

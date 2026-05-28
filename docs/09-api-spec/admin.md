@@ -11,7 +11,7 @@
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - request sample: `docs/06-http/admin.http`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
-- Last updated: 2026-05-27
+- Last updated: 2026-05-28
 
 ## Scope
 
@@ -77,7 +77,8 @@ All endpoints in this module use the unified response envelope:
 
 #### Purpose
 
-Return the admin dashboard overview snapshot.
+Return the admin dashboard observability snapshot for pending work, governance signals,
+order status, and mediation status.
 
 #### Request
 
@@ -89,7 +90,40 @@ No query parameters, path parameters, or body.
 
 | Field | Type | Notes |
 |---|---|---|
-| `data` | object | Aggregated admin overview snapshot |
+| `data.summary` | object | High-level totals for users, products, shops, reports, orders, and mediation cases |
+| `data.queueMetrics` | array | Stable pending-work metrics. Each item has `id`, `label`, `value`, `severity`, `available`, `source`, `description`, and `target.path` |
+| `data.governanceSignals` | array | Stable non-primary queue signals with the same metric item shape as `queueMetrics` |
+| `data.statusBreakdowns.orders` | array | Real order counts by selected `orders.order_status` values |
+| `data.statusBreakdowns.mediation` | array | Real mediation counts by selected `mediation_cases.status` values |
+| `data.unavailableMetrics` | array | Metrics intentionally not shown as live data because no reliable source exists yet |
+| `data.cards` | array | Legacy dashboard card shape retained for compatibility |
+| `data.shortcuts` | array | Admin route shortcuts |
+| `data.todo` | object | Legacy pending counts retained for compatibility |
+
+#### Metric Item Shape
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | Stable machine-readable identifier, e.g. `pending_verifications` |
+| `label` | string | Human-readable metric label |
+| `value` | number or null | Real count when `available=true`; `null` for unavailable metrics |
+| `severity` | string | UI hint such as `danger`, `warning`, `info`, or `muted` |
+| `available` | boolean | `true` only when the backend has a trustworthy data source |
+| `source` | string | Data source/filter expression used for the metric |
+| `description` | string | Short operational meaning |
+| `target.path` | string or null | Owning admin route when the metric is actionable |
+
+Current live queue metrics:
+
+| `id` | Data source | Target |
+|---|---|---|
+| `pending_verifications` | `student_verifications.verification_status = pending_review` | `/admin/verifications` |
+| `pending_review_tasks` | `product_review_tasks.review_status = pending_review` | `/admin/review-tasks` |
+| `pending_reports` | `reports.status = pending` | `/admin/reports` |
+| `pending_shops` | `shops.review_status = pending_review` | `/admin/shops` |
+| `pending_order_fulfillment` | `orders.order_status = pending_fulfillment` | `/admin/orders` |
+| `refunding_orders` | `orders.order_status = refunding` | `/admin/orders` |
+| `active_mediation_cases` | `mediation_cases.status IN (opened, evidence_review, decision_pending)` | `/admin/mediation` |
 
 #### Error Cases
 

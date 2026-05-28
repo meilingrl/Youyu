@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -28,7 +29,20 @@ class AdminGovernanceTest extends BackendTestBase {
                         .header("Authorization", "Bearer " + ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").isMap());
+                .andExpect(jsonPath("$.data").isMap())
+                .andExpect(jsonPath("$.data.summary.orderCount", greaterThanOrEqualTo(0)))
+                .andExpect(jsonPath("$.data.queueMetrics").isArray())
+                .andExpect(jsonPath("$.data.queueMetrics[0].id").value("pending_verifications"))
+                .andExpect(jsonPath("$.data.queueMetrics[0].source").value("student_verifications.verification_status = pending_review"))
+                .andExpect(jsonPath("$.data.queueMetrics[0].target.path").value("/admin/verifications"))
+                .andExpect(jsonPath("$.data.queueMetrics[4].id").value("pending_order_fulfillment"))
+                .andExpect(jsonPath("$.data.queueMetrics[4].target.path").value("/admin/orders"))
+                .andExpect(jsonPath("$.data.queueMetrics[6].id").value("active_mediation_cases"))
+                .andExpect(jsonPath("$.data.queueMetrics[6].target.path").value("/admin/mediation"))
+                .andExpect(jsonPath("$.data.governanceSignals").isArray())
+                .andExpect(jsonPath("$.data.statusBreakdowns.orders").isArray())
+                .andExpect(jsonPath("$.data.statusBreakdowns.mediation").isArray())
+                .andExpect(jsonPath("$.data.unavailableMetrics[0].available").value(false));
     }
 
     @Test

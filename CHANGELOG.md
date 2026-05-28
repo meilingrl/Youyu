@@ -1,3 +1,18 @@
+## [2026-05-28] - Admin Dashboard Observability
+
+### feat
+- Extended `/api/admin/dashboard` with stable live observability fields for pending queues, governance signals, order status, mediation status, and unavailable metrics.
+- Reworked `/admin/dashboard` into a real pending-work monitor backed by backend counts and routed metric cards.
+
+### docs
+- Documented the dashboard contract in `docs/09-api-spec/admin.md` and updated the admin HTTP dashboard smoke notes.
+
+### test
+- Added backend dashboard contract coverage.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
+
 ## [2026-05-28] - Platform Mediation Implementation
 
 ### feat
