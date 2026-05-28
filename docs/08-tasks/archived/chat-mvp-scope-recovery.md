@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: chat-mvp-scope-recovery
-- Status: active
-- Owner: unassigned
+- Status: completed
+- Owner: Codex
 - Track: cross-cutting
 - Depends on: archived `chat-mvp-scope-definition`
 - Priority: high
 - Planned date: 2026-05-28
-- Completed date:
+- Completed date: 2026-05-28
 
 ## Objective
 
@@ -87,14 +87,14 @@ If current code and archived docs conflict, runtime behavior wins and the mismat
 
 ## Acceptance Criteria
 
-- [ ] `docs/02-requirements/chat-mvp-scope.md` exists.
-- [ ] The document separates chat MVP, support console, and platform mediation responsibilities.
-- [ ] Admin mediation v1 chat visibility is documented as read-only context only.
-- [ ] No code or schema files are changed.
-- [ ] Relevant roadmap dependency status is updated.
-- [ ] `CHANGELOG.md` is updated.
-- [ ] `git diff --check` passes.
-- [ ] Completion notes are filled before archive.
+- [x] `docs/02-requirements/chat-mvp-scope.md` exists.
+- [x] The document separates chat MVP, support console, and platform mediation responsibilities.
+- [x] Admin mediation v1 chat visibility is documented as read-only context only.
+- [x] No code or schema files are changed.
+- [x] Relevant roadmap dependency status is updated.
+- [x] `CHANGELOG.md` is updated.
+- [x] `git diff --check` passes.
+- [x] Completion notes are filled before archive.
 
 ## Sub-agent Instructions
 
@@ -122,4 +122,14 @@ Return:
 
 ## Completion Notes
 
-(Filled in by implementing sub-agent and accepted by head Agent.)
+Completed by Codex on 2026-05-28.
+
+Created `docs/02-requirements/chat-mvp-scope.md` using current runtime code, schema, API spec, and HTTP smoke collection as truth sources. The recovered scope records the implemented user-to-user chat surface, including conversations, message list/send, unread/read, image messages, product/order cards, message search, pin/mute/delete, recall, quick replies, and auto-reply behavior.
+
+The document explicitly separates chat MVP, support console, and platform mediation. It states that future mediation v1 may expose related buyer/seller chat context only as read-only dispute context, and that admins must not join, send, or mutate user conversations.
+
+Updated `docs/05-roadmap/current/feature-roadmap.md` and `docs/05-roadmap/current/admin-module-goal-roadmap.md` so platform mediation is no longer blocked by the missing chat scope artifact. Updated `CHANGELOG.md`.
+
+Archived task records were used only as historical references. Runtime/API/spec/http conflicts found and documented in the recovered requirement: early archived scope deferred unread counts, last-message previews, image messages, search, conversation management, recall, quick replies, and auto-reply, but the current runtime implements them. No runtime code or schema changes were made.
+
+Verification: `git diff --check` passed.

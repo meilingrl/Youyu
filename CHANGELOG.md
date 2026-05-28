@@ -1,3 +1,13 @@
+## [2026-05-28] - Chat MVP Scope Recovery
+
+### docs
+- Restored `docs/02-requirements/chat-mvp-scope.md` from current runtime/API/spec/http truth.
+- Clarified chat MVP, support console, and platform mediation ownership boundaries.
+- Documented mediation v1 chat visibility as read-only dispute context only, with no admin participation or sending in buyer/seller conversations.
+- Updated current roadmaps so platform mediation is no longer blocked by the missing chat scope artifact.
+
+---
+
 ## [2026-05-28] - Admin Entry Workbench Navigation
 
 ### feat
