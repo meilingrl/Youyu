@@ -10,6 +10,24 @@
 @operatorToken = mock-9104-OPERATOR
 @orderAdminToken = mock-9105-ORDER_ADMIN
 
+### 0. Seed login smoke: super admin account should exist in the active database.
+POST {{baseUrl}}/api/admin/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "superadmin",
+  "password": "admin123"
+}
+
+### 0b. Seed login smoke: specialist reviewer account should exist in the active database.
+POST {{baseUrl}}/api/admin/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "reviewer",
+  "password": "admin123"
+}
+
 ### 1. Super admin dashboard should show live queues.
 GET {{baseUrl}}/api/admin/dashboard
 Authorization: Bearer {{superAdminToken}}

@@ -1,3 +1,15 @@
+## [2026-05-28] - Admin Seed Login Fix
+
+### fix
+- Treated specialist admin roles as admin sessions on the login page so `superadmin`, `reviewer`, `supportagent`, `operator`, and `orderadmin` enter the admin workbench instead of the user app.
+
+### test
+- Expanded backend seed admin login coverage across all seeded admin roles.
+- Added frontend auth-store coverage for specialist admin sessions.
+- Added admin full-flow HTTP login smoke requests for seeded admin accounts.
+
+---
+
 ## [2026-05-28] - Admin Module Goal Roadmap Closeout
 
 ### docs

@@ -2,6 +2,8 @@ package com.youyu.backend.admin;
 
 import com.youyu.backend.BackendTestBase;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.http.MediaType;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -109,19 +111,27 @@ class AdminRolePermissionTest extends BackendTestBase {
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
-    @Test
-    void seedSpecialistAccountCanLoginWithRole() throws Exception {
+    @ParameterizedTest
+    @CsvSource({
+            "admin, admin",
+            "superadmin, super_admin",
+            "supportagent, support_agent",
+            "reviewer, reviewer",
+            "operator, operator",
+            "orderadmin, order_admin"
+    })
+    void seedAdminAccountsCanLoginWithExpectedRoles(String loginId, String role) throws Exception {
         mockMvc.perform(post("/api/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+                        .content(("""
                                 {
-                                  "loginId": "reviewer",
+                                  "loginId": "%s",
                                   "password": "admin123"
                                 }
-                                """))
+                                """).formatted(loginId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.role").value("reviewer"))
+                .andExpect(jsonPath("$.data.role").value(role))
                 .andExpect(jsonPath("$.data.token").isString());
     }
 }

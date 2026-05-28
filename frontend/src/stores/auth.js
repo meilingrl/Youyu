@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { login as loginApi, register as registerApi } from '@/api/modules/auth'
 import { clearAuthStorage, getAuthStorage, setAuthStorage } from '@/utils/auth'
+import { isAdminRole } from '@/utils/admin-permissions'
 
 function normalizeSession(payload) {
   if (!payload) {
@@ -20,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => Boolean(session.value?.token))
   const currentRole = computed(() => session.value?.role || 'guest')
   const currentUser = computed(() => session.value?.user || null)
+  const isAdmin = computed(() => isAdminRole(currentRole.value))
 
   /**
    * 设置当前会话状态，同时持久化到 localStorage。
@@ -72,6 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     session,
     isLoggedIn,
+    isAdmin,
     currentRole,
     currentUser,
     setSession,
