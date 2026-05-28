@@ -1,3 +1,19 @@
+## [2026-05-28] - Platform Mediation Implementation
+
+### feat
+- Added durable `mediation_cases` persistence, seed cases, and admin-only mediation escalation/list/detail/status/decision APIs.
+- Implemented idempotent report escalation for order-backed reports and write-once final decisions.
+- Exposed mediation-scoped read-only chat context by related order without adding admin chat participation.
+- Added `/admin/mediation` list/detail UI and report-page escalation action for eligible order reports.
+
+### docs
+- Added mediation API specification and admin HTTP smoke examples.
+
+### test
+- Added backend mediation controller coverage for escalation, idempotency, list/detail, status transitions, decisions, authorization, and read-only chat context.
+
+---
+
 ## [2026-05-28] - Platform Mediation Boundary Contract
 
 ### docs

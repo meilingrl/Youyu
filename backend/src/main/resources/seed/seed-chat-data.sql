@@ -61,6 +61,40 @@ INSERT INTO chat_conversations (
     unread_count_a, unread_count_b, last_message_at, created_at
 )
 VALUES
+(15001, 'direct', NULL, NULL, 1010, 1001, 0, 1, '2026-05-27 09:40:00', '2026-05-27 09:40:00')
+ON DUPLICATE KEY UPDATE
+    type = VALUES(type),
+    product_id = VALUES(product_id),
+    shop_id = VALUES(shop_id),
+    user_a_id = VALUES(user_a_id),
+    user_b_id = VALUES(user_b_id),
+    unread_count_a = VALUES(unread_count_a),
+    unread_count_b = VALUES(unread_count_b),
+    last_message_at = VALUES(last_message_at),
+    created_at = VALUES(created_at);
+
+INSERT INTO chat_messages (
+    id, conversation_id, sender_user_id, body, is_read, read_at, message_type, media_url, product_id, order_id, created_at
+)
+VALUES
+(15001, 15001, 1010, 'Mediation seed context: buyer asks seller to confirm order SEED8008 handoff evidence.', FALSE, NULL, 'order_card', NULL, 3003, 8008, '2026-05-27 09:40:00')
+ON DUPLICATE KEY UPDATE
+    conversation_id = VALUES(conversation_id),
+    sender_user_id = VALUES(sender_user_id),
+    body = VALUES(body),
+    is_read = VALUES(is_read),
+    read_at = VALUES(read_at),
+    message_type = VALUES(message_type),
+    media_url = VALUES(media_url),
+    product_id = VALUES(product_id),
+    order_id = VALUES(order_id),
+    created_at = VALUES(created_at);
+
+INSERT INTO chat_conversations (
+    id, type, product_id, shop_id, user_a_id, user_b_id,
+    unread_count_a, unread_count_b, last_message_at, created_at
+)
+VALUES
 (13001, 'product_inquiry', 3010, NULL, 1001, 1010, 2, 0, '2026-05-26 20:18:00', '2026-05-26 20:10:00'),
 (13002, 'product_inquiry', 3002, NULL, 1001, 1004, 0, 1, '2026-05-26 19:44:00', '2026-05-26 19:32:00'),
 (13003, 'direct', NULL, NULL, 1011, 1001, 1, 0, '2026-05-26 18:52:00', '2026-05-26 18:40:00'),

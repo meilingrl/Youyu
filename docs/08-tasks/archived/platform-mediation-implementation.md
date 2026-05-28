@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: platform-mediation-implementation
-- Status: active
-- Owner: unassigned
+- Status: completed
+- Owner: Codex head Agent / worker
 - Track: cross-cutting
 - Depends on: `docs/02-requirements/platform-mediation-scope.md`, accepted archived `platform-mediation-boundary-and-contract` task
 - Priority: high
 - Planned date: 2026-05-28
-- Completed date:
+- Completed date: 2026-05-28
 
 ## Objective
 
@@ -220,23 +220,23 @@ Add small idempotent seed coverage:
 
 ## Acceptance Criteria
 
-- [ ] The task starts only after `docs/02-requirements/platform-mediation-scope.md` exists and the boundary task is archived as accepted.
-- [ ] Eligible order-backed reports can be escalated into `mediation_cases`.
-- [ ] Escalation is idempotent by `source_report_id`.
-- [ ] Non-order reports cannot be escalated in v1.
-- [ ] Mediation cases have admin list/detail/status/decision APIs.
-- [ ] Mediation cases have admin list/detail UI.
-- [ ] Final decisions are write-once and cannot be overwritten accidentally.
-- [ ] Source report triage state is updated on escalation and final decision without making reports the decision store.
-- [ ] Related order/refund context is shown without moving order/refund ownership into mediation.
-- [ ] Related chat context is read-only, scoped, and does not call `/api/chat/**` from admin UI.
-- [ ] New/changed API contracts are documented.
-- [ ] HTTP smoke requests cover escalation, list, detail, status update, and decision.
-- [ ] Seed data supports a local mediation scenario.
-- [ ] Backend tests pass.
-- [ ] Frontend tests/build pass as applicable.
-- [ ] `CHANGELOG.md` is updated.
-- [ ] Completion notes are filled before archive.
+- [x] The task starts only after `docs/02-requirements/platform-mediation-scope.md` exists and the boundary task is archived as accepted.
+- [x] Eligible order-backed reports can be escalated into `mediation_cases`.
+- [x] Escalation is idempotent by `source_report_id`.
+- [x] Non-order reports cannot be escalated in v1.
+- [x] Mediation cases have admin list/detail/status/decision APIs.
+- [x] Mediation cases have admin list/detail UI.
+- [x] Final decisions are write-once and cannot be overwritten accidentally.
+- [x] Source report triage state is updated on escalation and final decision without making reports the decision store.
+- [x] Related order/refund context is shown without moving order/refund ownership into mediation.
+- [x] Related chat context is read-only, scoped, and does not call `/api/chat/**` from admin UI.
+- [x] New/changed API contracts are documented.
+- [x] HTTP smoke requests cover escalation, list, detail, status update, and decision.
+- [x] Seed data supports a local mediation scenario.
+- [x] Backend tests pass.
+- [x] Frontend tests/build pass as applicable.
+- [x] `CHANGELOG.md` is updated.
+- [x] Completion notes are filled before archive.
 
 ## Sub-agent Instructions
 
@@ -264,4 +264,13 @@ Return:
 
 ## Completion Notes
 
-(Filled in by implementing sub-agent and accepted by head Agent.)
+- Accepted on 2026-05-28 after worker implementation and head Agent review.
+- Added `mediation_cases` schema, backend mediation controller/service/mapper/entity files, and admin-only endpoints for report escalation, case list/detail, status transitions, and final write-once decisions.
+- Escalation is limited to `order` and `digital_order` reports, validates the related order, is idempotent by `source_report_id`, and moves pending reports to `processing`.
+- Final decisions require `decisionCategory` and `decisionSummary`, require `decision_pending`, reject terminal cases, and mark the source report `resolved` without making reports the decision store.
+- Case detail includes source report, order/refund context, participants, and mediation-scoped read-only chat messages selected by `chat_messages.order_id = related_order_id`.
+- Added `/admin/mediation` and `/admin/mediation/:id` admin UI, report-page escalation action for eligible reports, admin navigation, API wrappers, and route guard coverage.
+- Added seed coverage for one eligible report without a case, one active case, one resolved case, and one order-card chat message. Head Agent review added cleanup for seeded chat messages before reseeding orders so the seed profile remains rerunnable under foreign keys.
+- Added `docs/09-api-spec/mediation.md`, linked it from admin/report/API README docs, and added admin HTTP smoke examples for escalation, list, detail, status, and decision.
+- Verification passed: `backend\\.\\mvnw.cmd test` (131 tests), `frontend\\npm test` (35 tests), `frontend\\npm run build`, and `git diff --check`.
+- HTTP smoke examples were updated but not manually executed against a running seed-profile server; automated backend tests cover the endpoint behavior.

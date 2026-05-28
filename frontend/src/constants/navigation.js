@@ -23,6 +23,7 @@ export const adminNavigation = [
   { label: '店铺准入', path: '/admin/shops' },
   { label: '订单履约', path: '/admin/orders' },
   { label: '举报处置', path: '/admin/reports' },
+  { label: 'Mediation', path: '/admin/mediation' },
   { label: '搜索治理', path: '/admin/hot-search' },
   { label: '支持上下文', path: '/admin/support' }
 ]

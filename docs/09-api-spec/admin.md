@@ -24,9 +24,13 @@ This document covers governance and operational endpoints under `/api/admin`:
 - review tasks
 - shops
 - reports
+- mediation case escalation and admin mediation APIs
 - search governance rules and search logs
 
 It does not cover admin login under `/api/admin/auth` or admin order operations under `/api/admin/orders`.
+
+Formal mediation APIs under `/api/admin/reports/{reportId}/escalate-to-mediation`
+and `/api/admin/mediation-cases/**` are documented in `docs/09-api-spec/mediation.md`.
 
 `/admin/support` is a frontend admin route, not an admin API namespace. The v1 support console scope reuses existing admin/report/order/search endpoints for context and does not introduce `/api/admin/support/**`; see `docs/02-requirements/admin-support-console-scope.md`.
 

@@ -312,3 +312,65 @@ Content-Type: application/json
   "status": "ignored",
   "resolution": "invalid status smoke"
 }
+
+###
+
+### Escalate eligible order report to mediation
+POST {{baseUrl}}/api/admin/reports/6010/escalate-to-mediation
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "escalationReason": "Order-backed dispute requires formal mediation."
+}
+
+###
+
+### Escalate non-order report to mediation - expect 400 BAD_REQUEST
+POST {{baseUrl}}/api/admin/reports/6001/escalate-to-mediation
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### List mediation cases
+GET {{baseUrl}}/api/admin/mediation-cases?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List mediation cases by status
+GET {{baseUrl}}/api/admin/mediation-cases?status=evidence_review&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Mediation case detail
+GET {{baseUrl}}/api/admin/mediation-cases/70001
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Mediation status update
+PUT {{baseUrl}}/api/admin/mediation-cases/70001/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "decision_pending"
+}
+
+###
+
+### Mediation final decision
+POST {{baseUrl}}/api/admin/mediation-cases/70001/decision
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "decisionCategory": "order_completion_required",
+  "decisionSummary": "Evidence review supports order completion.",
+  "enforcementSummary": "Order module remains the owner of operational state."
+}

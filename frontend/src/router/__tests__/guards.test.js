@@ -111,6 +111,18 @@ describe('router guards', () => {
     expect(router.currentRoute.value.path).toBe('/admin/dashboard')
   })
 
+  it('allows an admin user to visit mediation list and detail routes', async () => {
+    setSession('admin')
+    const router = createTestRouter()
+
+    await navigate(router, '/admin/mediation')
+    expect(router.currentRoute.value.name).toBe('admin-mediation')
+
+    await navigate(router, '/admin/mediation/70001')
+    expect(router.currentRoute.value.name).toBe('admin-mediation-detail')
+    expect(router.currentRoute.value.meta.navKey).toBe('/admin/mediation')
+  })
+
   it('routes an admin default entry to the admin dashboard', async () => {
     setSession('admin')
     const router = createTestRouter()

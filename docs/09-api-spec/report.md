@@ -21,7 +21,7 @@ This document covers report submission and governance endpoints across two contr
 - User-side report submission under `/api/reports` (`ReportController`)
 - Admin-side report listing and processing under `/api/admin/reports` (`AdminController`)
 
-It does not cover other admin governance endpoints (users, shops, products, search) documented in `admin.md`, or any future mediation or credit-risk workflows.
+It does not cover other admin governance endpoints (users, shops, products, search) documented in `admin.md`, mediation escalation/case endpoints documented in `mediation.md`, or any future credit-risk workflows.
 
 ## Authentication And Roles
 

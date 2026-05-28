@@ -81,6 +81,25 @@ export default {
       }
     },
     {
+      path: 'mediation',
+      name: 'admin-mediation',
+      component: () => import('@/views/admin/MediationCaseListView.vue'),
+      meta: {
+        title: 'Mediation Cases',
+        navKey: '/admin/mediation'
+      }
+    },
+    {
+      path: 'mediation/:id',
+      name: 'admin-mediation-detail',
+      component: () => import('@/views/admin/MediationCaseDetailView.vue'),
+      meta: {
+        title: 'Mediation Detail',
+        navKey: '/admin/mediation',
+        hiddenInNav: true
+      }
+    },
+    {
       path: 'hot-search',
       name: 'admin-hot-search',
       component: () => import('@/views/admin/HotSearchGovernView.vue'),

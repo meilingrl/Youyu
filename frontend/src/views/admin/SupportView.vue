@@ -195,16 +195,6 @@ const liveLanes = computed(() => [
 
 const blockedLanes = [
   {
-    key: 'mediation',
-    title: '平台调解',
-    eyebrow: 'Mediation',
-    owner: '未定义',
-    statusLabel: '已阻塞',
-    tagType: 'danger',
-    description: '缺少平台调解范围文档和后端合约，不创建调解案件、升级状态或处理结论。',
-    gaps: ['无 platform mediation scope', '无调解案件 API', '无调解状态模型']
-  },
-  {
     key: 'admin-chat',
     title: '管理员聊天可见性',
     eyebrow: 'Admin chat',

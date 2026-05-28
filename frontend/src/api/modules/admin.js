@@ -60,6 +60,26 @@ export function processAdminReport(id, payload) {
   return service.put(`/admin/reports/${id}/process`, payload)
 }
 
+export function escalateAdminReportToMediation(id, payload) {
+  return service.post(`/admin/reports/${id}/escalate-to-mediation`, payload)
+}
+
+export function getAdminMediationCases(params) {
+  return service.get('/admin/mediation-cases', { params })
+}
+
+export function getAdminMediationCaseDetail(id) {
+  return service.get(`/admin/mediation-cases/${id}`)
+}
+
+export function updateAdminMediationStatus(id, payload) {
+  return service.put(`/admin/mediation-cases/${id}/status`, payload)
+}
+
+export function recordAdminMediationDecision(id, payload) {
+  return service.post(`/admin/mediation-cases/${id}/decision`, payload)
+}
+
 export function getAdminSearchGovernanceRules() {
   return service.get('/admin/search/governance-rules')
 }
