@@ -11,6 +11,7 @@
 | 聊天 MVP | 已实现，范围文档需补齐 | 代码与变更记录显示聊天 MVP、P1、P2 已落地；`docs/08-tasks/archived/chat-mvp-scope-definition.md` 已存在，但其要求交付的 `docs/02-requirements/chat-mvp-scope.md` 当前缺失 |
 | 平台调解 | 阻塞中 | 当前边界任务仍需等待 `docs/02-requirements/chat-mvp-scope.md` 补齐后执行，不能仅凭归档任务继续推进 |
 | 前端包体积治理 | 已完成第二轮 | 第二轮治理已归档：见 `docs/08-tasks/archived/frontend-bundle-second-pass.md`。管理端表格组件改为管理端布局动态注册，Vite `manualChunks` 已将表格模块留在非首屏预加载的异步 admin chunk 中 |
+| 后台管理模块专项 | 已规划，进入任务包调度 | 专项路线见 `docs/05-roadmap/current/admin-module-goal-roadmap.md`；当前 active 任务包覆盖后台入口、聊天范围恢复、调解、可观测、审计、角色权限和全流程种子数据 |
 
 ## 已完成但不再作为当前主线展开的能力
 
@@ -31,15 +32,17 @@
 ## 推荐推进顺序
 
 1. 聊天 MVP 范围定义
-2. 前端包体积治理与当前体验桥接任务
+2. 后台入口工作台与导航收口
 3. 平台调解边界定义
 4. 平台调解实现
+5. 后台可观测、审计、角色权限和全流程种子数据
 
 ## 依赖关系
 
 - 平台调解依赖聊天 MVP
 - 当前正式 API 规范已覆盖现有主要模块；后续 UI/UX 确定后按接口变化增量维护
 - 前端包体积治理可以并行推进，但应作为横切任务单独管理
+- 后台管理模块专项由 `admin-module-goal-roadmap.md` 细化调度，任务级约束仍以 `docs/08-tasks/active/` 为准
 
 ## 使用规则
 

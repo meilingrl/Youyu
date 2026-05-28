@@ -1,3 +1,14 @@
+## [2026-05-28] - Admin Module Goal Continuation Plan
+
+### docs
+- Added the admin module goal roadmap for the next head Agent.
+- Added the Codex CLI head Agent prompt for continuing long-running admin module dispatch.
+- Added active task specs for admin entry, chat scope recovery, mediation, dashboard observability, audit logs, role permissions, and full-flow seed data.
+- Replaced the blocked platform mediation boundary task with a broader boundary-and-contract task to avoid duplicate active sources of truth.
+- Updated the current feature roadmap to point at the admin module goal roadmap and task package.
+
+---
+
 ## [2026-05-27] - Frontend Bundle Second Pass
 
 ### frontend
