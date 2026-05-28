@@ -5,8 +5,19 @@ import appRoutes from '../modules/app'
 import adminRoutes from '../modules/admin'
 import { setupRouterGuards } from '../guards'
 import { useAuthStore } from '@/stores/auth'
+import { getAuthStorage } from '@/utils/auth'
+
+const AUTH_STORAGE_KEY = 'youyu-auth'
+
+function resolveRootEntry() {
+  return String(getAuthStorage()?.role || '').toLowerCase() === 'admin' ? '/admin/dashboard' : '/app/home'
+}
 
 const routes = [
+  {
+    path: '/',
+    redirect: resolveRootEntry
+  },
   {
     path: '/login',
     name: 'login',
@@ -82,11 +93,57 @@ describe('router guards', () => {
     expect(router.currentRoute.value.path).toBe('/app/home')
   })
 
+  it('routes a regular user default entry to the app home', async () => {
+    setSession('user')
+    const router = createTestRouter()
+
+    await navigate(router, '/')
+
+    expect(router.currentRoute.value.path).toBe('/app/home')
+  })
+
   it('allows an admin user to visit the admin dashboard', async () => {
     setSession('admin')
     const router = createTestRouter()
 
     await navigate(router, '/admin/dashboard')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('routes an admin default entry to the admin dashboard', async () => {
+    setSession('admin')
+    const router = createTestRouter()
+
+    await navigate(router, '/')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('routes a restored uppercase admin session default entry to the admin dashboard', async () => {
+    window.localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        token: 'admin.token',
+        role: 'ADMIN',
+        user: {
+          id: '9001',
+          loginId: 'admin'
+        }
+      })
+    )
+    const router = createTestRouter()
+
+    await navigate(router, '/')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('redirects an admin away from user-only app pages to the admin dashboard', async () => {
+    setSession('admin')
+    const router = createTestRouter()
+
+    await navigate(router, '/app/profile')
 
     expect(router.currentRoute.value.path).toBe('/admin/dashboard')
   })

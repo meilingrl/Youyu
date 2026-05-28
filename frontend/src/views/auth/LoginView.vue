@@ -39,17 +39,6 @@ const registerForm = reactive({
   confirmPassword: ''
 })
 
-watch(
-  () => authStore.isLoggedIn,
-  (loggedIn) => {
-    if (loggedIn) {
-      const fallback = authStore.currentRole === 'admin' ? '/admin/dashboard' : '/app/home'
-      router.replace(String(route.query.redirect || fallback))
-    }
-  },
-  { immediate: true }
-)
-
 function resolveErrorMessage(error) {
   return error?.response?.data?.message || error?.message || '请求失败'
 }
@@ -57,6 +46,26 @@ function resolveErrorMessage(error) {
 function defaultPathAfterLogin() {
   return authStore.currentRole === 'admin' ? '/admin/dashboard' : '/app/home'
 }
+
+function resolvedPathAfterLogin() {
+  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+
+  if (authStore.currentRole === 'admin') {
+    return redirect.startsWith('/admin/') ? redirect : '/admin/dashboard'
+  }
+
+  return redirect && !redirect.startsWith('/admin') ? redirect : defaultPathAfterLogin()
+}
+
+watch(
+  () => authStore.isLoggedIn,
+  (loggedIn) => {
+    if (loggedIn) {
+      router.replace(resolvedPathAfterLogin())
+    }
+  },
+  { immediate: true }
+)
 
 async function handleLogin() {
   if (!loginForm.account || !loginForm.password) {
@@ -73,7 +82,7 @@ async function handleLogin() {
     })
     const isAdmin = authStore.currentRole === 'admin'
     ElMessage.success(isAdmin ? '登录成功，已进入管理后台' : '登录成功')
-    router.push(String(route.query.redirect || defaultPathAfterLogin()))
+    router.replace(resolvedPathAfterLogin())
   } catch (error) {
     ElMessage.error(resolveErrorMessage(error))
   } finally {

@@ -2,11 +2,16 @@ import { createRouter, createWebHistory } from 'vue-router'
 import appRoutes from './modules/app'
 import adminRoutes from './modules/admin'
 import { setupRouterGuards } from './guards'
+import { getAuthStorage } from '@/utils/auth'
+
+function resolveRootEntry() {
+  return String(getAuthStorage()?.role || '').toLowerCase() === 'admin' ? '/admin/dashboard' : '/app/home'
+}
 
 const routes = [
   {
     path: '/',
-    redirect: '/app'
+    redirect: resolveRootEntry
   },
   {
     path: '/login',

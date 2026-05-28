@@ -13,7 +13,7 @@ export default {
       name: 'admin-dashboard',
       component: () => import('@/views/admin/DashboardView.vue'),
       meta: {
-        title: '后台首页',
+        title: '治理总览',
         navKey: '/admin/dashboard'
       }
     },
@@ -22,7 +22,7 @@ export default {
       name: 'admin-users',
       component: () => import('@/views/admin/UserManageView.vue'),
       meta: {
-        title: '用户管理',
+        title: '用户与身份',
         navKey: '/admin/users'
       }
     },
@@ -31,7 +31,7 @@ export default {
       name: 'admin-verifications',
       component: () => import('@/views/admin/VerificationManageView.vue'),
       meta: {
-        title: '认证管理',
+        title: '学生认证队列',
         navKey: '/admin/verifications'
       }
     },
@@ -40,7 +40,7 @@ export default {
       name: 'admin-products',
       component: () => import('@/views/admin/ProductManageView.vue'),
       meta: {
-        title: '商品管理',
+        title: '商品治理',
         navKey: '/admin/products'
       }
     },
@@ -49,7 +49,7 @@ export default {
       name: 'admin-review-tasks',
       component: () => import('@/views/admin/ReviewTaskManageView.vue'),
       meta: {
-        title: '资料审核',
+        title: '资料审核队列',
         navKey: '/admin/review-tasks'
       }
     },
@@ -58,7 +58,7 @@ export default {
       name: 'admin-shops',
       component: () => import('@/views/admin/ShopManageView.vue'),
       meta: {
-        title: '店铺管理',
+        title: '店铺准入',
         navKey: '/admin/shops'
       }
     },
@@ -67,7 +67,7 @@ export default {
       name: 'admin-orders',
       component: () => import('@/views/admin/OrderManageView.vue'),
       meta: {
-        title: '订单管理',
+        title: '订单履约',
         navKey: '/admin/orders'
       }
     },
@@ -76,7 +76,7 @@ export default {
       name: 'admin-reports',
       component: () => import('@/views/admin/ReportManageView.vue'),
       meta: {
-        title: '举报处理',
+        title: '举报处置',
         navKey: '/admin/reports'
       }
     },
@@ -85,7 +85,7 @@ export default {
       name: 'admin-hot-search',
       component: () => import('@/views/admin/HotSearchGovernView.vue'),
       meta: {
-        title: '热搜治理',
+        title: '搜索治理',
         navKey: '/admin/hot-search'
       }
     },
@@ -94,7 +94,7 @@ export default {
       name: 'admin-support',
       component: () => import('@/views/admin/SupportView.vue'),
       meta: {
-        title: '客服与消息治理',
+        title: '支持上下文',
         navKey: '/admin/support'
       }
     }

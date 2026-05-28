@@ -34,7 +34,7 @@ export function setupRouterGuards(router) {
     }
 
     if (to.meta?.role && !hasRolePermission(to.meta.role, authStore.currentRole)) {
-      return authStore.currentRole === 'admin' ? { path: '/admin' } : { path: '/app' }
+      return authStore.currentRole === 'admin' ? { path: '/admin/dashboard' } : { path: '/app/home' }
     }
 
     return true

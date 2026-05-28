@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: admin-entry-workbench-navigation
-- Status: active
-- Owner: unassigned
+- Status: completed
+- Owner: Codex head Agent / worker
 - Track: cross-cutting
 - Depends on: current admin frontend baseline
 - Priority: high
 - Planned date: 2026-05-28
-- Completed date:
+- Completed date: 2026-05-28
 
 ## Objective
 
@@ -92,15 +92,15 @@ If the implementation discovers backend role data is insufficient for routing, s
 
 ## Acceptance Criteria
 
-- [ ] Admin login/default authenticated entry lands in `/admin/dashboard`.
-- [ ] Non-admin login/default entry remains in the normal app.
-- [ ] Admin layout is the primary admin experience and does not require visiting buyer/seller screens.
-- [ ] Admin navigation labels and grouping are clearer for governance work.
-- [ ] No backend, schema, or API contract changes are introduced.
-- [ ] `frontend\npm test` passes.
-- [ ] `frontend\npm run build` passes.
-- [ ] `CHANGELOG.md` is updated.
-- [ ] Completion notes are filled before archive.
+- [x] Admin login/default authenticated entry lands in `/admin/dashboard`.
+- [x] Non-admin login/default entry remains in the normal app.
+- [x] Admin layout is the primary admin experience and does not require visiting buyer/seller screens.
+- [x] Admin navigation labels and grouping are clearer for governance work.
+- [x] No backend, schema, or API contract changes are introduced.
+- [x] `frontend\npm test` passes.
+- [x] `frontend\npm run build` passes.
+- [x] `CHANGELOG.md` is updated.
+- [x] Completion notes are filled before archive.
 
 ## Sub-agent Instructions
 
@@ -122,10 +122,17 @@ Return:
 ## Documentation Updates Required
 
 - [x] `CHANGELOG.md`
-- [ ] relevant files in `docs/06-http/` if no API changes are expected
-- [ ] roadmap or standards docs if behavior decisions change
+- [x] relevant files in `docs/06-http/` not required; no API changes were introduced
+- [x] roadmap or standards docs not required; sequencing and behavior decisions did not change
 - [x] task status and archive move
 
 ## Completion Notes
 
-(Filled in by implementing sub-agent and accepted by head Agent.)
+- Accepted on 2026-05-28 after worker implementation and head Agent review.
+- Admin root/default entry now resolves persisted admin sessions to `/admin/dashboard`; ordinary users continue to default to `/app/home`.
+- Login redirect handling is role-aware: admins keep admin deep links but are not sent into buyer/seller app redirects; non-admin users are not sent into `/admin/*`.
+- Admin navigation, route titles, topbar, and dashboard copy now frame the area as a governance workbench with queues, context, and disposition lanes.
+- Sidebar overflow protections were added for the updated navigation labels.
+- No backend, schema, seed, HTTP smoke, or API spec files were changed.
+- Verification passed from `frontend/`: `npm test` (7 files, 34 tests) and `npm run build`.
+- Residual note: dashboard card relabeling remains frontend-only and index-based because the current dashboard card payload lacks stable semantic keys. The later dashboard observability task should add stable metric identifiers if the dashboard contract changes.

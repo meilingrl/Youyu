@@ -1,3 +1,17 @@
+## [2026-05-28] - Admin Entry Workbench Navigation
+
+### feat
+- Routed authenticated admin default entry and login fallback to `/admin/dashboard`.
+- Kept ordinary user default entry in `/app/home` and blocked non-admin direct access to `/admin/*`.
+- Reworded admin navigation, topbar, and dashboard surfaces around governance queues and workbench tasks.
+
+### test
+- Added router guard coverage for admin and non-admin default entry behavior.
+- Ran `frontend\npm test`.
+- Ran `frontend\npm run build`.
+
+---
+
 ## [2026-05-28] - Admin Module Goal Continuation Plan
 
 ### docs
