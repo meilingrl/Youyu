@@ -3,6 +3,7 @@ package com.youyu.backend.service.admin.impl;
 import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.enums.OrderStatus;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.mapper.audit.AdminAuditLogMapper;
 import com.youyu.backend.mapper.mediation.MediationMapper;
 import com.youyu.backend.mapper.product.ProductMapper;
 import com.youyu.backend.mapper.product.ProductReviewTaskMapper;
@@ -36,6 +37,7 @@ public class AdminServiceImpl implements AdminService {
     private static final List<String> SHOP_REVIEW_STATUSES = List.of("pending_review", "approved", "rejected");
     private static final List<String> REPORT_STATUSES = List.of("pending", "processing", "resolved", "rejected");
     private static final List<String> ACTIVE_MEDIATION_STATUSES = List.of("opened", "evidence_review", "decision_pending");
+    private static final int MAX_AUDIT_SUMMARY_LENGTH = 500;
 
     private final UserMapper userMapper;
     private final StudentVerificationMapper studentVerificationMapper;
@@ -43,6 +45,7 @@ public class AdminServiceImpl implements AdminService {
     private final ProductReviewTaskMapper productReviewTaskMapper;
     private final ShopMapper shopMapper;
     private final ReportMapper reportMapper;
+    private final AdminAuditLogMapper adminAuditLogMapper;
     private final MediationMapper mediationMapper;
     private final TransactionDataStore transactionDataStore;
     private final AuthTokenService authTokenService;
@@ -55,6 +58,7 @@ public class AdminServiceImpl implements AdminService {
                             ProductReviewTaskMapper productReviewTaskMapper,
                             ShopMapper shopMapper,
                             ReportMapper reportMapper,
+                            AdminAuditLogMapper adminAuditLogMapper,
                             MediationMapper mediationMapper,
                             TransactionDataStore transactionDataStore,
                             AuthTokenService authTokenService,
@@ -66,6 +70,7 @@ public class AdminServiceImpl implements AdminService {
         this.productReviewTaskMapper = productReviewTaskMapper;
         this.shopMapper = shopMapper;
         this.reportMapper = reportMapper;
+        this.adminAuditLogMapper = adminAuditLogMapper;
         this.mediationMapper = mediationMapper;
         this.transactionDataStore = transactionDataStore;
         this.authTokenService = authTokenService;
@@ -258,11 +263,6 @@ public class AdminServiceImpl implements AdminService {
 
         List<Map<String, Object>> unavailableMetrics = List.of(
                 unavailableMetric(
-                        "audit_log_events",
-                        "操作审计事件",
-                        "缺少 durable audit log 数据源；本任务不实现审计日志。"
-                ),
-                unavailableMetric(
                         "role_permission_alerts",
                         "角色权限异常",
                         "五角色权限模型尚未实现；本任务不推断权限告警。"
@@ -357,12 +357,19 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     @Transactional
-    public Map<String, Object> updateUserStatus(Long userId, String status, String restrictionReason) {
+    public Map<String, Object> updateUserStatus(Long userId, String status, String restrictionReason, Long adminUserId) {
         String normalizedStatus = requireAllowed(status, USER_STATUSES, "Unsupported user status");
         boolean restricted = "disabled".equals(normalizedStatus) || "locked".equals(normalizedStatus);
         userMapper.updateStatus(userId, normalizedStatus);
         userMapper.updateRestriction(userId, restricted, restricted ? defaultString(restrictionReason) : "");
-        return linkedMap("user", copy(findUser(userId)));
+        Map<String, Object> result = linkedMap("user", copy(findUser(userId)));
+        audit(adminUserId, "USER_STATUS_UPDATE", "USER", userId,
+                auditSummary(
+                        "status=" + normalizedStatus,
+                        "restricted=" + restricted,
+                        restricted ? "reason=" + defaultString(restrictionReason) : ""
+                ));
+        return result;
     }
 
     @Override
@@ -398,10 +405,19 @@ public class AdminServiceImpl implements AdminService {
             throw new BusinessException(ResultCode.BAD_REQUEST, "不支持的认证审核动作");
         }
 
-        return linkedMap(
+        Map<String, Object> result = linkedMap(
                 "verification", copy(findVerification(verificationId)),
                 "user", copy(findUser(userId))
         );
+        audit(adminUserId, "STUDENT_VERIFICATION_REVIEW", "STUDENT_VERIFICATION", verificationId,
+                auditSummary(
+                        "action=" + action,
+                        "userId=" + userId,
+                        "status=" + ("approve".equals(action) ? "approved" : "rejected"),
+                        "rejectReason=" + defaultString(rejectReason),
+                        "reviewNote=" + defaultString(reviewNote)
+                ));
+        return result;
     }
 
     @Override
@@ -417,11 +433,15 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public Map<String, Object> updateProductStatus(Long productId, String status) {
+    @Transactional
+    public Map<String, Object> updateProductStatus(Long productId, String status, Long adminUserId) {
         String normalizedStatus = requireAllowed(status, PRODUCT_STATUSES, "Unsupported product status");
         findProduct(productId);
         productMapper.updateStatus(productId, normalizedStatus);
-        return linkedMap("product", copy(findProduct(productId)));
+        Map<String, Object> result = linkedMap("product", copy(findProduct(productId)));
+        audit(adminUserId, "PRODUCT_STATUS_UPDATE", "PRODUCT", productId,
+                auditSummary("status=" + normalizedStatus));
+        return result;
     }
 
     @Override
@@ -437,29 +457,40 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public Map<String, Object> reviewTask(Long reviewTaskId, String action, String rejectReason, String reviewNote, Long adminUserId) {
         Map<String, Object> reviewTask = findReviewTask(reviewTaskId);
-        findProduct((Long) reviewTask.get("productId"));
+        Long productId = (Long) reviewTask.get("productId");
+        findProduct(productId);
 
         if ("approve".equals(action)) {
             productReviewTaskMapper.updateReviewResult(reviewTaskId, "approved", adminUserId, "", defaultIfBlank(reviewNote, "approved"));
-            productMapper.updateReviewResult((Long) reviewTask.get("productId"), "approved", "on_sale", "");
+            productMapper.updateReviewResult(productId, "approved", "on_sale", "");
             reviewTask.put("reviewNote", defaultIfBlank(reviewNote, "资料审核通过"));
         } else if ("reject".equals(action)) {
             if (isBlank(rejectReason)) {
                 throw new BusinessException(ResultCode.BAD_REQUEST, "驳回资料时必须填写驳回原因");
             }
             productReviewTaskMapper.updateReviewResult(reviewTaskId, "rejected", adminUserId, rejectReason, defaultString(reviewNote));
-            productMapper.updateReviewResult((Long) reviewTask.get("productId"), "rejected", "off_sale", rejectReason);
+            productMapper.updateReviewResult(productId, "rejected", "off_sale", rejectReason);
         } else {
             throw new BusinessException(ResultCode.BAD_REQUEST, "不支持的资料审核动作");
         }
 
         reviewTask.put("reviewedBy", "管理员#" + adminUserId);
-        return linkedMap(
+        Map<String, Object> result = linkedMap(
                 "reviewTask", copy(findReviewTask(reviewTaskId)),
-                "product", copy(findProduct((Long) reviewTask.get("productId")))
+                "product", copy(findProduct(productId))
         );
+        audit(adminUserId, "PRODUCT_REVIEW_TASK_REVIEW", "PRODUCT_REVIEW_TASK", reviewTaskId,
+                auditSummary(
+                        "action=" + action,
+                        "productId=" + productId,
+                        "status=" + ("approve".equals(action) ? "approved" : "rejected"),
+                        "rejectReason=" + defaultString(rejectReason),
+                        "reviewNote=" + defaultString(reviewNote)
+                ));
+        return result;
     }
 
     @Override
@@ -488,6 +519,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public Map<String, Object> updateShopStatus(Long shopId, String status, String reviewStatus, String rejectReason, Long adminUserId) {
         findShop(shopId);
         String normalizedStatus = optionalAllowed(status, SHOP_STATUSES, "Unsupported shop status");
@@ -517,7 +549,14 @@ public class AdminServiceImpl implements AdminService {
         }
         shopMapper.updateStatus(shopId, normalizedStatus, normalizedReviewStatus, adminUserId,
                 "rejected".equals(normalizedReviewStatus) ? rejectReason : "");
-        return linkedMap("shop", copy(findShop(shopId)));
+        Map<String, Object> result = linkedMap("shop", copy(findShop(shopId)));
+        audit(adminUserId, "SHOP_STATUS_UPDATE", "SHOP", shopId,
+                auditSummary(
+                        "status=" + normalizedStatus,
+                        "reviewStatus=" + normalizedReviewStatus,
+                        "rejectReason=" + ("rejected".equals(normalizedReviewStatus) ? defaultString(rejectReason) : "")
+                ));
+        return result;
     }
 
     @Override
@@ -533,10 +572,14 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
     public Map<String, Object> processReport(Long reportId, String status, String resolution, Long adminUserId) {
         String normalizedStatus = requireAllowed(status, REPORT_STATUSES, "Unsupported report status");
         reportMapper.updateStatus(reportId, normalizedStatus, "管理员#" + adminUserId, defaultString(resolution));
-        return linkedMap("report", copy(findReport(reportId)));
+        Map<String, Object> result = linkedMap("report", copy(findReport(reportId)));
+        audit(adminUserId, "REPORT_PROCESS", "REPORT", reportId,
+                auditSummary("status=" + normalizedStatus, "resolution=" + defaultString(resolution)));
+        return result;
     }
 
     @Override
@@ -545,23 +588,53 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public Map<String, Object> createSearchGovernanceRule(Map<String, Object> command) {
-        return searchService.createGovernanceRule(command);
+    @Transactional
+    public Map<String, Object> createSearchGovernanceRule(Map<String, Object> command, Long adminUserId) {
+        Map<String, Object> result = searchService.createGovernanceRule(command);
+        Long ruleId = toLong(result.get("id"));
+        audit(adminUserId, "SEARCH_GOVERNANCE_RULE_CREATE", "SEARCH_GOVERNANCE_RULE", ruleId,
+                auditSummary(
+                        "ruleType=" + defaultString(result.get("ruleType")),
+                        "keyword=" + defaultString(result.get("keyword")),
+                        "isActive=" + defaultString(result.get("isActive"))
+                ));
+        return result;
     }
 
     @Override
-    public Map<String, Object> updateSearchGovernanceRule(Long id, Map<String, Object> command) {
-        return searchService.updateGovernanceRule(id, command);
+    @Transactional
+    public Map<String, Object> updateSearchGovernanceRule(Long id, Map<String, Object> command, Long adminUserId) {
+        Map<String, Object> result = searchService.updateGovernanceRule(id, command);
+        audit(adminUserId, "SEARCH_GOVERNANCE_RULE_UPDATE", "SEARCH_GOVERNANCE_RULE", id,
+                auditSummary(
+                        "ruleType=" + defaultString(result.get("ruleType")),
+                        "keyword=" + defaultString(result.get("keyword")),
+                        "isActive=" + defaultString(result.get("isActive"))
+                ));
+        return result;
     }
 
     @Override
-    public void deleteSearchGovernanceRule(Long id) {
+    @Transactional
+    public void deleteSearchGovernanceRule(Long id, Long adminUserId) {
         searchService.deleteGovernanceRule(id);
+        audit(adminUserId, "SEARCH_GOVERNANCE_RULE_DELETE", "SEARCH_GOVERNANCE_RULE", id,
+                auditSummary("deleted=true"));
     }
 
     @Override
     public Map<String, Object> listSearchLogs(int page, int pageSize) {
         return searchService.listSearchLogs(page, pageSize);
+    }
+
+    @Override
+    public Map<String, Object> listAuditLogs(String action, String targetType, int page, int pageSize) {
+        int ps = clampPageSize(pageSize);
+        int pg = Math.max(1, page);
+        int offset = (pg - 1) * ps;
+        List<Map<String, Object>> items = adminAuditLogMapper.findPaged(action, targetType, offset, ps);
+        long total = adminAuditLogMapper.count(action, targetType);
+        return pagedResponse(items, total, pg, ps);
     }
 
     private Map<String, Object> pagedResponse(List<Map<String, Object>> items, long total, int page, int pageSize) {
@@ -703,6 +776,10 @@ public class AdminServiceImpl implements AdminService {
         return value == null ? "" : value;
     }
 
+    private String defaultString(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
     private String defaultIfBlank(String value, String defaultValue) {
         return isBlank(value) ? defaultValue : value;
     }
@@ -731,5 +808,27 @@ public class AdminServiceImpl implements AdminService {
             return number.longValue();
         }
         return Long.parseLong(String.valueOf(value));
+    }
+
+    private void audit(Long adminUserId, String action, String targetType, Long targetId, String summary) {
+        adminAuditLogMapper.insert(adminUserId, "ADMIN", action, targetType, targetId, summary);
+    }
+
+    private String auditSummary(String... parts) {
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            if (part == null || part.isBlank()) {
+                continue;
+            }
+            if (!builder.isEmpty()) {
+                builder.append("; ");
+            }
+            builder.append(part.trim());
+        }
+        String summary = builder.isEmpty() ? "performed=true" : builder.toString();
+        if (summary.length() <= MAX_AUDIT_SUMMARY_LENGTH) {
+            return summary;
+        }
+        return summary.substring(0, MAX_AUDIT_SUMMARY_LENGTH);
     }
 }

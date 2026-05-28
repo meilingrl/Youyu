@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: admin-audit-log-foundation
-- Status: blocked
-- Owner: unassigned
+- Status: completed
+- Owner: Codex
 - Track: cross-cutting
 - Depends on: current admin governance actions; mediation implementation if mediation actions are included
 - Priority: medium
 - Planned date: 2026-05-28
-- Completed date:
+- Completed date: 2026-05-28
 
 ## Objective
 
@@ -87,14 +87,14 @@ If an audit read endpoint is added, document it in `docs/09-api-spec/admin.md` a
 
 ## Acceptance Criteria
 
-- [ ] Critical admin mutations selected for v1 write audit records.
-- [ ] Audit record includes operator, action, target, reason/summary, and timestamp.
-- [ ] Audit logging does not replace existing business validation.
-- [ ] Audit read access, if added, is admin-only.
-- [ ] Required backend tests pass.
-- [ ] API docs and HTTP files are updated for any new endpoint.
-- [ ] `CHANGELOG.md` is updated.
-- [ ] Completion notes are filled before archive.
+- [x] Critical admin mutations selected for v1 write audit records.
+- [x] Audit record includes operator, action, target, reason/summary, and timestamp.
+- [x] Audit logging does not replace existing business validation.
+- [x] Audit read access, if added, is admin-only.
+- [x] Required backend tests pass.
+- [x] API docs and HTTP files are updated for any new endpoint.
+- [x] `CHANGELOG.md` is updated.
+- [x] Completion notes are filled before archive.
 
 ## Sub-agent Instructions
 
@@ -119,6 +119,29 @@ Return:
 - [ ] `docs/09-api-spec/` if API changes
 - [x] task status and archive move
 
+## Head Agent Notes
+
+- 2026-05-28: Unblocked after `platform-mediation-implementation` and `admin-dashboard-observability` were completed and committed. Current admin governance actions and mediation actions are available for selecting the v1 audit coverage.
+
 ## Completion Notes
 
-(Filled in by implementing sub-agent and accepted by head Agent.)
+- Added durable `admin_audit_logs` persistence with `operator_user_id`, `operator_role`, `action`, `target_type`, `target_id`, `summary`, and `created_at`.
+- Added `GET /api/admin/audit-logs` as an admin-only paginated read path with `action` and `targetType` filters.
+- v1 audited admin actions:
+  - `USER_STATUS_UPDATE`
+  - `PRODUCT_STATUS_UPDATE`
+  - `STUDENT_VERIFICATION_REVIEW`
+  - `PRODUCT_REVIEW_TASK_REVIEW`
+  - `SHOP_STATUS_UPDATE`
+  - `REPORT_PROCESS`
+  - `SEARCH_GOVERNANCE_RULE_CREATE`
+  - `SEARCH_GOVERNANCE_RULE_UPDATE`
+  - `SEARCH_GOVERNANCE_RULE_DELETE`
+- Kept business validation in existing service flows before audit writes; audit records are written only after successful mutations.
+- Updated `docs/09-api-spec/admin.md`, `docs/06-http/admin.http`, and `CHANGELOG.md`.
+- Verification:
+  - `backend/ .\mvnw.cmd test` passed, 134 tests.
+- Uncovered follow-up actions:
+  - Admin order operations under `/api/admin/orders/**`.
+  - Mediation escalation/status/decision operations under `/api/admin/mediation-cases/**`.
+  - Future role-permission management once the role model task is implemented.

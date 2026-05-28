@@ -1,3 +1,18 @@
+## [2026-05-28] - Admin Audit Log Foundation
+
+### feat
+- Added durable `admin_audit_logs` persistence and an admin-only `/api/admin/audit-logs` read endpoint.
+- Recorded audit events for high-risk admin mutations including user status, product status, review decisions, shop status, report processing, and search governance rules.
+
+### docs
+- Documented the audit-log contract and added admin HTTP smoke examples.
+
+### test
+- Added backend coverage for audit writes and admin-only audit reads.
+- Verified backend tests.
+
+---
+
 ## [2026-05-28] - Admin Dashboard Observability
 
 ### feat

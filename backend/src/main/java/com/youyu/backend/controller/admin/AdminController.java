@@ -66,7 +66,8 @@ public class AdminController {
                 adminService.updateUserStatus(
                         userId,
                         payload.getStatus(),
-                        payload.getRestrictionReason()
+                        payload.getRestrictionReason(),
+                        currentAdminUserId()
                 ),
                 traceId(request)
         );
@@ -117,7 +118,7 @@ public class AdminController {
                                                                 @RequestBody Map<String, String> payload,
                                                                 HttpServletRequest request) {
         return ApiResponse.success(
-                adminService.updateProductStatus(productId, payload.getOrDefault("status", "")),
+                adminService.updateProductStatus(productId, payload.getOrDefault("status", ""), currentAdminUserId()),
                 traceId(request)
         );
     }
@@ -212,20 +213,20 @@ public class AdminController {
     @PostMapping("/search/governance-rules")
     public ApiResponse<Map<String, Object>> createSearchGovernanceRule(@RequestBody Map<String, Object> command,
                                                                         HttpServletRequest request) {
-        return ApiResponse.success(adminService.createSearchGovernanceRule(command), traceId(request));
+        return ApiResponse.success(adminService.createSearchGovernanceRule(command, currentAdminUserId()), traceId(request));
     }
 
     @PutMapping("/search/governance-rules/{ruleId}")
     public ApiResponse<Map<String, Object>> updateSearchGovernanceRule(@PathVariable Long ruleId,
                                                                         @RequestBody Map<String, Object> command,
                                                                         HttpServletRequest request) {
-        return ApiResponse.success(adminService.updateSearchGovernanceRule(ruleId, command), traceId(request));
+        return ApiResponse.success(adminService.updateSearchGovernanceRule(ruleId, command, currentAdminUserId()), traceId(request));
     }
 
     @DeleteMapping("/search/governance-rules/{ruleId}")
     public ApiResponse<Map<String, Object>> deleteSearchGovernanceRule(@PathVariable Long ruleId,
                                                                         HttpServletRequest request) {
-        adminService.deleteSearchGovernanceRule(ruleId);
+        adminService.deleteSearchGovernanceRule(ruleId, currentAdminUserId());
         return ApiResponse.success(java.util.Map.of("deleted", true), traceId(request));
     }
 
@@ -234,6 +235,15 @@ public class AdminController {
                                                         @RequestParam(defaultValue = "10") int pageSize,
                                                         HttpServletRequest request) {
         return ApiResponse.success(adminService.listSearchLogs(page, pageSize), traceId(request));
+    }
+
+    @GetMapping("/audit-logs")
+    public ApiResponse<Map<String, Object>> auditLogs(@RequestParam(defaultValue = "") String action,
+                                                      @RequestParam(defaultValue = "") String targetType,
+                                                      @RequestParam(defaultValue = "1") int page,
+                                                      @RequestParam(defaultValue = "10") int pageSize,
+                                                      HttpServletRequest request) {
+        return ApiResponse.success(adminService.listAuditLogs(action, targetType, page, pageSize), traceId(request));
     }
 
     private Long currentAdminUserId() {

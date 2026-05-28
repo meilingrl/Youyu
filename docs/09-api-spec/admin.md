@@ -9,6 +9,7 @@
   - request DTO: `backend/src/main/java/com/youyu/backend/controller/admin/dto/ReviewVerificationRequest.java`
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/common/api/ApiResponse.java`
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
+  - audit mapper: `backend/src/main/java/com/youyu/backend/mapper/audit/AdminAuditLogMapper.java`
   - request sample: `docs/06-http/admin.http`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
 - Last updated: 2026-05-28
@@ -26,6 +27,7 @@ This document covers governance and operational endpoints under `/api/admin`:
 - reports
 - mediation case escalation and admin mediation APIs
 - search governance rules and search logs
+- admin audit logs
 
 It does not cover admin login under `/api/admin/auth` or admin order operations under `/api/admin/orders`.
 
@@ -697,6 +699,66 @@ Browse paginated search logs from the admin view.
 #### Error Cases
 
 - `400`: invalid pagination values
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
+### `GET /api/admin/audit-logs`
+
+#### Purpose
+
+Browse durable admin operation logs for sensitive backend actions.
+
+#### Request
+
+##### Query
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `action` | no | string | Exact action filter, e.g. `USER_STATUS_UPDATE`; default empty |
+| `targetType` | no | string | Exact target type filter, e.g. `USER`; default empty |
+| `page` | no | number | Default `1` |
+| `pageSize` | no | number | Default `10`, max `100` |
+
+#### Response
+
+- `data` is the paginated audit-log result returned by `AdminService.listAuditLogs(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `items` | array | Current page of audit records |
+| `total` | number | Total matched rows |
+| `page` | number | Current page number |
+| `pageSize` | number | Current page size |
+
+#### Audit Record Shape
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | number | Audit log ID |
+| `operatorUserId` | number | Admin user ID from the authenticated request |
+| `operatorRole` | string | Current role label, initially `ADMIN` |
+| `action` | string | Stable action identifier |
+| `targetType` | string | Stable target category |
+| `targetId` | number | Mutated target ID |
+| `summary` | string | Short action summary, capped by backend storage |
+| `createdAt` | string | Audit event creation time |
+
+Current v1 audited actions:
+
+| Action | Target type | Source endpoint examples |
+|---|---|---|
+| `USER_STATUS_UPDATE` | `USER` | `PUT /api/admin/users/{userId}/status` |
+| `PRODUCT_STATUS_UPDATE` | `PRODUCT` | `PUT /api/admin/products/{productId}/status` |
+| `STUDENT_VERIFICATION_REVIEW` | `STUDENT_VERIFICATION` | `PUT /api/admin/verifications/{verificationId}/review` |
+| `PRODUCT_REVIEW_TASK_REVIEW` | `PRODUCT_REVIEW_TASK` | `PUT /api/admin/review-tasks/{reviewTaskId}/review` |
+| `SHOP_STATUS_UPDATE` | `SHOP` | `PUT /api/admin/shops/{shopId}/status` |
+| `REPORT_PROCESS` | `REPORT` | `PUT /api/admin/reports/{reportId}/process` |
+| `SEARCH_GOVERNANCE_RULE_CREATE` | `SEARCH_GOVERNANCE_RULE` | `POST /api/admin/search/governance-rules` |
+| `SEARCH_GOVERNANCE_RULE_UPDATE` | `SEARCH_GOVERNANCE_RULE` | `PUT /api/admin/search/governance-rules/{ruleId}` |
+| `SEARCH_GOVERNANCE_RULE_DELETE` | `SEARCH_GOVERNANCE_RULE` | `DELETE /api/admin/search/governance-rules/{ruleId}` |
+
+#### Error Cases
+
 - `401`: missing token or invalid token
 - `403`: current user is not an admin
 

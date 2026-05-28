@@ -380,3 +380,25 @@ Content-Type: application/json
   "decisionSummary": "Evidence review supports order completion.",
   "enforcementSummary": "Order module remains the owner of operational state."
 }
+
+# AUDIT LOGS
+
+###
+
+### List admin audit logs
+### Expected item fields:
+### - operatorUserId, operatorRole, action, targetType, targetId, summary, createdAt
+GET {{baseUrl}}/api/admin/audit-logs?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List audit logs for user status changes
+GET {{baseUrl}}/api/admin/audit-logs?action=USER_STATUS_UPDATE&targetType=USER&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Audit logs with USER token - expect 403
+GET {{baseUrl}}/api/admin/audit-logs
+Authorization: Bearer {{userToken}}

@@ -356,6 +356,23 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE INDEX idx_reports_submitted ON reports(submitted_at);
 CREATE INDEX idx_reports_status_submitted ON reports(status, submitted_at);
 
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    operator_user_id BIGINT NOT NULL,
+    operator_role VARCHAR(32) NOT NULL,
+    action VARCHAR(64) NOT NULL,
+    target_type VARCHAR(64) NOT NULL,
+    target_id BIGINT NOT NULL,
+    summary VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_admin_audit_log_operator FOREIGN KEY (operator_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_admin_audit_logs_created ON admin_audit_logs(created_at, id);
+CREATE INDEX idx_admin_audit_logs_action_created ON admin_audit_logs(action, created_at, id);
+CREATE INDEX idx_admin_audit_logs_target ON admin_audit_logs(target_type, target_id, created_at, id);
+CREATE INDEX idx_admin_audit_logs_operator ON admin_audit_logs(operator_user_id, created_at, id);
+
 CREATE TABLE IF NOT EXISTS mediation_cases (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     case_no VARCHAR(40) NOT NULL UNIQUE,
