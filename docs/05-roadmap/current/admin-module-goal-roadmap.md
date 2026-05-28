@@ -12,8 +12,9 @@ It is a module-specific execution roadmap. It does not replace `stage-roadmap.md
 - The active branch is expected to be `codex/admin-module-goal`.
 - The existing admin surface already covers dashboard, users, verifications, products, review tasks, shops, orders, reports, hot search governance, and support context.
 - `/admin/support` is currently a support context dashboard, not a ticketing, mediation, or admin-chat system.
-- Platform mediation is no longer blocked by the missing chat scope artifact; `docs/02-requirements/platform-mediation-scope.md` now defines the v1 mediation contract before implementation.
-- Admin role handling is currently coarse-grained. The database has `users.role`, and backend auth uses role checks through `LoginRequired`.
+- Platform mediation v1 is implemented from `docs/02-requirements/platform-mediation-scope.md` with report escalation, case workflow, decision records, and read-only related chat context.
+- Admin role handling now has backend-enforced staff roles for `SUPER_ADMIN`, `SUPPORT_AGENT`, `REVIEWER`, `OPERATOR`, and `ORDER_ADMIN`, while legacy `ADMIN` remains a full-access compatibility role.
+- Full-flow seed coverage now includes role-specific staff accounts, core admin queues, mediation scenarios, audit examples, and `docs/06-http/admin-full-flow.http` for local verification.
 
 ## Locked Product Decisions
 
@@ -43,6 +44,8 @@ The first permission model should use this five-role minimum set:
 Do not implement role control as frontend menu hiding only. Backend authorization and tests are mandatory before a role-permission task is accepted.
 
 ## Recommended Sequence
+
+All items in this sequence are completed and archived as of 2026-05-28.
 
 1. `admin-entry-workbench-navigation`
    - Simplify the admin login destination, dashboard frame, and navigation.

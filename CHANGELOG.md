@@ -1,3 +1,13 @@
+## [2026-05-28] - Admin Module Goal Roadmap Closeout
+
+### docs
+- Updated the admin module goal roadmap baseline to reflect completed mediation, backend-enforced staff roles, and full-flow seed verification coverage.
+
+### verify
+- Verified the repository state after the final seed workflow commit.
+
+---
+
 ## [2026-05-28] - Seed Full Admin Flow
 
 ### test
