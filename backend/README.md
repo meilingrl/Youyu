@@ -18,11 +18,13 @@ Spring Boot 3.3 backend for Youyu. Layered by domain: `controller / service / ma
 **First-time setup** (schema + seed data):
 ```bash
 # Windows
-mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=seed
+mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--spring.profiles.active=seed"
 
 # macOS / Linux
-./mvnw spring-boot:run -Dspring-boot.run.profiles=seed
+./mvnw spring-boot:run "-Dspring-boot.run.arguments=--spring.profiles.active=seed"
 ```
+
+If you start the backend from an IDE, use application program argument `--spring.profiles.active=seed`.
 
 **Normal run**:
 ```bash

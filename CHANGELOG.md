@@ -1,3 +1,10 @@
+## [2026-05-28] - Seed Profile Startup Docs
+
+### docs
+- Clarified seed-profile startup as an application argument via `--spring.profiles.active=seed`, including the Maven wrapper argument form and IDE program argument.
+
+---
+
 ## [2026-05-28] - Admin Seed Login Fix
 
 ### fix

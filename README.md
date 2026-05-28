@@ -69,10 +69,16 @@ cd Youyu
 From `backend/`:
 
 ```bash
-mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=seed
+mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--spring.profiles.active=seed"
 ```
 
 Use the seed profile the first time when you want demo users, demo products, and seeded transaction data.
+
+If you start from an IDE, set the application program argument to:
+
+```bash
+--spring.profiles.active=seed
+```
 
 For normal daily startup:
 
