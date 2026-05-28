@@ -1,7 +1,8 @@
 ### Youyu - Full Admin Flow Seed Walkthrough
 ### Start backend with seed profile before running:
-### backend\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--spring.profiles.active=seed"
-### IDE program argument: --spring.profiles.active=seed
+### cd backend
+### $env:SPRING_PROFILES_ACTIVE="seed"
+### .\mvnw.cmd spring-boot:run
 
 @baseUrl = http://localhost:8080
 @adminToken = mock-9001-ADMIN

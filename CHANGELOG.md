@@ -1,3 +1,10 @@
+## [2026-05-28] - Seed Profile Startup Environment
+
+### docs
+- Corrected seed-profile startup docs to use `SPRING_PROFILES_ACTIVE=seed`, including the PowerShell form `$env:SPRING_PROFILES_ACTIVE="seed"`.
+
+---
+
 ## [2026-05-28] - Seed Profile Startup Docs
 
 ### docs
