@@ -182,13 +182,30 @@ ON DUPLICATE KEY UPDATE
     order_id = VALUES(order_id),
     created_at = VALUES(created_at);
 
+-- Zhang San custom quick replies for message-center UI acceptance.
+INSERT INTO quick_replies (id, user_id, content, sort_order, created_at, updated_at)
+VALUES
+(15001, 1001, '可以，今晚 8 点后校内自提。', 1, '2026-05-26 20:30:00', CURRENT_TIMESTAMP),
+(15002, 1001, '我稍后补一张实物照片给你。', 2, '2026-05-26 20:31:00', CURRENT_TIMESTAMP),
+(15003, 1001, '确认下单后我会按备注安排。', 3, '2026-05-26 20:32:00', CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE
+    user_id = VALUES(user_id),
+    content = VALUES(content),
+    sort_order = VALUES(sort_order),
+    created_at = VALUES(created_at),
+    updated_at = VALUES(updated_at);
+
 -- Notifications are compactly surfaced inside the message center, not as a main
 -- navigation section.
 INSERT INTO notifications (id, user_id, type, title, body, action_url, is_read, created_at)
 VALUES
-(12001, 1001, 'order_status', 'Order payment reminder', 'Order SEED8002 is waiting for payment confirmation.', '/app/orders', FALSE, '2026-05-25 15:10:00'),
-(12002, 1001, 'system', 'Message center enabled', 'Unread messages and order notifications are available in the message center.', '/app/messages', TRUE, '2026-05-24 09:00:00'),
-(12003, 1002, 'review_reminder', 'Pending review reminder', 'You have a pending campus review task to check.', '/app/reviews/pending', FALSE, '2026-05-25 12:30:00')
+(12001, 1001, 'order_status', '订单等待付款', '订单 SEED8002 已生成，卖家将在付款后为你预留商品。', '/app/orders', FALSE, '2026-05-26 21:10:00'),
+(12002, 1001, 'order_status', '线下自提时间已确认', '工程制图工具套装约定今晚 19:30 在教学楼一楼交接，请按时到达。', '/app/orders', FALSE, '2026-05-26 19:45:00'),
+(12003, 1001, 'review_reminder', '有一笔交易待评价', '你已完成 USB Hub 交易，可以补充评价帮助其他同学判断商品状态。', '/app/reviews/pending', FALSE, '2026-05-26 16:20:00'),
+(12004, 1001, 'system', '快捷回复样例已准备', '消息中心已为 zhangsan 准备常用回复，可在聊天输入区直接编辑和使用。', '/app/messages', TRUE, '2026-05-26 12:00:00'),
+(12005, 1001, 'system', '图片与表情消息可用', '现在可以在聊天中发送图片、表情和表情包，适合补充商品细节。', '/app/messages', TRUE, '2026-05-25 20:40:00'),
+(12006, 1002, 'review_reminder', '评价提醒', '你有一条课程资料交易评价待处理，完成后可提升交易记录完整度。', '/app/reviews/pending', FALSE, '2026-05-25 12:30:00'),
+(12007, 1010, 'order_status', '买家咨询提醒', 'zhangsan 正在咨询 USB Hub 自提安排，请及时查看消息中心。', '/app/messages', FALSE, '2026-05-26 20:18:00')
 ON DUPLICATE KEY UPDATE
     user_id = VALUES(user_id),
     type = VALUES(type),

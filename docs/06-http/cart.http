@@ -1,0 +1,77 @@
+### Youyu - Cart
+### Prerequisite: backend started with -Dspring-boot.run.profiles=seed
+
+@baseUrl = http://localhost:8080
+@buyerToken = mock-1001-USER
+
+# ---------------------------------------------------------------------------
+# Cart
+# ---------------------------------------------------------------------------
+
+### Get cart items
+GET {{baseUrl}}/api/cart
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Add item to cart
+POST {{baseUrl}}/api/cart/items
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "productId": 3003,
+  "quantity": 1
+}
+
+###
+
+### Add item without auth - expect 401
+POST {{baseUrl}}/api/cart/items
+Content-Type: application/json
+
+{
+  "productId": 3003,
+  "quantity": 1
+}
+
+###
+
+### Add item with invalid quantity - expect BAD_REQUEST
+POST {{baseUrl}}/api/cart/items
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "productId": 3003,
+  "quantity": 0
+}
+
+###
+
+### Update cart item quantity and selected state
+PATCH {{baseUrl}}/api/cart/items/1
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "quantity": 2,
+  "selected": true
+}
+
+###
+
+### Unselect cart item
+PATCH {{baseUrl}}/api/cart/items/1
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "selected": false
+}
+
+###
+
+### Remove item from cart
+DELETE {{baseUrl}}/api/cart/items/1
+Authorization: Bearer {{buyerToken}}

@@ -8,10 +8,14 @@
 
 | 功能线 | 状态 | 当前说明 |
 |---|---|---|
-| 聊天 MVP | 已实现，范围文档已恢复 | 当前范围边界见 `docs/02-requirements/chat-mvp-scope.md`；该文档以当前 runtime code、API spec 和 HTTP smoke collection 为事实源，archived chat tasks 仅作历史参考 |
-| 平台调解 | 边界已定义，进入实现任务 | `docs/02-requirements/platform-mediation-scope.md` 已定义 report escalation -> `mediation_cases`、read-only chat visibility、orders/refunds/support 边界；下一步派发 `docs/08-tasks/active/platform-mediation-implementation.md` |
+| 聊天 MVP | ✅ 已完成，范围文档已恢复 | 基础聊天功能已实现；当前范围边界见 `docs/02-requirements/chat-mvp-scope.md`，后续可继续完善分页、未读计数、通知 |
+| 安全加固 | 🔴 P0 进行中 | HTTPS、JWT、CORS、输入验证等上线前必做项 |
+| 隐私合规 | 🔴 P0 进行中 | 隐私政策、用户协议、Cookie 同意等法律文档 |
+| 性能优化 | 🟡 P1 待启动 | Redis 缓存、异步日志、限流、OSS 迁移 |
+| 管理员功能 | 🟡 P2 当前专项已完成 | 后台入口、调解、可观测 dashboard、审计日志、角色权限和全流程 seed 已完成；后续批量操作等扩展继续按 `launch-preparation-roadmap.md` 排期 |
+| 营销功能 | 🟡 P2 待启动 | 优惠券、店铺活动、活动统计 |
+| UI/UX 改进 | 🟡 P3 部分完成 | 消息中心与交易中心第二轮体验已完成，设置页面和全局细节仍待收口 |
 | 前端包体积治理 | 已完成第二轮 | 第二轮治理已归档：见 `docs/08-tasks/archived/frontend-bundle-second-pass.md`。管理端表格组件改为管理端布局动态注册，Vite `manualChunks` 已将表格模块留在非首屏预加载的异步 admin chunk 中 |
-| 后台管理模块专项 | 已规划，进入任务包调度 | 专项路线见 `docs/05-roadmap/current/admin-module-goal-roadmap.md`；当前 active 任务包覆盖后台入口、聊天范围恢复、调解、可观测、审计、角色权限和全流程种子数据 |
 
 ## 已完成但不再作为当前主线展开的能力
 
@@ -26,20 +30,37 @@
 - 商品/店铺评价
 - 推荐能力
 - 正式 API 规范化当前模块覆盖
+- 消息中心 P0/P1/P2 体验与交易中心第二轮 UI/UX
+- 购物车与支付 API 规范补齐
 
 这些内容保留在代码、HTTP 验证文件、任务归档和变更记录中追溯，不继续占用当前路线图主体。
 
 ## 推荐推进顺序
 
-1. 平台调解实现
-2. 后台可观测、审计、角色权限和全流程种子数据
+**详细实施计划参见**：`launch-preparation-roadmap.md`
+
+**简要顺序**：
+1. **阶段 0（P0）**：安全加固 + 隐私合规 + 基础设施 + 容器化（2-3 周）
+2. **阶段 1（P1）**：性能优化 + 消息功能完善 + 用户个性化（3-4 周）
+3. **阶段 2（P2）**：管理员功能 + 营销功能 + 数据统计（3-4 周）
+4. **阶段 3（P3）**：UI/UX 改进 + 前端包体积治理（2-3 周）
+5. **阶段 4（P0）**：全链路测试 + 运维文档 + 合规性检查（1 周）
+
+**总计**：约 13 周（3 个月）
 
 ## 依赖关系
 
-- 平台调解依赖聊天 MVP 当前范围文档；`docs/02-requirements/chat-mvp-scope.md` 已恢复，`docs/02-requirements/platform-mediation-scope.md` 已将 admin chat visibility 限定为 mediation case/read-only context
-- 当前正式 API 规范已覆盖现有主要模块；后续 UI/UX 确定后按接口变化增量维护
-- 前端包体积治理可以并行推进，但应作为横切任务单独管理
-- 后台管理模块专项由 `admin-module-goal-roadmap.md` 细化调度，任务级约束仍以 `docs/08-tasks/active/` 为准
+- **阶段 1-3 依赖阶段 0**：安全和合规是上线前提，必须先完成
+- **阶段 4 依赖所有功能开发**：全链路测试需要所有功能就绪
+- **UI/UX 改进已部分完成**：消息中心和交易中心第二轮已落地，设置页面和跨页面一致性仍需继续收口
+- **ICP 备案需要提前启动**：审批需要 20-30 个工作日
+- **前端包体积治理可以并行**：作为横切任务独立推进
+
+**可并行工作**：
+- 阶段 0：安全加固 + 隐私合规（不同开发者）
+- 阶段 1：性能优化（后端）+ 消息功能（全栈）+ 个性化设置（前端）
+- 阶段 2：管理功能 + 营销功能 + 数据统计（可分配给不同开发者）
+- 后台管理模块已完成当前专项；后续扩展继续以 `admin-module-goal-roadmap.md` 和新的 active task 为准
 
 ## 使用规则
 

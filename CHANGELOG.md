@@ -201,6 +201,51 @@
 
 ---
 
+## [2026-05-27] - Message Center Interaction Corrections
+
+### frontend
+- Reworked message search date filtering into a compact trigger with a floating multi-select/range calendar.
+- Centered and constrained the emoji/sticker panel so it no longer spills past the composer.
+- Replaced the hard-to-hit recall button with a hover action rail beside message bubbles.
+- Added hover timestamps for message bubbles.
+
+### test
+- Verified frontend unit tests and frontend production build.
+
+---
+
+## [2026-05-27] - Message Center UI Polish Follow-up
+
+### frontend
+- Removed uploaded image file names from image-message captions.
+- Constrained the emoji/sticker panel width so it stays inside the composer area.
+- Replaced two separate date inputs in message search with a single continuous date-range calendar.
+- Localized and tightened the notification center UI copy.
+
+### data
+- Expanded message-center notification seed rows with Chinese order, review, and system examples.
+
+### test
+- Verified frontend unit tests, frontend production build, and targeted backend chat controller tests.
+
+---
+
+## [2026-05-27] - Message Center UI Swipe and Composer Polish
+
+### frontend
+- Reworked the message conversation list with clearer row hierarchy, active state, category tags, and swipe actions for pin, mute, and delete.
+- Aligned self-message bubbles with the existing restrained message-center palette.
+- Added emoji insertion and lightweight sticker sending from the composer.
+- Updated quick replies to show only current-scenario presets plus user custom replies, with inline custom reply creation and deletion.
+
+### data
+- Added Zhang San custom quick-reply seed rows to `seed-chat-data.sql` for acceptance testing.
+
+### test
+- Verified frontend unit tests, frontend production build, and targeted backend chat controller tests.
+
+---
+
 ## [2026-05-27] - Message Center P2 Experience Tools
 
 ### feat
@@ -247,6 +292,98 @@
 - Verified backend tests, frontend tests, and frontend production build.
 
 ---
+
+## [2026-05-26] - Message Center Acceptance Fixes
+
+### fix
+- Added seed unread chat counters and notification rows so red-dot/read-state behavior is visible in acceptance data.
+- Moved notifications out of top-level app navigation and embedded them under the message center.
+- Stabilized conversation switching by scrolling only the message thread container and removing thread/bubble entrance animations.
+
+### test
+- Added backend coverage for chat unread count and mark-read behavior.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
+
+## [2026-05-25] - Message Center P0 Completion
+
+### feat
+- Added chat unread counts, conversation read-state tracking, and global message unread badges.
+- Added image messages with Base64 fallback upload, image bubbles, failure placeholders, and full-screen preview.
+- Added in-app notification module with unread counts, notification list, read/read-all actions, and order-status notification hooks.
+
+### backend
+- Extended chat conversation/message persistence for unread counts, read timestamps, message type, and media payloads.
+- Added notification controller, service, mapper, entity, and schema table.
+- Integrated order and mock-payment status transitions with best-effort notification delivery.
+
+### frontend
+- Updated message center store and view for unread synchronization and image messages.
+- Added notification API module, Pinia store, route, and notification list page.
+- Added desktop and mobile navigation badges for chat and notifications.
+
+### docs
+- Added chat and notification API specs.
+- Updated chat and notification HTTP smoke collections.
+- Archived completed P0 message-center task documents.
+
+### test
+- Sub-agents reported passing backend tests, frontend tests, and frontend build before final integration.
+- Final integrated verification rerun is recorded in the task completion response.
+
+---
+
+## [2026-05-25] - System Architecture and Launch Preparation Roadmap
+
+### docs
+- Created comprehensive data management and privacy compliance guide (`docs/03-architecture/data-management-and-privacy.md`)
+- Created performance and scalability guide with optimization roadmap (`docs/03-architecture/performance-and-scalability.md`)
+- Created operations and deployment standards document (`docs/04-standards/operations-and-deployment.md`)
+- Created launch preparation roadmap with 4-phase implementation plan (`docs/05-roadmap/current/launch-preparation-roadmap.md`)
+- Updated documentation index to include new architecture and standards documents
+- Updated stage and feature roadmaps to reflect launch preparation focus
+
+### architecture
+- Documented data storage strategy and browser storage limitations
+- Defined privacy compliance requirements (PIPL, user rights, legal documents)
+- Outlined performance baselines and known bottlenecks (recommendation engine, media storage, search logging)
+- Established three-phase optimization roadmap (pre-launch, post-launch, scale-out)
+- Specified security hardening requirements (HTTPS, JWT secrets, CORS, input validation)
+- Defined deployment architecture with containerization and CI/CD enhancement
+
+### standards
+- Established pre-launch deployment checklist with security requirements
+- Documented backup strategy, logging configuration, and monitoring setup
+- Created operational procedures (deployment runbook, incident response, database migration)
+- Defined compliance requirements (ICP filing, data residency, cost optimization)
+- Added cost estimation for three growth phases (¥400/month → ¥1000/month → ¥3800/month)
+
+### compliance
+- Specified required legal documents (privacy policy, user agreement, cookie policy)
+- Defined user rights implementation (data export, account deletion, consent logging)
+- Outlined database schema additions for consent tracking and soft deletion
+- Documented frontend changes for cookie consent and legal document pages
+
+### roadmap
+- Established 4-phase launch preparation plan (13 weeks total):
+  - Phase 0 (P0, 2-3 weeks): Security hardening, privacy compliance, infrastructure, containerization
+  - Phase 1 (P1, 3-4 weeks): Performance optimization, messaging features, user personalization
+  - Phase 2 (P2, 3-4 weeks): Admin features, marketing (coupons, promotions), data analytics
+  - Phase 3 (P3, 2-3 weeks): UI/UX improvements, frontend bundle optimization
+  - Phase 4 (P0, 1 week): Full testing, operations documentation, compliance verification
+- Defined parallel work streams and dependency relationships
+- Estimated cloud service costs: ¥400/month (Phase 0-1) → ¥1000/month (Phase 2-3) → ¥1000-3800/month (post-launch)
+- Identified high-risk items: Redis caching strategy, OSS migration, coupon concurrency, UI/UX requirements clarity
+
+### agent-protocol
+- Updated `CLAUDE.md` to require agents read system architecture constraints before starting tasks
+- Added references to data management, performance, and operations documents in pre-task checklist
+- Updated stage roadmap to reflect "launch preparation and engineering governance" phase
+- Updated feature roadmap with current status of all major features (security, compliance, performance, admin, marketing, UI/UX)
+
+---
+
 ## [2026-05-25] - Home and Explore UX Bundle Update
 
 ### feat
@@ -299,6 +436,85 @@
 - Verified seed data loads without errors
 - Verified conversations appear in messages view
 - Verified message timestamps and ordering
+
+---
+
+## [2026-05-27] - Trade mobile primary action bar
+
+### feat
+- Added a reusable mobile-only trade action bar for cart, checkout, and payment flows.
+- Cart mobile now keeps selected count, selected amount, and the `去结算` action fixed above the bottom navigation.
+- Checkout mobile now keeps payable amount, fulfillment context, and the guarded `提交订单` action fixed above the bottom navigation.
+- Payment mobile now keeps payable amount, payment/order status, and the payable-only mock payment action fixed above the bottom navigation.
+
+### docs
+- Completed and archived `docs/08-tasks/archived/trade-mobile-primary-action-bar.md`.
+
+### test
+- Head-agent verification after installing frontend dependencies: `npm test` passed with 7 test files and 30 tests.
+- `npm run build` passed.
+
+---
+
+## [2026-05-27] - Cart and payment API spec alignment
+
+### docs
+- Added formal cart and payment API specifications for the current trade-flow endpoints.
+- Split cart and payment HTTP smoke examples into dedicated `cart.http` and `payment.http` files.
+- Corrected `order.http` to remove unsupported status-filter examples and include current order creation requirements.
+- Archived the completed cart/payment API spec alignment task record.
+
+---
+
+## [2026-05-27] - Review entry and seed demo bridge
+
+### feat
+- Added an honest product-detail review entry that routes users to `/app/reviews/pending` without implying review eligibility before completed purchase validation.
+
+### docs
+- Updated the review HTTP validation asset with the seedbuyer completed-order path for exercising pending/product review behavior.
+- Archived the review-entry task record with completion notes.
+
+### test
+- `backend\\.\\mvnw.cmd test` passed with 100 tests.
+- Head-agent verification after installing frontend dependencies: `npm test` passed with 7 test files and 30 tests.
+- `npm run build` passed.
+
+---
+
+## [2026-05-27] - Order detail dedicated experience
+
+### feat
+- Added `/app/orders/:orderId` as an authenticated buyer order-detail route with direct refresh support.
+- Moved buyer-side order detail sections into `OrderDetailView.vue`, covering status, items, fulfillment, digital assets, payments, refunds, reports, and message entry points.
+- Added mobile-stable primary actions for pay, cancel, receipt confirmation, offline confirmation, and refund actions while preserving `availableActions` gating.
+
+### refactor
+- Simplified `OrdersView.vue` back to list, metrics, filters, payment shortcut, and detail-route navigation.
+- Preserved `/app/orders?orderId=` compatibility by redirecting legacy query links to the dedicated detail route.
+
+### test
+- Head-agent verification after installing frontend dependencies: `npm test` passed with 7 test files and 30 tests.
+- `npm run build` passed.
+
+### docs
+- Archived the completed order-detail task record with implementation and verification notes.
+
+---
+
+## [2026-05-27] - Trade center live status dashboard
+
+### feat
+- Reworked `/app/trade` into a live transaction dashboard using the existing cart, order, and pending-review APIs.
+- Added real counts for cart items, selected cart items, pending payment, pending receipt, refund in progress, completed orders, and pending reviews.
+- Added prioritized next-action cards plus partial error, retry, loading, and all-empty states while preserving quick navigation to cart, orders, pending reviews, and my reviews.
+
+### docs
+- Completed and archived `docs/08-tasks/archived/trade-center-live-status-dashboard.md`.
+
+### test
+- Head-agent verification after installing frontend dependencies: `npm test` passed with 7 test files and 30 tests.
+- `npm run build` passed.
 
 ---
 

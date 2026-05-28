@@ -34,6 +34,8 @@ Engineering architecture documents:
 - payment implementation strategy
 - UI/UX constitution and redesign direction
 - frontend information architecture and route distribution
+- data management and privacy compliance
+- performance and scalability guide
 
 ### `04-standards/`
 
@@ -45,6 +47,7 @@ Repository standards and governance:
 - contribution workflow
 - testing workflow
 - course constraints and acceptance rules
+- operations and deployment standards
 - glossary
 
 ### `05-roadmap/`
@@ -88,7 +91,9 @@ Formal API specification documents.
 - current module specs:
   - `admin.md`
   - `auth.md`
+  - `cart.md`
   - `order.md`
+  - `payment.md`
   - `product.md`
   - `recommend.md`
   - `report.md`

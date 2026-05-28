@@ -11,6 +11,14 @@
 - Completed scope: message search, conversation pin/mute/delete, message recall, auto-reply settings and trigger flow.
 - Verification: backend tests, frontend tests, and frontend production build passed.
 
+## P3 UI Polish Update
+
+- Date: 2026-05-27
+- Status: message-center UI polish pass is complete.
+- Completed scope: clearer conversation rows, swipe conversation actions, emoji/sticker composer entry, scoped custom quick replies, floating multi/range date filter, localized notification UI/data, improved recall hover action, and bubble hover timestamps.
+- Task record: `docs/08-tasks/archived/message-center-ui-polish.md`
+- Verification: frontend tests, frontend production build, and targeted backend chat controller tests passed.
+
 ## 当前状态
 
 **已完成**：
@@ -24,12 +32,14 @@
 - ✅ 商品卡片消息
 - ✅ 订单卡片消息
 - ✅ 快捷回复
+- ✅ 消息搜索
+- ✅ 会话管理（置顶、删除、静音）
+- ✅ 消息撤回
+- ✅ 自动回复
+- ✅ 消息界面 UI/UX 优化
 
 **待开发功能**：
-- ❌ 消息搜索
-- ❌ 会话管理（置顶、删除、静音）
-- ❌ 消息撤回
-- ❌ 自动回复
+- 暂无已批准的消息中心后续任务
 
 ---
 
@@ -71,10 +81,10 @@
 
 | 任务 ID | 功能 | 业务价值 | 预计工时 |
 |---------|------|----------|----------|
-| task-08 | 消息搜索 | 按关键词、时间筛选历史消息 | 8-10h |
-| task-09 | 会话管理 | 置顶、删除、静音会话 | 6-8h |
-| task-10 | 消息撤回 | 2分钟内可撤回错误消息 | 4-6h |
-| task-11 | 自动回复 | 卖家离线时自动回复 | 6-8h |
+| task-08 | 消息搜索（已完成） | 按关键词、时间筛选历史消息 | 8-10h |
+| task-09 | 会话管理（已完成） | 置顶、删除、静音会话 | 6-8h |
+| task-10 | 消息撤回（已完成） | 2分钟内可撤回错误消息 | 4-6h |
+| task-11 | 自动回复（已完成） | 卖家离线时自动回复 | 6-8h |
 
 **并行策略**:
 - task-08, task-09, task-10 完全独立,可并行
@@ -96,10 +106,10 @@ P1 阶段（3个任务,部分并行）:
 └─ task-06: 快捷回复 [已完成]
 
 P2 阶段（4个任务,部分并行）:
-├─ task-08: 消息搜索 [独立]
-├─ task-09: 会话管理 [独立]
-├─ task-10: 消息撤回 [独立]
-└─ task-11: 自动回复 [依赖 task-06]
+├─ task-08: 消息搜索 [已完成]
+├─ task-09: 会话管理 [已完成]
+├─ task-10: 消息撤回 [已完成]
+└─ task-11: 自动回复 [已完成]
 ```
 
 ---
@@ -180,14 +190,29 @@ P2 阶段（4个任务,部分并行）:
 ### P2 阶段整体验收
 
 **功能验收**:
-- [ ] 可以搜索历史消息（按关键词、时间）
-- [ ] 可以置顶、删除、静音会话
-- [ ] 可以撤回 2 分钟内的消息
-- [ ] 卖家离线时自动回复
+- [x] 可以搜索历史消息（按关键词、时间）
+- [x] 可以置顶、删除、静音会话
+- [x] 可以撤回 2 分钟内的消息
+- [x] 卖家离线时自动回复
 
 **技术验收**:
-- [ ] 所有测试通过
-- [ ] 文档已更新
+- [x] 所有测试通过
+- [x] 文档已更新
+
+### P3 UI/UX 优化验收
+
+**功能验收**:
+- [x] 左侧会话行层级更清晰，并支持滑动置顶、静音和删除。
+- [x] 表情、表情包入口可用，上传图片不会自动带文件名说明。
+- [x] 快捷回复只展示当前场景预设和用户自定义内容，支持新增/删除。
+- [x] 消息搜索日期筛选使用悬浮日历，支持多选和范围选择。
+- [x] 通知页面使用中文 UI 和后端 seed 示例数据。
+- [x] 撤回入口可点击性提升，气泡 hover 展示时间戳。
+
+**技术验收**:
+- [x] `frontend/npm test` 通过
+- [x] `frontend/npm run build` 通过
+- [x] targeted backend chat controller tests 通过
 
 ---
 
@@ -259,4 +284,6 @@ P2 阶段（4个任务,部分并行）:
 
 | 日期 | 变更 | 负责人 |
 |------|------|--------|
+| 2026-05-27 | 完成消息中心 P3 UI/UX 优化并归档任务 | Codex |
+| 2026-05-27 | 完成 P2 体验优化并同步验收状态 | Codex |
 | 2026-05-25 | 重写为头 Agent 协调文档 | Claude |

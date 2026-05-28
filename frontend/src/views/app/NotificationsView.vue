@@ -18,14 +18,14 @@ const router = useRouter()
 const store = useNotificationStore()
 
 const unreadText = computed(() => {
-  if (store.unreadCount <= 0) return 'No unread notifications'
-  return `${store.unreadCount} unread`
+  if (store.unreadCount <= 0) return '暂无未读通知'
+  return `${store.unreadCount} 条未读通知`
 })
 
 const typeMeta = {
-  order_status: { label: 'Order', tone: 'success', icon: 'Order' },
-  review_reminder: { label: 'Review', tone: 'warning', icon: 'Review' },
-  system: { label: 'System', tone: 'info', icon: 'Info' }
+  order_status: { label: '订单', tone: 'success', icon: '订单' },
+  review_reminder: { label: '评价', tone: 'warning', icon: '评价' },
+  system: { label: '系统', tone: 'info', icon: '系统' }
 }
 
 onMounted(async () => {
@@ -43,13 +43,13 @@ function formatTime(value) {
   if (Number.isNaN(date.getTime())) return value
   const diffMs = Date.now() - date.getTime()
   const diffMinutes = Math.max(0, Math.floor(diffMs / 60000))
-  if (diffMinutes < 1) return 'Just now'
-  if (diffMinutes < 60) return `${diffMinutes} min ago`
+  if (diffMinutes < 1) return '刚刚'
+  if (diffMinutes < 60) return `${diffMinutes} 分钟前`
   const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `${diffHours} h ago`
+  if (diffHours < 24) return `${diffHours} 小时前`
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays} d ago`
-  return date.toLocaleString()
+  if (diffDays < 7) return `${diffDays} 天前`
+  return date.toLocaleString('zh-CN')
 }
 
 async function openNotification(notification) {
@@ -61,16 +61,16 @@ async function openNotification(notification) {
       await router.push(notification.actionUrl)
     }
   } catch (error) {
-    ElMessage.error(error?.response?.data?.message || error?.message || 'Failed to open notification')
+    ElMessage.error(error?.response?.data?.message || error?.message || '打开通知失败')
   }
 }
 
 async function markAllRead() {
   try {
     await store.markAllRead()
-    ElMessage.success('All notifications marked as read')
+    ElMessage.success('已全部标记为已读')
   } catch (error) {
-    ElMessage.error(error?.response?.data?.message || error?.message || 'Failed to mark notifications')
+    ElMessage.error(error?.response?.data?.message || error?.message || '标记通知失败')
   }
 }
 
@@ -83,13 +83,13 @@ async function changePage(nextPage) {
   <section class="notifications-view" :class="{ 'notifications-view--embedded': props.embedded }">
     <section class="notifications-hero">
       <div>
-        <p class="notifications-hero__eyebrow">Message Center</p>
-        <h1>Notifications</h1>
+        <p class="notifications-hero__eyebrow">消息中心</p>
+        <h1>通知</h1>
         <p>{{ unreadText }}</p>
       </div>
       <div class="notifications-hero__actions">
         <el-button plain :loading="store.loading" @click="store.loadNotifications(store.page, store.size)">
-          Refresh
+          刷新
         </el-button>
         <el-button
           type="primary"
@@ -97,7 +97,7 @@ async function changePage(nextPage) {
           :disabled="store.unreadCount === 0"
           @click="markAllRead"
         >
-          Mark All Read
+          全部已读
         </el-button>
       </div>
     </section>
@@ -109,10 +109,10 @@ async function changePage(nextPage) {
     <EmptyState
       v-else-if="store.notifications.length === 0"
       emoji="i"
-      title="No notifications yet"
-      description="Order status updates and review reminders will appear here."
+      title="暂无通知"
+      description="订单状态、评价提醒和系统消息会显示在这里。"
     >
-      <el-button type="primary" @click="$router.push('/app/orders')">Go to Orders</el-button>
+      <el-button type="primary" @click="$router.push('/app/orders')">查看订单</el-button>
     </EmptyState>
 
     <template v-else>
@@ -134,7 +134,7 @@ async function changePage(nextPage) {
             <div class="notification-item__meta">
               <el-tag size="small" :type="metaFor(item.type).tone">{{ metaFor(item.type).label }}</el-tag>
               <span>{{ formatTime(item.createdAt) }}</span>
-              <span v-if="!item.isRead" class="notification-item__unread">Unread</span>
+              <span v-if="!item.isRead" class="notification-item__unread">未读</span>
             </div>
             <h2>{{ item.title }}</h2>
             <p>{{ item.body }}</p>
