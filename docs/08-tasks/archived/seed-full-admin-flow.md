@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: seed-full-admin-flow
-- Status: blocked
-- Owner: unassigned
+- Status: completed
+- Owner: Codex
 - Track: cross-cutting
 - Depends on: admin entry, mediation implementation, audit log foundation, role permission model
 - Priority: medium
 - Planned date: 2026-05-28
-- Completed date:
+- Completed date: 2026-05-28
 
 ## Objective
 
@@ -86,14 +86,14 @@ No API contract change is expected. If seeded tokens, users, or sample IDs in HT
 
 ## Acceptance Criteria
 
-- [ ] Seed data covers the current admin workbench and all implemented core queues.
-- [ ] Seed data includes role-specific admin accounts after role implementation.
-- [ ] Seed data includes a full dispute/mediation scenario after mediation implementation.
-- [ ] Seed records are compatible with schema and business validation.
-- [ ] Verification walkthrough is documented.
-- [ ] Required tests and smoke checks pass.
-- [ ] `CHANGELOG.md` is updated.
-- [ ] Completion notes are filled before archive.
+- [x] Seed data covers the current admin workbench and all implemented core queues.
+- [x] Seed data includes role-specific admin accounts after role implementation.
+- [x] Seed data includes a full dispute/mediation scenario after mediation implementation.
+- [x] Seed records are compatible with schema and business validation.
+- [x] Verification walkthrough is documented.
+- [x] Required tests and smoke checks pass.
+- [x] `CHANGELOG.md` is updated.
+- [x] Completion notes are filled before archive.
 
 ## Sub-agent Instructions
 
@@ -114,10 +114,27 @@ Return:
 ## Documentation Updates Required
 
 - [x] `CHANGELOG.md`
-- [ ] relevant files in `docs/06-http/`
-- [ ] roadmap or standards docs if applicable
+- [x] relevant files in `docs/06-http/`
+- [x] roadmap or standards docs if applicable (not required)
 - [x] task status and archive move
 
 ## Completion Notes
 
-(Filled in by implementing sub-agent and accepted by head Agent.)
+- Current seed coverage includes:
+  - dashboard queues for pending verification, product review, shop review, reports, orders, and mediation;
+  - role-specific staff accounts: `superadmin`, `supportagent`, `reviewer`, `operator`, `orderadmin`, all using password `admin123`;
+  - order-backed report scenarios `6010`, `6011`, `6012`;
+  - active mediation case `70001` and resolved mediation case `70002`;
+  - read-only order chat context for mediation via order `8008`;
+  - seeded admin audit logs `92001` through `92006`.
+- Added `docs/06-http/admin-full-flow.http` as the local walkthrough from dashboard to queues, order/report/mediation context, audit logs, and role permission smoke checks.
+- Updated `CHANGELOG.md`.
+- Verification:
+  - `backend/ .\mvnw.cmd test` passed.
+  - `frontend/ npm test` passed.
+  - `frontend/ npm run build` passed.
+  - `git diff --check` passed.
+
+## Head Agent Notes
+
+- 2026-05-28: Unblocked after `admin-role-permission-model` was completed and committed. All listed dependencies are now archived.

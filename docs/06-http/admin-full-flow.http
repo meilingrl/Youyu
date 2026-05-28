@@ -1,0 +1,65 @@
+### Youyu - Full Admin Flow Seed Walkthrough
+### Start backend with seed profile before running:
+### backend\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=seed
+
+@baseUrl = http://localhost:8080
+@adminToken = mock-9001-ADMIN
+@superAdminToken = mock-9101-SUPER_ADMIN
+@supportToken = mock-9102-SUPPORT_AGENT
+@reviewerToken = mock-9103-REVIEWER
+@operatorToken = mock-9104-OPERATOR
+@orderAdminToken = mock-9105-ORDER_ADMIN
+
+### 1. Super admin dashboard should show live queues.
+GET {{baseUrl}}/api/admin/dashboard
+Authorization: Bearer {{superAdminToken}}
+
+### 2. Reviewer checks pending student verification seed records.
+GET {{baseUrl}}/api/admin/verifications?status=pending_review&page=1&pageSize=10
+Authorization: Bearer {{reviewerToken}}
+
+### 3. Reviewer checks pending product review tasks.
+GET {{baseUrl}}/api/admin/review-tasks?status=pending_review&page=1&pageSize=10
+Authorization: Bearer {{reviewerToken}}
+
+### 4. Reviewer checks pending shop admission.
+GET {{baseUrl}}/api/admin/shops?reviewStatus=pending_review&page=1&pageSize=10
+Authorization: Bearer {{reviewerToken}}
+
+### 5. Support agent reviews pending and processing reports.
+GET {{baseUrl}}/api/admin/reports?page=1&pageSize=10
+Authorization: Bearer {{supportToken}}
+
+### 6. Order admin reviews seeded order queues.
+GET {{baseUrl}}/api/admin/orders
+Authorization: Bearer {{orderAdminToken}}
+
+### 7. Support agent opens active mediation case with order and chat context.
+GET {{baseUrl}}/api/admin/mediation-cases/70001
+Authorization: Bearer {{supportToken}}
+
+### 8. Super admin reviews resolved mediation decision path.
+GET {{baseUrl}}/api/admin/mediation-cases/70002
+Authorization: Bearer {{superAdminToken}}
+
+### 9. Operator reviews search governance rules and logs.
+GET {{baseUrl}}/api/admin/search/governance-rules
+Authorization: Bearer {{operatorToken}}
+
+### 10. Super admin reviews seeded audit trail examples.
+GET {{baseUrl}}/api/admin/audit-logs?page=1&pageSize=10
+Authorization: Bearer {{superAdminToken}}
+
+### 11. Permission smoke: reviewer cannot access admin orders.
+GET {{baseUrl}}/api/admin/orders
+Authorization: Bearer {{reviewerToken}}
+
+### 12. Permission smoke: support agent cannot make final mediation decision.
+POST {{baseUrl}}/api/admin/mediation-cases/70001/decision
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "decisionCategory": "order_completion_required",
+  "decisionSummary": "Permission smoke should be rejected."
+}

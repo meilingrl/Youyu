@@ -1,3 +1,16 @@
+## [2026-05-28] - Seed Full Admin Flow
+
+### test
+- Added seeded admin audit-log examples and a full admin-flow HTTP walkthrough covering dashboard, review queues, reports, orders, mediation, search governance, audit logs, and role permission smoke checks.
+
+### docs
+- Documented seeded credentials and end-to-end local admin verification steps in `docs/06-http/admin-full-flow.http`.
+
+### verify
+- Verified backend tests, frontend tests, frontend production build, and diff checks.
+
+---
+
 ## [2026-05-28] - Admin Role Permission Model
 
 ### feat

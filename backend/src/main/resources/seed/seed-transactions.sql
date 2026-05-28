@@ -1,5 +1,6 @@
 -- Idempotent cart + order seed (reserved ids). Safe to re-run under profile `seed`.
 DELETE FROM mediation_cases WHERE related_order_id BETWEEN 8001 AND 8010;
+DELETE FROM admin_audit_logs WHERE id BETWEEN 92001 AND 92010;
 DELETE FROM chat_messages WHERE order_id BETWEEN 8001 AND 8010;
 DELETE FROM order_items WHERE order_id BETWEEN 8001 AND 8010;
 DELETE FROM order_fulfillments WHERE order_id BETWEEN 8001 AND 8010;
@@ -139,3 +140,27 @@ ON DUPLICATE KEY UPDATE
     decided_at = VALUES(decided_at),
     updated_at = VALUES(updated_at),
     last_status_changed_at = VALUES(last_status_changed_at);
+
+INSERT INTO admin_audit_logs (
+    id, operator_user_id, operator_role, action, target_type, target_id, summary, created_at
+) VALUES
+(92001, 9001, 'ADMIN', 'USER_STATUS_UPDATE', 'USER', 1003,
+ 'Seed audit: disabled risk account remains under review.', '2026-05-27 08:30:00'),
+(92002, 9103, 'REVIEWER', 'STUDENT_VERIFICATION_REVIEW', 'STUDENT_VERIFICATION', 2003,
+ 'Seed audit: rejected verification due to identity mismatch.', '2026-05-27 08:45:00'),
+(92003, 9103, 'REVIEWER', 'PRODUCT_REVIEW_TASK_REVIEW', 'PRODUCT_REVIEW_TASK', 5001,
+ 'Seed audit: approved digital material after source statement check.', '2026-05-27 09:00:00'),
+(92004, 9102, 'SUPPORT_AGENT', 'REPORT_PROCESS', 'REPORT', 6011,
+ 'Seed audit: escalated order-backed report into mediation context.', '2026-05-27 09:35:00'),
+(92005, 9104, 'OPERATOR', 'SEARCH_GOVERNANCE_RULE_UPDATE', 'SEARCH_GOVERNANCE_RULE', 1,
+ 'Seed audit: reviewed hot-search governance rule state.', '2026-05-27 10:10:00'),
+(92006, 9001, 'ADMIN', 'SHOP_STATUS_UPDATE', 'SHOP', 4003,
+ 'Seed audit: pending shop kept in review queue for local verification.', '2026-05-27 10:40:00')
+ON DUPLICATE KEY UPDATE
+    operator_user_id = VALUES(operator_user_id),
+    operator_role = VALUES(operator_role),
+    action = VALUES(action),
+    target_type = VALUES(target_type),
+    target_id = VALUES(target_id),
+    summary = VALUES(summary),
+    created_at = VALUES(created_at);
