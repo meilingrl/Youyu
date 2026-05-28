@@ -5,8 +5,20 @@ import appRoutes from '../modules/app'
 import adminRoutes from '../modules/admin'
 import { setupRouterGuards } from '../guards'
 import { useAuthStore } from '@/stores/auth'
+import { getAuthStorage } from '@/utils/auth'
+import { isAdminRole } from '@/utils/admin-permissions'
+
+const AUTH_STORAGE_KEY = 'youyu-auth'
+
+function resolveRootEntry() {
+  return isAdminRole(getAuthStorage()?.role) ? '/admin/dashboard' : '/app/home'
+}
 
 const routes = [
+  {
+    path: '/',
+    redirect: resolveRootEntry
+  },
   {
     path: '/login',
     name: 'login',
@@ -82,11 +94,96 @@ describe('router guards', () => {
     expect(router.currentRoute.value.path).toBe('/app/home')
   })
 
+  it('routes a regular user default entry to the app home', async () => {
+    setSession('user')
+    const router = createTestRouter()
+
+    await navigate(router, '/')
+
+    expect(router.currentRoute.value.path).toBe('/app/home')
+  })
+
   it('allows an admin user to visit the admin dashboard', async () => {
     setSession('admin')
     const router = createTestRouter()
 
     await navigate(router, '/admin/dashboard')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('allows an admin user to visit mediation list and detail routes', async () => {
+    setSession('admin')
+    const router = createTestRouter()
+
+    await navigate(router, '/admin/mediation')
+    expect(router.currentRoute.value.name).toBe('admin-mediation')
+
+    await navigate(router, '/admin/mediation/70001')
+    expect(router.currentRoute.value.name).toBe('admin-mediation-detail')
+    expect(router.currentRoute.value.meta.navKey).toBe('/admin/mediation')
+  })
+
+  it('routes an admin default entry to the admin dashboard', async () => {
+    setSession('admin')
+    const router = createTestRouter()
+
+    await navigate(router, '/')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('routes a restored uppercase admin session default entry to the admin dashboard', async () => {
+    window.localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        token: 'admin.token',
+        role: 'ADMIN',
+        user: {
+          id: '9001',
+          loginId: 'admin'
+        }
+      })
+    )
+    const router = createTestRouter()
+
+    await navigate(router, '/')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('allows specialist admin roles to enter the dashboard', async () => {
+    setSession('reviewer')
+    const router = createTestRouter()
+
+    await navigate(router, '/')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('redirects specialist admin roles away from unavailable admin pages', async () => {
+    setSession('reviewer')
+    const router = createTestRouter()
+
+    await navigate(router, '/admin/orders')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
+  it('allows specialist admin roles to visit permitted admin pages', async () => {
+    setSession('order_admin')
+    const router = createTestRouter()
+
+    await navigate(router, '/admin/orders')
+
+    expect(router.currentRoute.value.path).toBe('/admin/orders')
+  })
+
+  it('redirects an admin away from user-only app pages to the admin dashboard', async () => {
+    setSession('admin')
+    const router = createTestRouter()
+
+    await navigate(router, '/app/profile')
 
     expect(router.currentRoute.value.path).toBe('/admin/dashboard')
   })

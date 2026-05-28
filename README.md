@@ -69,7 +69,8 @@ cd Youyu
 From `backend/`:
 
 ```bash
-mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=seed
+$env:SPRING_PROFILES_ACTIVE="seed"
+mvnw.cmd spring-boot:run
 ```
 
 Use the seed profile the first time when you want demo users, demo products, and seeded transaction data.
@@ -77,6 +78,7 @@ Use the seed profile the first time when you want demo users, demo products, and
 For normal daily startup:
 
 ```bash
+$env:SPRING_PROFILES_ACTIVE=""
 mvnw.cmd spring-boot:run
 ```
 

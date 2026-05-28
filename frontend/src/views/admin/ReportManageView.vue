@@ -1,10 +1,12 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
-import { getAdminReports, processAdminReport } from '@/api/modules/admin'
+import { escalateAdminReportToMediation, getAdminReports, processAdminReport } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
 
+const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 const rows = ref([])
@@ -49,6 +51,35 @@ function onSearch() {
   loadReports()
 }
 
+function canProcessReport(row) {
+  return ['pending', 'processing'].includes(row.status)
+}
+
+function canEscalateToMediation(row) {
+  return ['order', 'digital_order'].includes(row.targetType)
+}
+
+async function escalateToMediation(row) {
+  try {
+    const result = await ElMessageBox.prompt('Escalation reason', 'Escalate to mediation', {
+      confirmButtonText: 'Submit',
+      cancelButtonText: 'Cancel'
+    })
+    const response = await escalateAdminReportToMediation(row.id, {
+      escalationReason: result.value
+    })
+    ElMessage.success(response.data.created ? 'Mediation case created' : 'Existing mediation case returned')
+    await loadReports()
+    if (response.data.case?.id) {
+      router.push(`/admin/mediation/${response.data.case.id}`)
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(resolveErrorMessage(error))
+    }
+  }
+}
+
 async function process(row, status) {
   try {
     const result = await ElMessageBox.prompt('请填写处理结论', '举报处理', {
@@ -89,6 +120,8 @@ onMounted(loadReports)
           <el-option label="用户" value="user" />
           <el-option label="商品" value="product" />
           <el-option label="店铺" value="shop" />
+          <el-option label="Order" value="order" />
+          <el-option label="Digital order" value="digital_order" />
         </el-select>
         <el-select v-model="filters.status" placeholder="处理状态" clearable>
           <el-option label="待处理" value="pending" />
@@ -111,6 +144,14 @@ onMounted(loadReports)
         <el-table-column label="操作" min-width="220" fixed="right">
           <template #default="{ row }">
             <el-button
+              v-if="canEscalateToMediation(row)"
+              link
+              type="primary"
+              @click="escalateToMediation(row)"
+            >
+              Mediation
+            </el-button>
+            <el-button
               v-if="row.status === 'pending'"
               link
               type="warning"
@@ -119,7 +160,7 @@ onMounted(loadReports)
               标记处理中
             </el-button>
             <el-button
-              v-if="row.status !== 'resolved'"
+              v-if="canProcessReport(row)"
               link
               type="success"
               @click="process(row, 'resolved')"
@@ -127,13 +168,14 @@ onMounted(loadReports)
               处理完成
             </el-button>
             <el-button
-              v-if="row.status !== 'rejected'"
+              v-if="canProcessReport(row)"
               link
               type="danger"
               @click="process(row, 'rejected')"
             >
               驳回举报
             </el-button>
+            <el-tag v-if="!canProcessReport(row)" type="info" effect="plain">无需操作</el-tag>
           </template>
         </el-table-column>
       </el-table>

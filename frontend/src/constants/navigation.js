@@ -15,14 +15,15 @@ export const mobileBottomNavigation = [
 ]
 
 export const adminNavigation = [
-  { label: '后台首页', path: '/admin/dashboard' },
-  { label: '用户管理', path: '/admin/users' },
-  { label: '认证管理', path: '/admin/verifications' },
-  { label: '商品管理', path: '/admin/products' },
-  { label: '资料审核', path: '/admin/review-tasks' },
-  { label: '店铺管理', path: '/admin/shops' },
-  { label: '订单管理', path: '/admin/orders' },
-  { label: '举报处理', path: '/admin/reports' },
-  { label: '热搜治理', path: '/admin/hot-search' },
-  { label: '客服治理', path: '/admin/support' }
+  { label: '治理总览', path: '/admin/dashboard' },
+  { label: '用户与身份', path: '/admin/users' },
+  { label: '学生认证队列', path: '/admin/verifications' },
+  { label: '商品治理', path: '/admin/products' },
+  { label: '资料审核队列', path: '/admin/review-tasks' },
+  { label: '店铺准入', path: '/admin/shops' },
+  { label: '订单履约', path: '/admin/orders' },
+  { label: '举报处置', path: '/admin/reports' },
+  { label: 'Mediation', path: '/admin/mediation' },
+  { label: '搜索治理', path: '/admin/hot-search' },
+  { label: '支持上下文', path: '/admin/support' }
 ]

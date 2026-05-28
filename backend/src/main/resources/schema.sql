@@ -356,6 +356,55 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE INDEX idx_reports_submitted ON reports(submitted_at);
 CREATE INDEX idx_reports_status_submitted ON reports(status, submitted_at);
 
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    operator_user_id BIGINT NOT NULL,
+    operator_role VARCHAR(32) NOT NULL,
+    action VARCHAR(64) NOT NULL,
+    target_type VARCHAR(64) NOT NULL,
+    target_id BIGINT NOT NULL,
+    summary VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_admin_audit_log_operator FOREIGN KEY (operator_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_admin_audit_logs_created ON admin_audit_logs(created_at, id);
+CREATE INDEX idx_admin_audit_logs_action_created ON admin_audit_logs(action, created_at, id);
+CREATE INDEX idx_admin_audit_logs_target ON admin_audit_logs(target_type, target_id, created_at, id);
+CREATE INDEX idx_admin_audit_logs_operator ON admin_audit_logs(operator_user_id, created_at, id);
+
+CREATE TABLE IF NOT EXISTS mediation_cases (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    case_no VARCHAR(40) NOT NULL UNIQUE,
+    source_report_id BIGINT NOT NULL UNIQUE,
+    related_order_id BIGINT NOT NULL,
+    buyer_user_id BIGINT NOT NULL,
+    seller_user_id BIGINT NOT NULL,
+    reporter_user_id BIGINT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'opened',
+    decision_category VARCHAR(64),
+    decision_summary TEXT,
+    enforcement_summary TEXT,
+    cancel_reason VARCHAR(500),
+    decided_by_admin_user_id BIGINT,
+    decided_at TIMESTAMP,
+    created_by_admin_user_id BIGINT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_status_changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_mediation_case_report FOREIGN KEY (source_report_id) REFERENCES reports(id),
+    CONSTRAINT fk_mediation_case_order FOREIGN KEY (related_order_id) REFERENCES orders(id),
+    CONSTRAINT fk_mediation_case_buyer FOREIGN KEY (buyer_user_id) REFERENCES users(id),
+    CONSTRAINT fk_mediation_case_seller FOREIGN KEY (seller_user_id) REFERENCES users(id),
+    CONSTRAINT fk_mediation_case_reporter FOREIGN KEY (reporter_user_id) REFERENCES users(id),
+    CONSTRAINT fk_mediation_case_created_by FOREIGN KEY (created_by_admin_user_id) REFERENCES users(id),
+    CONSTRAINT fk_mediation_case_decided_by FOREIGN KEY (decided_by_admin_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_mediation_cases_status_updated ON mediation_cases(status, updated_at, id);
+CREATE INDEX idx_mediation_cases_order ON mediation_cases(related_order_id);
+CREATE INDEX idx_mediation_cases_decision ON mediation_cases(decision_category);
+
 CREATE TABLE IF NOT EXISTS search_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     keyword VARCHAR(255) NOT NULL,

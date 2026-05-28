@@ -2,6 +2,7 @@ package com.youyu.backend.filter;
 
 import com.youyu.backend.common.auth.AuthContextHolder;
 import com.youyu.backend.common.auth.AuthUser;
+import com.youyu.backend.common.auth.AdminPermissionPolicy;
 import com.youyu.backend.common.auth.LoginRequired;
 import com.youyu.backend.common.auth.UserRole;
 import com.youyu.backend.common.exception.ForbiddenException;
@@ -34,11 +35,18 @@ public class AuthInterceptor implements HandlerInterceptor {
             throw new UnauthorizedException("Login is required for this endpoint");
         }
 
+        if (loginRequired.permissions().length > 0) {
+            if (!AdminPermissionPolicy.hasAnyPermission(authUser.getRole(), loginRequired.permissions())) {
+                throw new ForbiddenException("Current admin role is not allowed to access this capability");
+            }
+            return true;
+        }
+
         Set<String> allowedRoles = Arrays.stream(loginRequired.roles())
                 .map(UserRole::name)
                 .collect(Collectors.toSet());
 
-        if (!allowedRoles.contains(authUser.getRole())) {
+        if (!allowedRoles.contains(AdminPermissionPolicy.normalizeRoleName(authUser.getRole()))) {
             throw new ForbiddenException("Current role is not allowed to access this endpoint");
         }
         return true;

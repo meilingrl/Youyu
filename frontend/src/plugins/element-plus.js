@@ -14,7 +14,6 @@ import { ElSegmented } from 'element-plus/es/components/segmented/index.mjs'
 import { ElSelect, ElOption } from 'element-plus/es/components/select/index.mjs'
 import { ElSkeleton } from 'element-plus/es/components/skeleton/index.mjs'
 import { ElSwitch } from 'element-plus/es/components/switch/index.mjs'
-import { ElTable, ElTableColumn } from 'element-plus/es/components/table/index.mjs'
 import { ElTabs, ElTabPane } from 'element-plus/es/components/tabs/index.mjs'
 import { ElTag } from 'element-plus/es/components/tag/index.mjs'
 import 'element-plus/theme-chalk/base.css'
@@ -42,8 +41,6 @@ import 'element-plus/es/components/segmented/style/css'
 import 'element-plus/es/components/select/style/css'
 import 'element-plus/es/components/skeleton/style/css'
 import 'element-plus/es/components/switch/style/css'
-import 'element-plus/es/components/table/style/css'
-import 'element-plus/es/components/table-column/style/css'
 import 'element-plus/es/components/tab-pane/style/css'
 import 'element-plus/es/components/tabs/style/css'
 import 'element-plus/es/components/tag/style/css'
@@ -71,8 +68,6 @@ const components = [
   ElSelect,
   ElSkeleton,
   ElSwitch,
-  ElTable,
-  ElTableColumn,
   ElTabPane,
   ElTabs,
   ElTag

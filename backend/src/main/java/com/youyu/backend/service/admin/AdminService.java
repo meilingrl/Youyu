@@ -12,7 +12,7 @@ public interface AdminService {
 
     Map<String, Object> userDetail(Long userId);
 
-    Map<String, Object> updateUserStatus(Long userId, String status, String restrictionReason);
+    Map<String, Object> updateUserStatus(Long userId, String status, String restrictionReason, Long adminUserId);
 
     Map<String, Object> listVerifications(String keyword, String status, int page, int pageSize);
 
@@ -20,7 +20,7 @@ public interface AdminService {
 
     Map<String, Object> listProducts(String keyword, String status, String reviewStatus, String productType, int page, int pageSize);
 
-    Map<String, Object> updateProductStatus(Long productId, String status);
+    Map<String, Object> updateProductStatus(Long productId, String status, Long adminUserId);
 
     Map<String, Object> listReviewTasks(String keyword, String status, int page, int pageSize);
 
@@ -30,7 +30,7 @@ public interface AdminService {
 
     Map<String, Object> shopDetail(Long shopId);
 
-    Map<String, Object> updateShopStatus(Long shopId, String status, String reviewStatus, String rejectReason);
+    Map<String, Object> updateShopStatus(Long shopId, String status, String reviewStatus, String rejectReason, Long adminUserId);
 
     Map<String, Object> listReports(String keyword, String status, String targetType, int page, int pageSize);
 
@@ -38,11 +38,13 @@ public interface AdminService {
 
     java.util.List<Map<String, Object>> listSearchGovernanceRules();
 
-    Map<String, Object> createSearchGovernanceRule(Map<String, Object> command);
+    Map<String, Object> createSearchGovernanceRule(Map<String, Object> command, Long adminUserId);
 
-    Map<String, Object> updateSearchGovernanceRule(Long id, Map<String, Object> command);
+    Map<String, Object> updateSearchGovernanceRule(Long id, Map<String, Object> command, Long adminUserId);
 
-    void deleteSearchGovernanceRule(Long id);
+    void deleteSearchGovernanceRule(Long id, Long adminUserId);
 
     Map<String, Object> listSearchLogs(int page, int pageSize);
+
+    Map<String, Object> listAuditLogs(String action, String targetType, int page, int pageSize);
 }

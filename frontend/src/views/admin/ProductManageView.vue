@@ -50,6 +50,14 @@ function onSearch() {
   loadProducts()
 }
 
+function canPutOnSale(row) {
+  return row.status !== 'on_sale' && row.status !== 'closed' && ['approved', 'not_required'].includes(row.reviewStatus)
+}
+
+function hasProductAction(row) {
+  return canPutOnSale(row) || row.status === 'on_sale'
+}
+
 async function changeStatus(row, status) {
   try {
     await ElMessageBox.confirm(`确认将商品状态调整为 ${status} 吗？`, '商品状态变更', {
@@ -113,7 +121,7 @@ onMounted(loadProducts)
         <el-table-column label="操作" min-width="160" fixed="right">
           <template #default="{ row }">
             <el-button
-              v-if="row.status !== 'on_sale' && row.reviewStatus !== 'pending_review'"
+              v-if="canPutOnSale(row)"
               link
               type="success"
               @click="changeStatus(row, 'on_sale')"
@@ -128,6 +136,7 @@ onMounted(loadProducts)
             >
               下架
             </el-button>
+            <el-tag v-if="!hasProductAction(row)" type="info" effect="plain">无需操作</el-tag>
           </template>
         </el-table-column>
       </el-table>

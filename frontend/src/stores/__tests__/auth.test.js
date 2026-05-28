@@ -41,6 +41,7 @@ describe('auth store', () => {
     expect(loginApi).toHaveBeenCalledWith({ loginId: 'zhangsan', password: 'user123' })
     expect(store.session).toEqual(normalized)
     expect(store.currentRole).toBe('user')
+    expect(store.isAdmin).toBe(false)
     expect(store.currentUser).toEqual(session.user)
     expect(store.isLoggedIn).toBe(true)
     expect(JSON.parse(window.localStorage.getItem(AUTH_STORAGE_KEY))).toEqual(normalized)
@@ -61,8 +62,27 @@ describe('auth store', () => {
 
     expect(store.session).toEqual({ ...session, role: 'admin' })
     expect(store.currentRole).toBe('admin')
+    expect(store.isAdmin).toBe(true)
     expect(store.currentUser).toEqual(session.user)
     expect(store.isLoggedIn).toBe(true)
+  })
+
+  it('treats specialist admin roles as admin sessions', async () => {
+    const session = {
+      token: 'super.token',
+      role: 'SUPER_ADMIN',
+      user: {
+        id: '9101',
+        loginId: 'superadmin'
+      }
+    }
+    loginApi.mockResolvedValue({ data: session })
+
+    const store = setupStore()
+    await store.login({ loginId: 'superadmin', password: 'admin123' })
+
+    expect(store.currentRole).toBe('super_admin')
+    expect(store.isAdmin).toBe(true)
   })
 
   it('does not create a valid session when login fails', async () => {

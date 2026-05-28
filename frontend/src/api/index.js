@@ -1,4 +1,5 @@
 export * as authApi from './modules/auth'
+export * as adminApi from './modules/admin'
 export * as chatApi from './modules/chat'
 export * as favoriteApi from './modules/favorite'
 export * as notificationApi from './modules/notification'

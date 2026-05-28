@@ -7,7 +7,7 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/auth/AuthController.java`
   - controller: `backend/src/main/java/com/youyu/backend/controller/admin/AdminAuthController.java`
   - request sample: `docs/06-http/auth.http`
-- Last updated: 2026-05-16
+- Last updated: 2026-05-28
 
 ## Scope
 
@@ -29,7 +29,8 @@ It does not cover user profile, address, student verification, or preference end
 - `GET /api/auth/me`: login required
 - `POST /api/auth/logout`: login required
 
-Current project samples use Bearer tokens such as `mock-1001-USER`.
+Current project samples use Bearer tokens such as `mock-1001-USER`, `mock-9001-ADMIN`,
+and specialist admin tokens such as `mock-9103-REVIEWER`.
 
 ## Response Envelope
 
@@ -109,6 +110,8 @@ Log in through the admin login entrypoint.
 #### Response
 
 - `data` uses the same shared login result shape as `/api/auth/login`
+- Admin staff roles in `data.role` may be `admin`, `super_admin`, `support_agent`, `reviewer`, `operator`, or `order_admin`.
+- The legacy `admin` role remains full-access compatible with `super_admin`.
 
 #### Error Cases
 
@@ -158,6 +161,8 @@ Reserve a logout entrypoint for future session invalidation logic.
 ## Shared Types / Enumerations
 
 - Bearer token: current project examples use mock tokens during local development and testing
+- Mock token role segment accepts uppercase role names including underscores, for example `mock-9102-SUPPORT_AGENT`
+- Admin staff roles: `ADMIN`, `SUPER_ADMIN`, `SUPPORT_AGENT`, `REVIEWER`, `OPERATOR`, `ORDER_ADMIN`
 - Trace ID: every response may carry `traceId` for request tracing
 
 ## Notes

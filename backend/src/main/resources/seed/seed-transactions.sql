@@ -1,4 +1,7 @@
 -- Idempotent cart + order seed (reserved ids). Safe to re-run under profile `seed`.
+DELETE FROM mediation_cases WHERE related_order_id BETWEEN 8001 AND 8010;
+DELETE FROM admin_audit_logs WHERE id BETWEEN 92001 AND 92010;
+DELETE FROM chat_messages WHERE order_id BETWEEN 8001 AND 8010;
 DELETE FROM order_items WHERE order_id BETWEEN 8001 AND 8010;
 DELETE FROM order_fulfillments WHERE order_id BETWEEN 8001 AND 8010;
 DELETE FROM orders WHERE id BETWEEN 8001 AND 8010;
@@ -83,3 +86,81 @@ INSERT INTO order_fulfillments (
     '', '', NULL, '', '', FALSE, FALSE, 'Limited preview before purchase; full download after receipt confirmation', 'preview_only', NULL),
 (8510, 8010, 'logistics', 'pending_action', NULL, NULL, '', '',
     '', '', NULL, '', '', FALSE, FALSE, '', 'not_applicable', NULL);
+
+INSERT INTO reports (
+    id, reporter_user_id, reporter_name, target_type, target_id, target_label,
+    reason_type, content, status, submitted_at, processed_at, processed_by,
+    resolution, created_at, updated_at
+) VALUES
+(6010, 1010, 'Seed Buyer', 'order', 8001, 'Order SEED8001',
+ 'after_sales_dispute', 'Buyer says the drawing tool shipment has not been clarified.',
+ 'pending', '2026-05-27 09:10:00', NULL, NULL, '',
+ '2026-05-27 09:10:00', CURRENT_TIMESTAMP),
+(6011, 1010, 'Seed Buyer', 'order', 8008, 'Order SEED8008',
+ 'payment_delivery_dispute', 'Buyer and seller disagree on whether the offline rack order should proceed.',
+ 'processing', '2026-05-27 09:20:00', '2026-05-27 09:35:00', 'Admin9001',
+ 'Escalated to mediation case MED-SEED-8008.',
+ '2026-05-27 09:20:00', CURRENT_TIMESTAMP),
+(6012, 1001, 'Zhang San', 'order', 8010, 'Order SEED8010',
+ 'quality_dispute', 'Seller reported a repeated after-sales dispute on the drawing tool order.',
+ 'resolved', '2026-05-27 09:30:00', '2026-05-27 11:00:00', 'Admin9001',
+ 'Resolved by mediation case MED-SEED-8010.',
+ '2026-05-27 09:30:00', CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE
+    target_type = VALUES(target_type),
+    target_id = VALUES(target_id),
+    target_label = VALUES(target_label),
+    reason_type = VALUES(reason_type),
+    content = VALUES(content),
+    status = VALUES(status),
+    processed_at = VALUES(processed_at),
+    processed_by = VALUES(processed_by),
+    resolution = VALUES(resolution),
+    updated_at = VALUES(updated_at);
+
+INSERT INTO mediation_cases (
+    id, case_no, source_report_id, related_order_id, buyer_user_id, seller_user_id, reporter_user_id,
+    status, decision_category, decision_summary, enforcement_summary, cancel_reason,
+    decided_by_admin_user_id, decided_at, created_by_admin_user_id, created_at, updated_at, last_status_changed_at
+) VALUES
+(70001, 'MED-SEED-8008', 6011, 8008, 1010, 1001, 1010,
+ 'evidence_review', NULL, NULL, NULL, NULL,
+ NULL, NULL, 9001, '2026-05-27 09:35:00', CURRENT_TIMESTAMP, '2026-05-27 09:35:00'),
+(70002, 'MED-SEED-8010', 6012, 8010, 1011, 1004, 1001,
+ 'resolved', 'order_completion_required', 'Seller replacement evidence is sufficient; order completion is required.',
+ 'Order owner should keep fulfillment evidence available for follow-up.', NULL,
+ 9001, '2026-05-27 11:00:00', 9001, '2026-05-27 09:45:00', CURRENT_TIMESTAMP, '2026-05-27 11:00:00')
+ON DUPLICATE KEY UPDATE
+    status = VALUES(status),
+    decision_category = VALUES(decision_category),
+    decision_summary = VALUES(decision_summary),
+    enforcement_summary = VALUES(enforcement_summary),
+    cancel_reason = VALUES(cancel_reason),
+    decided_by_admin_user_id = VALUES(decided_by_admin_user_id),
+    decided_at = VALUES(decided_at),
+    updated_at = VALUES(updated_at),
+    last_status_changed_at = VALUES(last_status_changed_at);
+
+INSERT INTO admin_audit_logs (
+    id, operator_user_id, operator_role, action, target_type, target_id, summary, created_at
+) VALUES
+(92001, 9001, 'ADMIN', 'USER_STATUS_UPDATE', 'USER', 1003,
+ 'Seed audit: disabled risk account remains under review.', '2026-05-27 08:30:00'),
+(92002, 9103, 'REVIEWER', 'STUDENT_VERIFICATION_REVIEW', 'STUDENT_VERIFICATION', 2003,
+ 'Seed audit: rejected verification due to identity mismatch.', '2026-05-27 08:45:00'),
+(92003, 9103, 'REVIEWER', 'PRODUCT_REVIEW_TASK_REVIEW', 'PRODUCT_REVIEW_TASK', 5001,
+ 'Seed audit: approved digital material after source statement check.', '2026-05-27 09:00:00'),
+(92004, 9102, 'SUPPORT_AGENT', 'REPORT_PROCESS', 'REPORT', 6011,
+ 'Seed audit: escalated order-backed report into mediation context.', '2026-05-27 09:35:00'),
+(92005, 9104, 'OPERATOR', 'SEARCH_GOVERNANCE_RULE_UPDATE', 'SEARCH_GOVERNANCE_RULE', 1,
+ 'Seed audit: reviewed hot-search governance rule state.', '2026-05-27 10:10:00'),
+(92006, 9001, 'ADMIN', 'SHOP_STATUS_UPDATE', 'SHOP', 4003,
+ 'Seed audit: pending shop kept in review queue for local verification.', '2026-05-27 10:40:00')
+ON DUPLICATE KEY UPDATE
+    operator_user_id = VALUES(operator_user_id),
+    operator_role = VALUES(operator_role),
+    action = VALUES(action),
+    target_type = VALUES(target_type),
+    target_id = VALUES(target_id),
+    summary = VALUES(summary),
+    created_at = VALUES(created_at);

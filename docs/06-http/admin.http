@@ -4,6 +4,11 @@
 
 @baseUrl = http://localhost:8080
 @adminToken = mock-9001-ADMIN
+@superAdminToken = mock-9101-SUPER_ADMIN
+@supportToken = mock-9102-SUPPORT_AGENT
+@reviewerToken = mock-9103-REVIEWER
+@operatorToken = mock-9104-OPERATOR
+@orderAdminToken = mock-9105-ORDER_ADMIN
 @userToken = mock-1001-USER
 
 # ─────────────────────────────────────────────
@@ -26,6 +31,12 @@ GET {{baseUrl}}/api/admin/dashboard
 ###
 
 ### Dashboard overview
+### Expected data fields:
+### - summary
+### - queueMetrics[] with stable id/source/target/available fields
+### - governanceSignals[]
+### - statusBreakdowns.orders[] and statusBreakdowns.mediation[]
+### - unavailableMetrics[] for non-instrumented metrics
 GET {{baseUrl}}/api/admin/dashboard
 Authorization: Bearer {{adminToken}}
 
@@ -79,6 +90,17 @@ Content-Type: application/json
 {
   "status": "active",
   "restrictionReason": ""
+}
+
+###
+
+### Reject unsupported user status - expect 400 BAD_REQUEST
+PUT {{baseUrl}}/api/admin/users/1003/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "suspended"
 }
 
 # ─────────────────────────────────────────────
@@ -155,6 +177,17 @@ Authorization: Bearer {{adminToken}}
 GET {{baseUrl}}/api/admin/products?productType=digital&page=1&pageSize=10
 Authorization: Bearer {{adminToken}}
 
+###
+
+### Reject unsupported product status - expect 400 BAD_REQUEST
+PUT {{baseUrl}}/api/admin/products/3010/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "shadow_hidden"
+}
+
 # ─────────────────────────────────────────────
 # REVIEW TASKS
 # ─────────────────────────────────────────────
@@ -230,6 +263,18 @@ Content-Type: application/json
   "reviewStatus": "approved"
 }
 
+###
+
+### Reject invalid shop status/reviewStatus combination - expect 400 BAD_REQUEST
+PUT {{baseUrl}}/api/admin/shops/4003/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "disabled",
+  "reviewStatus": "approved"
+}
+
 # ─────────────────────────────────────────────
 # REPORT MANAGEMENT
 # ─────────────────────────────────────────────
@@ -266,3 +311,137 @@ Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 {}
+
+###
+
+### Process report with unsupported status - expect 400 BAD_REQUEST
+PUT {{baseUrl}}/api/admin/reports/6001/process
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "ignored",
+  "resolution": "invalid status smoke"
+}
+
+###
+
+### Escalate eligible order report to mediation
+POST {{baseUrl}}/api/admin/reports/6010/escalate-to-mediation
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "escalationReason": "Order-backed dispute requires formal mediation."
+}
+
+###
+
+### Escalate non-order report to mediation - expect 400 BAD_REQUEST
+POST {{baseUrl}}/api/admin/reports/6001/escalate-to-mediation
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+###
+
+### List mediation cases
+GET {{baseUrl}}/api/admin/mediation-cases?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List mediation cases by status
+GET {{baseUrl}}/api/admin/mediation-cases?status=evidence_review&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Mediation case detail
+GET {{baseUrl}}/api/admin/mediation-cases/70001
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Mediation status update
+PUT {{baseUrl}}/api/admin/mediation-cases/70001/status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "status": "decision_pending"
+}
+
+###
+
+### Mediation final decision
+POST {{baseUrl}}/api/admin/mediation-cases/70001/decision
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "decisionCategory": "order_completion_required",
+  "decisionSummary": "Evidence review supports order completion.",
+  "enforcementSummary": "Order module remains the owner of operational state."
+}
+
+# AUDIT LOGS
+
+###
+
+### List admin audit logs
+### Expected item fields:
+### - operatorUserId, operatorRole, action, targetType, targetId, summary, createdAt
+GET {{baseUrl}}/api/admin/audit-logs?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### List audit logs for user status changes
+GET {{baseUrl}}/api/admin/audit-logs?action=USER_STATUS_UPDATE&targetType=USER&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Audit logs with USER token - expect 403
+GET {{baseUrl}}/api/admin/audit-logs
+Authorization: Bearer {{userToken}}
+
+# ROLE PERMISSION SMOKE
+
+###
+
+### Reviewer can access verification queue
+GET {{baseUrl}}/api/admin/verifications?page=1&pageSize=10
+Authorization: Bearer {{reviewerToken}}
+
+###
+
+### Reviewer cannot access order admin queue - expect 403
+GET {{baseUrl}}/api/admin/orders
+Authorization: Bearer {{reviewerToken}}
+
+###
+
+### Operator can access search governance
+GET {{baseUrl}}/api/admin/search/governance-rules
+Authorization: Bearer {{operatorToken}}
+
+###
+
+### Support agent cannot record final mediation decisions - expect 403
+POST {{baseUrl}}/api/admin/mediation-cases/70001/decision
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "decisionCategory": "order_completion_required",
+  "decisionSummary": "Permission smoke should be rejected."
+}
+
+###
+
+### Order admin can access order queue
+GET {{baseUrl}}/api/admin/orders
+Authorization: Bearer {{orderAdminToken}}

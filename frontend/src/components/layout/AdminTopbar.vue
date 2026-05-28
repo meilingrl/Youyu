@@ -14,8 +14,8 @@ function handleLogout() {
 <template>
   <header class="admin-topbar shell-card">
     <div>
-      <div class="admin-topbar__title">后台管理端</div>
-      <div class="admin-topbar__subtitle">统一治理、审核与经营管理入口</div>
+      <div class="admin-topbar__title">治理工作台</div>
+      <div class="admin-topbar__subtitle">集中处理身份、内容、交易与风险队列</div>
     </div>
 
     <div class="admin-topbar__actions">

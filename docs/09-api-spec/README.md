@@ -6,6 +6,7 @@ This directory stores the formal API contract documents for `Youyu`.
 
 - `admin.md`: admin-side governance, review, and operational endpoints
 - `auth.md`: authentication and current-user context
+- `mediation.md`: admin-only report escalation and platform mediation case workflow
 - `order.md`: buyer order flow and admin order operations
 - `product.md`: product browse, detail, publish, and seller operations
 - `recommend.md`: home and also-bought recommendation endpoints

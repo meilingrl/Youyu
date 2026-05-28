@@ -128,6 +128,7 @@ onMounted(loadTasks)
             >
               驳回
             </el-button>
+            <el-tag v-if="row.reviewStatus !== 'pending_review'" type="info" effect="plain">无需操作</el-tag>
           </template>
         </el-table-column>
       </el-table>

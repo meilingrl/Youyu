@@ -1,6 +1,7 @@
 package com.youyu.backend.service.product.impl;
 
 import com.youyu.backend.common.api.ResultCode;
+import com.youyu.backend.common.auth.AdminPermissionPolicy;
 import com.youyu.backend.common.auth.AuthContextHolder;
 import com.youyu.backend.common.exception.BusinessException;
 import com.youyu.backend.mapper.product.ProductMapper;
@@ -180,7 +181,7 @@ public class ProductServiceImpl implements ProductService {
         if (AuthContextHolder.get() == null) {
             return false;
         }
-        return "ADMIN".equals(AuthContextHolder.get().getRole())
+        return AdminPermissionPolicy.isAdminRole(AuthContextHolder.get().getRole())
                 || Objects.equals(AuthContextHolder.get().getUserId(), product.get("sellerUserId"));
     }
 

@@ -5,6 +5,16 @@ VALUES (9001, 'admin',
 ON DUPLICATE KEY UPDATE username = VALUES(username), password_hash = VALUES(password_hash),
     nickname = VALUES(nickname), status = VALUES(status), role = VALUES(role);
 
+INSERT INTO users (id, username, password_hash, nickname, status, role, registered_at, created_at, updated_at)
+VALUES
+(9101, 'superadmin', '$2a$10$jJy4r2olYY7ca7bAvZRuJe9Z77E.JZxzVTugqYw6S8lr4ahKU2hqG', 'Super Admin', 'active', 'SUPER_ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(9102, 'supportagent', '$2a$10$jJy4r2olYY7ca7bAvZRuJe9Z77E.JZxzVTugqYw6S8lr4ahKU2hqG', 'Support Agent', 'active', 'SUPPORT_AGENT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(9103, 'reviewer', '$2a$10$jJy4r2olYY7ca7bAvZRuJe9Z77E.JZxzVTugqYw6S8lr4ahKU2hqG', 'Reviewer', 'active', 'REVIEWER', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(9104, 'operator', '$2a$10$jJy4r2olYY7ca7bAvZRuJe9Z77E.JZxzVTugqYw6S8lr4ahKU2hqG', 'Operator', 'active', 'OPERATOR', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(9105, 'orderadmin', '$2a$10$jJy4r2olYY7ca7bAvZRuJe9Z77E.JZxzVTugqYw6S8lr4ahKU2hqG', 'Order Admin', 'active', 'ORDER_ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE username = VALUES(username), password_hash = VALUES(password_hash),
+    nickname = VALUES(nickname), status = VALUES(status), role = VALUES(role);
+
 INSERT INTO users (id, username, phone, email, password_hash, nickname, avatar, status, registered_at, last_login_at, created_at, updated_at)
 VALUES
 (1001, 'zhangsan', '13800000001', 'zhangsan@campus.edu.cn', '$2a$10$gtBIsqnrdZkJaiT0V4WbUOoYcJkcUQAJINfCwagPVRQEjFW8GM79O', 'Zhang San', '', 'active', '2026-04-01 10:00:00', '2026-05-09 09:20:00', '2026-04-01 10:00:00', CURRENT_TIMESTAMP),

@@ -1,3 +1,232 @@
+## [2026-05-28] - Seed Profile Startup Environment
+
+### docs
+- Corrected seed-profile startup docs to use `SPRING_PROFILES_ACTIVE=seed`, including the PowerShell form `$env:SPRING_PROFILES_ACTIVE="seed"`.
+
+---
+
+## [2026-05-28] - Seed Profile Startup Docs
+
+### docs
+- Clarified seed-profile startup as an application argument via `--spring.profiles.active=seed`, including the Maven wrapper argument form and IDE program argument.
+
+---
+
+## [2026-05-28] - Admin Seed Login Fix
+
+### fix
+- Treated specialist admin roles as admin sessions on the login page so `superadmin`, `reviewer`, `supportagent`, `operator`, and `orderadmin` enter the admin workbench instead of the user app.
+
+### test
+- Expanded backend seed admin login coverage across all seeded admin roles.
+- Added frontend auth-store coverage for specialist admin sessions.
+- Added admin full-flow HTTP login smoke requests for seeded admin accounts.
+
+---
+
+## [2026-05-28] - Admin Module Goal Roadmap Closeout
+
+### docs
+- Updated the admin module goal roadmap baseline to reflect completed mediation, backend-enforced staff roles, and full-flow seed verification coverage.
+
+### verify
+- Verified the repository state after the final seed workflow commit.
+
+---
+
+## [2026-05-28] - Seed Full Admin Flow
+
+### test
+- Added seeded admin audit-log examples and a full admin-flow HTTP walkthrough covering dashboard, review queues, reports, orders, mediation, search governance, audit logs, and role permission smoke checks.
+
+### docs
+- Documented seeded credentials and end-to-end local admin verification steps in `docs/06-http/admin-full-flow.http`.
+
+### verify
+- Verified backend tests, frontend tests, frontend production build, and diff checks.
+
+---
+
+## [2026-05-28] - Admin Role Permission Model
+
+### feat
+- Added five admin staff roles with backend capability enforcement and legacy `ADMIN` full-access compatibility.
+- Restricted admin governance, order, mediation, search, and audit endpoints by backend permission.
+- Aligned frontend admin route guards and sidebar visibility with the role-permission matrix.
+- Added seed staff accounts for local role verification.
+
+### docs
+- Documented admin role semantics in API specs, HTTP smoke examples, and backend seed credentials.
+
+### test
+- Added backend role-permission coverage and frontend guard coverage.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
+
+## [2026-05-28] - Admin Audit Log Foundation
+
+### feat
+- Added durable `admin_audit_logs` persistence and an admin-only `/api/admin/audit-logs` read endpoint.
+- Recorded audit events for high-risk admin mutations including user status, product status, review decisions, shop status, report processing, and search governance rules.
+
+### docs
+- Documented the audit-log contract and added admin HTTP smoke examples.
+
+### test
+- Added backend coverage for audit writes and admin-only audit reads.
+- Verified backend tests.
+
+---
+
+## [2026-05-28] - Admin Dashboard Observability
+
+### feat
+- Extended `/api/admin/dashboard` with stable live observability fields for pending queues, governance signals, order status, mediation status, and unavailable metrics.
+- Reworked `/admin/dashboard` into a real pending-work monitor backed by backend counts and routed metric cards.
+
+### docs
+- Documented the dashboard contract in `docs/09-api-spec/admin.md` and updated the admin HTTP dashboard smoke notes.
+
+### test
+- Added backend dashboard contract coverage.
+- Verified backend tests, frontend tests, and frontend production build.
+
+---
+
+## [2026-05-28] - Platform Mediation Implementation
+
+### feat
+- Added durable `mediation_cases` persistence, seed cases, and admin-only mediation escalation/list/detail/status/decision APIs.
+- Implemented idempotent report escalation for order-backed reports and write-once final decisions.
+- Exposed mediation-scoped read-only chat context by related order without adding admin chat participation.
+- Added `/admin/mediation` list/detail UI and report-page escalation action for eligible order reports.
+
+### docs
+- Added mediation API specification and admin HTTP smoke examples.
+
+### test
+- Added backend mediation controller coverage for escalation, idempotency, list/detail, status transitions, decisions, authorization, and read-only chat context.
+
+---
+
+## [2026-05-28] - Platform Mediation Boundary Contract
+
+### docs
+- Added `docs/02-requirements/platform-mediation-scope.md` defining report escalation into `mediation_cases`, v1 statuses, decision categories, read-only chat visibility, and API/data/admin/seed/test expectations.
+- Updated the platform mediation implementation task so it can be dispatched without additional product decisions.
+- Updated current roadmaps to mark mediation boundary definition complete and implementation as the next step.
+- Aligned support-console scope and open questions with the accepted chat and mediation requirement documents.
+
+### test
+- Ran `git diff --check`.
+
+---
+
+## [2026-05-28] - Chat MVP Scope Recovery
+
+### docs
+- Restored `docs/02-requirements/chat-mvp-scope.md` from current runtime/API/spec/http truth.
+- Clarified chat MVP, support console, and platform mediation ownership boundaries.
+- Documented mediation v1 chat visibility as read-only dispute context only, with no admin participation or sending in buyer/seller conversations.
+- Updated current roadmaps so platform mediation is no longer blocked by the missing chat scope artifact.
+
+---
+
+## [2026-05-28] - Admin Entry Workbench Navigation
+
+### feat
+- Routed authenticated admin default entry and login fallback to `/admin/dashboard`.
+- Kept ordinary user default entry in `/app/home` and blocked non-admin direct access to `/admin/*`.
+- Reworded admin navigation, topbar, and dashboard surfaces around governance queues and workbench tasks.
+
+### test
+- Added router guard coverage for admin and non-admin default entry behavior.
+- Ran `frontend\npm test`.
+- Ran `frontend\npm run build`.
+
+---
+
+## [2026-05-28] - Admin Module Goal Continuation Plan
+
+### docs
+- Added the admin module goal roadmap for the next head Agent.
+- Added the Codex CLI head Agent prompt for continuing long-running admin module dispatch.
+- Added active task specs for admin entry, chat scope recovery, mediation, dashboard observability, audit logs, role permissions, and full-flow seed data.
+- Replaced the blocked platform mediation boundary task with a broader boundary-and-contract task to avoid duplicate active sources of truth.
+- Updated the current feature roadmap to point at the admin module goal roadmap and task package.
+
+---
+
+## [2026-05-27] - Frontend Bundle Second Pass
+
+### frontend
+- Moved admin table component registration into an admin-only Element Plus plugin loaded by `AdminLayout`.
+- Gated admin child route rendering until the admin Element Plus table plugin finishes registering.
+- Routed Element Plus table/table-column modules and styles into the async admin plugin chunk instead of the eager `element-plus` chunk.
+
+### docs
+- Updated the active bundle task notes and current feature roadmap with final chunk metrics.
+
+### test
+- Ran `frontend\npm test`.
+- Ran `frontend\npm run build`.
+- Checked `frontend\dist\index.html` for admin table chunk `modulepreload`.
+- Ran preview smoke for `/app/home`, `/admin/users`, and `/admin/products` with mocked admin API responses.
+
+---
+
+## [2026-05-27] - Admin Support Context Dashboard
+
+### feat
+- Replaced the reserved `/admin/support` placeholder with a frontend-only support context dashboard.
+- Surfaced report, order/refund, governance, and search context from existing admin-owned APIs only.
+- Kept mediation, admin chat, notifications, group governance, and abnormal-message lanes visibly blocked or missing.
+
+### docs
+- Updated the active admin support console task completion notes with verification results and residual limitations.
+
+### test
+- Ran `frontend\npm test`.
+- Ran `frontend\npm run build`.
+- Ran `git diff --check`.
+
+---
+
+## [2026-05-27] - Admin Support Console Scope Contract
+
+### docs
+- Added the admin support console scope contract, including lane ownership, reusable endpoints, missing endpoints, non-goals, and mediation blockage.
+- Created the implementation-ready frontend-only support context dashboard task.
+- Clarified that `/admin/support` is a frontend route and does not currently define an `/api/admin/support/**` namespace.
+
+---
+
+## [2026-05-27] - Admin Governance Action Consistency
+
+### fix
+- Added explicit admin governance allow-lists for user, product, report, and shop status mutations.
+- Validated shop `status` / `reviewStatus` combinations and propagated the current admin reviewer through shop status updates.
+- Aligned admin product, report, verification, and review-task action columns with supported backend transitions.
+
+### docs
+- Clarified admin API accepted values and added negative admin HTTP smoke examples for unsupported governance states.
+- Recorded the state/action matrix in the active task completion notes.
+
+### test
+- Added backend regression coverage for invalid user, product, shop, and report governance transitions.
+
+---
+
+## [2026-05-27] - Admin Module Goal Task Scoping
+
+### docs
+- Scoped the admin governance action-consistency task into an execution-ready cross-cutting backend/frontend contract task.
+- Added a documentation-only support-console contract task to keep `/admin/support` development bounded before implementation.
+- Corrected current roadmap and mediation-task notes so platform mediation remains blocked on the missing `chat-mvp-scope.md` artifact, not merely on archived task status.
+
+---
+
 ## [2026-05-27] - Message Center Interaction Corrections
 
 ### frontend

@@ -18,14 +18,16 @@ Spring Boot 3.3 backend for Youyu. Layered by domain: `controller / service / ma
 **First-time setup** (schema + seed data):
 ```bash
 # Windows
-mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=seed
+$env:SPRING_PROFILES_ACTIVE="seed"
+mvnw.cmd spring-boot:run
 
 # macOS / Linux
-./mvnw spring-boot:run -Dspring-boot.run.profiles=seed
+SPRING_PROFILES_ACTIVE=seed ./mvnw spring-boot:run
 ```
 
 **Normal run**:
 ```bash
+$env:SPRING_PROFILES_ACTIVE=""
 mvnw.cmd spring-boot:run
 ```
 
@@ -59,6 +61,7 @@ Loaded in order:
 
 Demo credentials (seed only):
 - Admin: `admin` / `admin123`
+- Admin staff: `superadmin`, `supportagent`, `reviewer`, `operator`, `orderadmin` / `admin123`
 - User: `zhangsan` / `user123`
 - Seed buyers: `seedbuyer`–`seedbuyer4` / `user123` (user IDs 1010–1013)
 
@@ -69,7 +72,7 @@ Demo credentials (seed only):
 **Mock tokens** (dev/test only):
 ```
 Authorization: Bearer mock-{userId}-{role}
-# e.g. Bearer mock-1001-USER  or  Bearer mock-9001-ADMIN
+# e.g. Bearer mock-1001-USER, Bearer mock-9001-ADMIN, or Bearer mock-9103-REVIEWER
 ```
 
 `@LoginRequired` marks endpoints requiring authentication. Read current user via `AuthContextHolder.getUser()`.

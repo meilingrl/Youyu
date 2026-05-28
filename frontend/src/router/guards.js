@@ -1,4 +1,10 @@
 import { useAuthStore } from '@/stores/auth'
+import { adminNavigation } from '@/constants/navigation'
+import {
+  hasAnyAdminPermission,
+  isAdminRole,
+  permissionsForAdminPath
+} from '@/utils/admin-permissions'
 
 function hasRolePermission(routeRole, currentRole) {
   if (!routeRole) {
@@ -6,10 +12,20 @@ function hasRolePermission(routeRole, currentRole) {
   }
 
   if (Array.isArray(routeRole)) {
-    return routeRole.includes(currentRole)
+    return routeRole.includes(currentRole) || (routeRole.includes('admin') && isAdminRole(currentRole))
+  }
+
+  if (routeRole === 'admin') {
+    return isAdminRole(currentRole)
   }
 
   return routeRole === currentRole
+}
+
+function firstAllowedAdminPath(role) {
+  return adminNavigation.find((item) =>
+    hasAnyAdminPermission(role, permissionsForAdminPath(item.path))
+  )?.path || '/app/home'
 }
 
 export function setupRouterGuards(router) {
@@ -34,7 +50,14 @@ export function setupRouterGuards(router) {
     }
 
     if (to.meta?.role && !hasRolePermission(to.meta.role, authStore.currentRole)) {
-      return authStore.currentRole === 'admin' ? { path: '/admin' } : { path: '/app' }
+      return isAdminRole(authStore.currentRole) ? { path: firstAllowedAdminPath(authStore.currentRole) } : { path: '/app/home' }
+    }
+
+    if (to.path.startsWith('/admin')) {
+      const permissions = permissionsForAdminPath(to.meta?.navKey || to.path)
+      if (!hasAnyAdminPermission(authStore.currentRole, permissions)) {
+        return { path: firstAllowedAdminPath(authStore.currentRole) }
+      }
     }
 
     return true

@@ -6,6 +6,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -28,7 +29,20 @@ class AdminGovernanceTest extends BackendTestBase {
                         .header("Authorization", "Bearer " + ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").isMap());
+                .andExpect(jsonPath("$.data").isMap())
+                .andExpect(jsonPath("$.data.summary.orderCount", greaterThanOrEqualTo(0)))
+                .andExpect(jsonPath("$.data.queueMetrics").isArray())
+                .andExpect(jsonPath("$.data.queueMetrics[0].id").value("pending_verifications"))
+                .andExpect(jsonPath("$.data.queueMetrics[0].source").value("student_verifications.verification_status = pending_review"))
+                .andExpect(jsonPath("$.data.queueMetrics[0].target.path").value("/admin/verifications"))
+                .andExpect(jsonPath("$.data.queueMetrics[4].id").value("pending_order_fulfillment"))
+                .andExpect(jsonPath("$.data.queueMetrics[4].target.path").value("/admin/orders"))
+                .andExpect(jsonPath("$.data.queueMetrics[6].id").value("active_mediation_cases"))
+                .andExpect(jsonPath("$.data.queueMetrics[6].target.path").value("/admin/mediation"))
+                .andExpect(jsonPath("$.data.governanceSignals").isArray())
+                .andExpect(jsonPath("$.data.statusBreakdowns.orders").isArray())
+                .andExpect(jsonPath("$.data.statusBreakdowns.mediation").isArray())
+                .andExpect(jsonPath("$.data.unavailableMetrics[0].available").value(false));
     }
 
     @Test
@@ -151,6 +165,17 @@ class AdminGovernanceTest extends BackendTestBase {
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
+    @Test
+    void updateUserStatusRejectsUnsupportedStatus() throws Exception {
+        mockMvc.perform(put("/api/admin/users/1001/status")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("{\"status\": \"suspended\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
     // ══════════════════════════════════════════════
     // Verification review
     // ══════════════════════════════════════════════
@@ -215,6 +240,17 @@ class AdminGovernanceTest extends BackendTestBase {
                 .andExpect(jsonPath("$.data.verification.rejectReason").value("invalid document"));
     }
 
+    @Test
+    void reviewVerificationRejectsUnsupportedAction() throws Exception {
+        mockMvc.perform(put("/api/admin/verifications/2002/review")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("{\"action\": \"defer\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
     // ══════════════════════════════════════════════
     // Product management
     // ══════════════════════════════════════════════
@@ -256,6 +292,28 @@ class AdminGovernanceTest extends BackendTestBase {
                 .andExpect(jsonPath("$.data.product.status").value("off_sale"));
     }
 
+    @Test
+    void updateProductStatusRejectsUnsupportedStatus() throws Exception {
+        mockMvc.perform(put("/api/admin/products/3010/status")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("{\"status\": \"shadow_hidden\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
+    @Test
+    void reviewTaskRejectsUnsupportedAction() throws Exception {
+        mockMvc.perform(put("/api/admin/review-tasks/5002/review")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("{\"action\": \"defer\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
     // ══════════════════════════════════════════════
     // Shop management
     // ══════════════════════════════════════════════
@@ -294,6 +352,38 @@ class AdminGovernanceTest extends BackendTestBase {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.shop.status").value("active"))
                 .andExpect(jsonPath("$.data.shop.reviewStatus").value("approved"));
+    }
+
+    @Test
+    void updateShopStatusRejectsUnsupportedCombination() throws Exception {
+        mockMvc.perform(put("/api/admin/shops/4003/status")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "status": "disabled",
+                                  "reviewStatus": "approved"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
+    @Test
+    void processReportRejectsUnsupportedStatus() throws Exception {
+        mockMvc.perform(put("/api/admin/reports/6001/process")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "status": "ignored",
+                                  "resolution": "test invalid status"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
     }
 
     // ══════════════════════════════════════════════

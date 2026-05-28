@@ -157,3 +157,14 @@ Content-Type: application/json
 ### Get own verification status
 GET {{baseUrl}}/api/users/verification
 Authorization: Bearer mock-1001-USER
+
+###
+
+### Login - reviewer admin staff (seed data)
+POST {{baseUrl}}/api/admin/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "reviewer",
+  "password": "admin123"
+}

@@ -9,9 +9,10 @@
   - request DTO: `backend/src/main/java/com/youyu/backend/controller/admin/dto/ReviewVerificationRequest.java`
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/common/api/ApiResponse.java`
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
+  - audit mapper: `backend/src/main/java/com/youyu/backend/mapper/audit/AdminAuditLogMapper.java`
   - request sample: `docs/06-http/admin.http`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
-- Last updated: 2026-05-17
+- Last updated: 2026-05-28
 
 ## Scope
 
@@ -24,15 +25,34 @@ This document covers governance and operational endpoints under `/api/admin`:
 - review tasks
 - shops
 - reports
+- mediation case escalation and admin mediation APIs
 - search governance rules and search logs
+- admin audit logs
 
 It does not cover admin login under `/api/admin/auth` or admin order operations under `/api/admin/orders`.
 
+Formal mediation APIs under `/api/admin/reports/{reportId}/escalate-to-mediation`
+and `/api/admin/mediation-cases/**` are documented in `docs/09-api-spec/mediation.md`.
+
+`/admin/support` is a frontend admin route, not an admin API namespace. The v1 support console scope reuses existing admin/report/order/search endpoints for context and does not introduce `/api/admin/support/**`; see `docs/02-requirements/admin-support-console-scope.md`.
+
 ## Authentication And Roles
 
-- All endpoints in this module require admin role access.
-- `AdminController` uses class-level `@LoginRequired(roles = {UserRole.ADMIN})`.
-- Current project samples use Bearer tokens such as `mock-9001-ADMIN`.
+- All endpoints in this module require an admin staff role and, for protected actions, a backend `AdminPermission`.
+- Legacy `ADMIN` remains a full-access compatibility role and is treated like `SUPER_ADMIN`.
+- Supported admin staff roles are `SUPER_ADMIN`, `SUPPORT_AGENT`, `REVIEWER`, `OPERATOR`, and `ORDER_ADMIN`.
+- Current project samples use Bearer tokens such as `mock-9001-ADMIN`, `mock-9101-SUPER_ADMIN`, and `mock-9103-REVIEWER`.
+- Frontend navigation mirrors these capabilities, but backend permission checks are the source of enforcement.
+
+### Admin Permission Matrix
+
+| Role | Capabilities |
+|---|---|
+| `ADMIN` / `SUPER_ADMIN` | All admin permissions including audit logs and final mediation decisions |
+| `SUPPORT_AGENT` | Dashboard, support context, user/product/shop context, reports, search logs, order read, mediation handling except final decisions |
+| `REVIEWER` | Dashboard, student verification, product context, product review tasks, shop context and shop review/status handling |
+| `OPERATOR` | Dashboard, product context, search governance, search logs |
+| `ORDER_ADMIN` | Dashboard, order read/manage, mediation handling except final decisions |
 
 ## Response Envelope
 
@@ -71,7 +91,8 @@ All endpoints in this module use the unified response envelope:
 
 #### Purpose
 
-Return the admin dashboard overview snapshot.
+Return the admin dashboard observability snapshot for pending work, governance signals,
+order status, and mediation status.
 
 #### Request
 
@@ -83,7 +104,40 @@ No query parameters, path parameters, or body.
 
 | Field | Type | Notes |
 |---|---|---|
-| `data` | object | Aggregated admin overview snapshot |
+| `data.summary` | object | High-level totals for users, products, shops, reports, orders, and mediation cases |
+| `data.queueMetrics` | array | Stable pending-work metrics. Each item has `id`, `label`, `value`, `severity`, `available`, `source`, `description`, and `target.path` |
+| `data.governanceSignals` | array | Stable non-primary queue signals with the same metric item shape as `queueMetrics` |
+| `data.statusBreakdowns.orders` | array | Real order counts by selected `orders.order_status` values |
+| `data.statusBreakdowns.mediation` | array | Real mediation counts by selected `mediation_cases.status` values |
+| `data.unavailableMetrics` | array | Metrics intentionally not shown as live data because no reliable source exists yet |
+| `data.cards` | array | Legacy dashboard card shape retained for compatibility |
+| `data.shortcuts` | array | Admin route shortcuts |
+| `data.todo` | object | Legacy pending counts retained for compatibility |
+
+#### Metric Item Shape
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | string | Stable machine-readable identifier, e.g. `pending_verifications` |
+| `label` | string | Human-readable metric label |
+| `value` | number or null | Real count when `available=true`; `null` for unavailable metrics |
+| `severity` | string | UI hint such as `danger`, `warning`, `info`, or `muted` |
+| `available` | boolean | `true` only when the backend has a trustworthy data source |
+| `source` | string | Data source/filter expression used for the metric |
+| `description` | string | Short operational meaning |
+| `target.path` | string or null | Owning admin route when the metric is actionable |
+
+Current live queue metrics:
+
+| `id` | Data source | Target |
+|---|---|---|
+| `pending_verifications` | `student_verifications.verification_status = pending_review` | `/admin/verifications` |
+| `pending_review_tasks` | `product_review_tasks.review_status = pending_review` | `/admin/review-tasks` |
+| `pending_reports` | `reports.status = pending` | `/admin/reports` |
+| `pending_shops` | `shops.review_status = pending_review` | `/admin/shops` |
+| `pending_order_fulfillment` | `orders.order_status = pending_fulfillment` | `/admin/orders` |
+| `refunding_orders` | `orders.order_status = refunding` | `/admin/orders` |
+| `active_mediation_cases` | `mediation_cases.status IN (opened, evidence_review, decision_pending)` | `/admin/mediation` |
 
 #### Error Cases
 
@@ -164,7 +218,7 @@ This endpoint uses `UpdateUserStatusRequest` with `@Valid`.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `status` | yes | string | `@NotBlank` |
+| `status` | yes | string | One of `active`, `disabled`, `locked` |
 | `restrictionReason` | no | string | Max 255 |
 
 #### Response
@@ -287,7 +341,7 @@ Update admin-managed product state.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `status` | yes | string | Passed through map-style payload |
+| `status` | yes | string | One of `draft`, `on_sale`, `off_sale`, `closed` |
 
 #### Response
 
@@ -434,9 +488,18 @@ This endpoint currently accepts a map-style payload.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `status` | yes | string | Shop availability state |
-| `reviewStatus` | yes | string | Review outcome state |
+| `status` | yes when `reviewStatus` is omitted | string | One of `active`, `inactive`, `disabled`; may be omitted when `reviewStatus` supplies an approval/rejection transition |
+| `reviewStatus` | no | string | One of `pending_review`, `approved`, `rejected` |
 | `rejectReason` | no | string | Required by business rules in rejection flows |
+
+Valid `status` / `reviewStatus` combinations:
+
+| Flow | Accepted payload |
+|---|---|
+| Approve shop | `reviewStatus=approved` with omitted status or `status=active` |
+| Reject shop | `reviewStatus=rejected` with omitted status or `status=inactive`; `rejectReason` required |
+| Keep pending review | `reviewStatus=pending_review` with omitted status or `status=inactive` |
+| Disable / enable availability only | omit `reviewStatus`, set `status` to `active`, `inactive`, or `disabled` |
 
 #### Response
 
@@ -495,7 +558,7 @@ This endpoint currently accepts a map-style payload.
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
-| `status` | yes | string | Processing outcome |
+| `status` | yes | string | One of `pending`, `processing`, `resolved`, `rejected` |
 | `resolution` | no | string | Resolution note |
 
 #### Response
@@ -651,10 +714,75 @@ Browse paginated search logs from the admin view.
 - `401`: missing token or invalid token
 - `403`: current user is not an admin
 
+### `GET /api/admin/audit-logs`
+
+#### Purpose
+
+Browse durable admin operation logs for sensitive backend actions.
+
+#### Request
+
+##### Query
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `action` | no | string | Exact action filter, e.g. `USER_STATUS_UPDATE`; default empty |
+| `targetType` | no | string | Exact target type filter, e.g. `USER`; default empty |
+| `page` | no | number | Default `1` |
+| `pageSize` | no | number | Default `10`, max `100` |
+
+#### Response
+
+- `data` is the paginated audit-log result returned by `AdminService.listAuditLogs(...)`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `items` | array | Current page of audit records |
+| `total` | number | Total matched rows |
+| `page` | number | Current page number |
+| `pageSize` | number | Current page size |
+
+#### Audit Record Shape
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | number | Audit log ID |
+| `operatorUserId` | number | Admin user ID from the authenticated request |
+| `operatorRole` | string | Current role label, e.g. `ADMIN`, `SUPER_ADMIN`, or specialist staff role |
+| `action` | string | Stable action identifier |
+| `targetType` | string | Stable target category |
+| `targetId` | number | Mutated target ID |
+| `summary` | string | Short action summary, capped by backend storage |
+| `createdAt` | string | Audit event creation time |
+
+Current v1 audited actions:
+
+| Action | Target type | Source endpoint examples |
+|---|---|---|
+| `USER_STATUS_UPDATE` | `USER` | `PUT /api/admin/users/{userId}/status` |
+| `PRODUCT_STATUS_UPDATE` | `PRODUCT` | `PUT /api/admin/products/{productId}/status` |
+| `STUDENT_VERIFICATION_REVIEW` | `STUDENT_VERIFICATION` | `PUT /api/admin/verifications/{verificationId}/review` |
+| `PRODUCT_REVIEW_TASK_REVIEW` | `PRODUCT_REVIEW_TASK` | `PUT /api/admin/review-tasks/{reviewTaskId}/review` |
+| `SHOP_STATUS_UPDATE` | `SHOP` | `PUT /api/admin/shops/{shopId}/status` |
+| `REPORT_PROCESS` | `REPORT` | `PUT /api/admin/reports/{reportId}/process` |
+| `SEARCH_GOVERNANCE_RULE_CREATE` | `SEARCH_GOVERNANCE_RULE` | `POST /api/admin/search/governance-rules` |
+| `SEARCH_GOVERNANCE_RULE_UPDATE` | `SEARCH_GOVERNANCE_RULE` | `PUT /api/admin/search/governance-rules/{ruleId}` |
+| `SEARCH_GOVERNANCE_RULE_DELETE` | `SEARCH_GOVERNANCE_RULE` | `DELETE /api/admin/search/governance-rules/{ruleId}` |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `403`: current user is not an admin
+
 ## Shared Types / Enumerations
 
-- Verification review `action`: current flow expects `approve` or `reject`
-- Review-task `action`: current flow expects `approve` or `reject`
+- User `status`: `active`, `disabled`, `locked`
+- Verification review `action`: `approve`, `reject`
+- Product `status`: `draft`, `on_sale`, `off_sale`, `closed`
+- Review-task `action`: `approve`, `reject`
+- Shop `status`: `active`, `inactive`, `disabled`
+- Shop `reviewStatus`: `pending_review`, `approved`, `rejected`
+- Report `status`: `pending`, `processing`, `resolved`, `rejected`
 - Search governance `ruleType`: current examples use `SENSITIVE_WORD` and `HIDE_KEYWORD`
 - Several admin mutation endpoints still accept map-style payloads rather than dedicated DTOs
 
