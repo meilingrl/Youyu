@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: platform-mediation-boundary-and-contract
-- Status: blocked
+- Status: completed
 - Owner: unassigned
 - Track: cross-cutting
 - Depends on: `docs/02-requirements/chat-mvp-scope.md`, current report/order/refund/chat/admin baselines
 - Priority: high
 - Planned date: 2026-05-28
-- Completed date:
+- Completed date: 2026-05-28
 
 ## Objective
 
@@ -101,15 +101,15 @@ The exact endpoint and schema shape should be specified enough for implementatio
 
 ## Acceptance Criteria
 
-- [ ] Task remains blocked if `docs/02-requirements/chat-mvp-scope.md` is absent.
-- [ ] `platform-mediation-scope.md` clearly separates reports, support, chat, orders/refunds, and mediation.
-- [ ] The chosen model is `mediation_cases` created from report escalation.
-- [ ] Admin chat access is read-only and scoped to related dispute context.
-- [ ] The implementation task is ready for a sub-agent without needing product decisions.
-- [ ] No code, schema, or seed files are changed.
-- [ ] `CHANGELOG.md` is updated.
-- [ ] `git diff --check` passes.
-- [ ] Completion notes are filled before archive.
+- [x] Task remains blocked if `docs/02-requirements/chat-mvp-scope.md` is absent.
+- [x] `platform-mediation-scope.md` clearly separates reports, support, chat, orders/refunds, and mediation.
+- [x] The chosen model is `mediation_cases` created from report escalation.
+- [x] Admin chat access is read-only and scoped to related dispute context.
+- [x] The implementation task is ready for a sub-agent without needing product decisions.
+- [x] No code, schema, or seed files are changed.
+- [x] `CHANGELOG.md` is updated.
+- [x] `git diff --check` passes.
+- [x] Completion notes are filled before archive.
 
 ## Sub-agent Instructions
 
@@ -132,10 +132,30 @@ Return:
 ## Documentation Updates Required
 
 - [x] `CHANGELOG.md`
-- [ ] relevant files in `docs/06-http/` if no API changes are expected
+- [x] relevant files in `docs/06-http/` if no API changes are expected
 - [x] roadmap or standards docs if applicable
 - [x] task status and archive move
 
 ## Completion Notes
 
-(Filled in by implementing sub-agent and accepted by head Agent.)
+Completed on 2026-05-28.
+
+- Confirmed `docs/02-requirements/chat-mvp-scope.md` exists, so the prior chat-scope blocker is cleared.
+- Created `docs/02-requirements/platform-mediation-scope.md`.
+- Defined mediation v1 as order-backed report escalation into `mediation_cases`.
+- Kept `reports` as accusation/governance intake and `mediation_cases` as the formal dispute/decision owner.
+- Kept `/admin/support` as context/navigation only.
+- Kept chat visibility read-only, mediation-scoped, and outside user-owned `/api/chat/**` admin calls.
+- Defined v1 mediation statuses: `opened`, `evidence_review`, `decision_pending`, `resolved`, `cancelled`.
+- Defined decision categories: `refund_full_to_buyer`, `refund_rejected_release_to_seller`, `order_completion_required`, `platform_governance_action`, `no_action_invalid_or_duplicate`.
+- Rewrote `docs/08-tasks/active/platform-mediation-implementation.md` with explicit data, API, admin UI, seed, testing, and acceptance criteria.
+- Updated current roadmaps and `CHANGELOG.md`.
+- No backend, frontend, schema, or seed files were changed.
+
+Verification:
+
+- `git diff --check` - passed.
+
+Residual documentation notes:
+
+- During head Agent review, `docs/02-requirements/admin-support-console-scope.md` and `docs/05-roadmap/current/open-questions.md` were aligned with the accepted chat and mediation scope documents so they no longer describe the mediation scope as absent or unresolved.

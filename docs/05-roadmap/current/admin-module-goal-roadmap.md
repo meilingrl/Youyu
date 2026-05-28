@@ -12,7 +12,7 @@ It is a module-specific execution roadmap. It does not replace `stage-roadmap.md
 - The active branch is expected to be `codex/admin-module-goal`.
 - The existing admin surface already covers dashboard, users, verifications, products, review tasks, shops, orders, reports, hot search governance, and support context.
 - `/admin/support` is currently a support context dashboard, not a ticketing, mediation, or admin-chat system.
-- Platform mediation is no longer blocked by the missing chat scope artifact; the next boundary task must still define mediation contracts before implementation.
+- Platform mediation is no longer blocked by the missing chat scope artifact; `docs/02-requirements/platform-mediation-scope.md` now defines the v1 mediation contract before implementation.
 - Admin role handling is currently coarse-grained. The database has `users.role`, and backend auth uses role checks through `LoginRequired`.
 
 ## Locked Product Decisions
@@ -51,10 +51,10 @@ Do not implement role control as frontend menu hiding only. Backend authorizatio
    - Restore the missing chat MVP requirement artifact.
    - Unblock mediation boundary work from the missing chat-scope-document blocker.
 3. `platform-mediation-boundary-and-contract`
-   - Define support, report, order, refund, chat visibility, and mediation case boundaries.
-   - Produce the implementation task constraints.
+   - Completed boundary definition for support, report, order, refund, chat visibility, and mediation case ownership.
+   - Produced implementation task constraints.
 4. `platform-mediation-implementation`
-   - Implement the mediation v1 workflow once the boundary task is complete.
+   - Implement the mediation v1 workflow from `docs/02-requirements/platform-mediation-scope.md`.
 5. `admin-dashboard-observability`
    - Upgrade the admin dashboard into a task and flow monitor using real backend data.
 6. `admin-audit-log-foundation`

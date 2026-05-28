@@ -1,3 +1,16 @@
+## [2026-05-28] - Platform Mediation Boundary Contract
+
+### docs
+- Added `docs/02-requirements/platform-mediation-scope.md` defining report escalation into `mediation_cases`, v1 statuses, decision categories, read-only chat visibility, and API/data/admin/seed/test expectations.
+- Updated the platform mediation implementation task so it can be dispatched without additional product decisions.
+- Updated current roadmaps to mark mediation boundary definition complete and implementation as the next step.
+- Aligned support-console scope and open questions with the accepted chat and mediation requirement documents.
+
+### test
+- Ran `git diff --check`.
+
+---
+
 ## [2026-05-28] - Chat MVP Scope Recovery
 
 ### docs

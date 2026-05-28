@@ -9,7 +9,7 @@
 | 功能线 | 状态 | 当前说明 |
 |---|---|---|
 | 聊天 MVP | 已实现，范围文档已恢复 | 当前范围边界见 `docs/02-requirements/chat-mvp-scope.md`；该文档以当前 runtime code、API spec 和 HTTP smoke collection 为事实源，archived chat tasks 仅作历史参考 |
-| 平台调解 | 可进入边界任务 | 聊天范围缺失不再阻塞；下一步由 `docs/08-tasks/active/platform-mediation-boundary-and-contract.md` 定义 report/order/refund/chat visibility/support/mediation 边界 |
+| 平台调解 | 边界已定义，进入实现任务 | `docs/02-requirements/platform-mediation-scope.md` 已定义 report escalation -> `mediation_cases`、read-only chat visibility、orders/refunds/support 边界；下一步派发 `docs/08-tasks/active/platform-mediation-implementation.md` |
 | 前端包体积治理 | 已完成第二轮 | 第二轮治理已归档：见 `docs/08-tasks/archived/frontend-bundle-second-pass.md`。管理端表格组件改为管理端布局动态注册，Vite `manualChunks` 已将表格模块留在非首屏预加载的异步 admin chunk 中 |
 | 后台管理模块专项 | 已规划，进入任务包调度 | 专项路线见 `docs/05-roadmap/current/admin-module-goal-roadmap.md`；当前 active 任务包覆盖后台入口、聊天范围恢复、调解、可观测、审计、角色权限和全流程种子数据 |
 
@@ -31,13 +31,12 @@
 
 ## 推荐推进顺序
 
-1. 平台调解边界定义
-2. 平台调解实现
-3. 后台可观测、审计、角色权限和全流程种子数据
+1. 平台调解实现
+2. 后台可观测、审计、角色权限和全流程种子数据
 
 ## 依赖关系
 
-- 平台调解依赖聊天 MVP 当前范围文档；`docs/02-requirements/chat-mvp-scope.md` 已恢复，调解边界任务可继续核定 read-only chat visibility
+- 平台调解依赖聊天 MVP 当前范围文档；`docs/02-requirements/chat-mvp-scope.md` 已恢复，`docs/02-requirements/platform-mediation-scope.md` 已将 admin chat visibility 限定为 mediation case/read-only context
 - 当前正式 API 规范已覆盖现有主要模块；后续 UI/UX 确定后按接口变化增量维护
 - 前端包体积治理可以并行推进，但应作为横切任务单独管理
 - 后台管理模块专项由 `admin-module-goal-roadmap.md` 细化调度，任务级约束仍以 `docs/08-tasks/active/` 为准

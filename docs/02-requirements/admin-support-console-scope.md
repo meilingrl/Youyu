@@ -36,7 +36,7 @@ The first implementation slice is ready only because it can be built from existi
 | Search/risk signal context | partial existing lane | search governance module via `AdminController` | `GET /api/admin/search/governance-rules`, `GET /api/admin/search/logs`, plus rule CRUD endpoints | no abnormal-message detection; no chat moderation hits; no risk queue | V1 may show search log/governance links only. It must not claim message-risk processing exists. |
 | Buyer/seller chat visibility | missing for admin support | chat module | User endpoints exist under `/api/chat/**` for conversation list, messages, search, pin, mute, recall, auto-reply, quick replies, unread count | no admin role access; no cross-user conversation lookup; no admin participant model; no three-party support conversation | Admin support v1 must not call `/api/chat/**`. Chat remains peer-to-peer USER scope until a separate admin chat contract exists. |
 | Notifications | not a support-console data source in v1 | notification module | User endpoints exist under `/api/notifications/**` for list, unread count, mark-read | no admin notification queue; no support notification composition; USER role only | V1 may mention notifications as user delivery infrastructure only. It must not display or mutate notifications. |
-| Platform mediation | blocked | not yet defined | none | `docs/02-requirements/platform-mediation-scope.md` is absent; `docs/02-requirements/chat-mvp-scope.md` is also absent in this worktree | Mediation is excluded from support console v1. Do not add mediation UI, endpoints, states, or schema until platform mediation scope exists. |
+| Platform mediation | contract-defined, implementation pending | mediation module after implementation | none currently; planned contract is `docs/02-requirements/platform-mediation-scope.md` | mediation endpoints and `mediation_cases` do not exist until implementation | Mediation is excluded from support console v1 ownership. Support console may link to mediation after implementation, but must not own mediation UI state, endpoints, or schema. |
 | Group governance | missing | no current owner | none | no group entity, group membership, group message, or group moderation endpoints | Excluded from v1. Keep it as a reserved lane only. |
 
 ## 4. Reusable Endpoint Details
@@ -139,7 +139,7 @@ It may replace the reserved `/admin/support` placeholder with a live dashboard t
 - shows unavailable lanes as blocked or missing without fake counts
 - keeps all mutations on the owner pages
 
-This slice is implementation-ready because it needs no backend, schema, seed, API contract, or product-decision change. It remains blocked from implementing mediation because `docs/02-requirements/platform-mediation-scope.md` is absent.
+This slice is implementation-ready because it needs no backend, schema, seed, API contract, or product-decision change. It remains separate from mediation: `docs/02-requirements/platform-mediation-scope.md` now defines mediation ownership, and support console must not become that owner.
 
 ## 8. Future Scope Triggers
 
@@ -147,7 +147,7 @@ Create a separate task before expanding support console beyond v1 if any of the 
 
 - admin-visible chat transcripts or admin message sending
 - support assignment, SLA, internal notes, or disposition workflow
-- mediation escalation from reports or orders
+- support-console ownership of mediation escalation from reports or orders
 - group governance
 - abnormal-message detection
 - notification composition or admin notification queues
