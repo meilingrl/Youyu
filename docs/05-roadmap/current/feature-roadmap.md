@@ -13,7 +13,7 @@
 | 隐私合规 | 🔴 P0 进行中 | 隐私政策、用户协议、Cookie 同意等法律文档 |
 | 性能优化 | 🟡 P1 待启动 | Redis 缓存、异步日志、限流、OSS 迁移 |
 | 管理员功能 | 🟡 P2 当前专项已完成 | 后台入口、调解、可观测 dashboard、审计日志、角色权限和全流程 seed 已完成；后续批量操作等扩展继续按 `launch-preparation-roadmap.md` 排期 |
-| 营销功能 | 🟡 P2 待启动 | 优惠券、店铺活动、活动统计 |
+| 营销功能 | 🟡 P2 已进入营销 MVP 规划 | 第一阶段聚焦店主优惠券闭环和店铺活动基础发布/审核/展示；活动统计暂缓 |
 | UI/UX 改进 | 🟡 P3 部分完成 | 消息中心与交易中心第二轮体验已完成，设置页面和全局细节仍待收口 |
 | 前端包体积治理 | 已完成第二轮 | 第二轮治理已归档：见 `docs/08-tasks/archived/frontend-bundle-second-pass.md`。管理端表格组件改为管理端布局动态注册，Vite `manualChunks` 已将表格模块留在非首屏预加载的异步 admin chunk 中 |
 
@@ -67,3 +67,9 @@
 - 当前功能状态发生变化时更新本文件
 - 任务级实现细节不写在这里，统一进入 `../../08-tasks/`
 - 横切治理项可以出现在这里，但必须有明确任务归属
+## 2026-05-29 Marketing MVP Status
+
+- Marketing MVP first phase is implemented and archived under `docs/08-tasks/archived/marketing-mvp-foundation.md`.
+- Coupon scope now covers owner submission, admin review, buyer claim, owned-coupon list, one-coupon checkout/order use, and first-pass consistency guards.
+- Shop activity scope now covers owner submission, admin review, and approved effective public display only.
+- Activity statistics, complex promotion rule engines, coupon stacking, and automatic best-coupon selection remain out of scope.

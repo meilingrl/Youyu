@@ -93,6 +93,17 @@ export default {
       }
     },
     {
+      path: 'coupons',
+      name: 'app-coupons',
+      component: () => import('@/views/app/BuyerCouponsView.vue'),
+      meta: {
+        title: '我的优惠券',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/me'
+      }
+    },
+    {
       path: 'shops/:id',
       name: 'app-shop',
       component: () => import('@/views/app/ShopView.vue'),
@@ -145,6 +156,17 @@ export default {
         requiresAuth: true,
         role: 'user',
         hiddenInNav: true
+      }
+    },
+    {
+      path: 'seller/marketing',
+      name: 'seller-marketing',
+      component: () => import('@/views/app/SellerMarketingView.vue'),
+      meta: {
+        title: '店铺营销管理',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/me'
       }
     },
     {

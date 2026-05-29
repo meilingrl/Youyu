@@ -17,6 +17,7 @@ const ALL_PERMISSIONS = [
   'ADMIN_PRODUCTS_REVIEW',
   'ADMIN_SHOPS_VIEW',
   'ADMIN_SHOPS_MANAGE',
+  'ADMIN_MARKETING_REVIEW',
   'ADMIN_REPORTS_HANDLE',
   'ADMIN_SEARCH_GOVERN',
   'ADMIN_SEARCH_LOGS_VIEW',
@@ -47,7 +48,8 @@ const PERMISSIONS_BY_ROLE = {
     'ADMIN_PRODUCTS_VIEW',
     'ADMIN_PRODUCTS_REVIEW',
     'ADMIN_SHOPS_VIEW',
-    'ADMIN_SHOPS_MANAGE'
+    'ADMIN_SHOPS_MANAGE',
+    'ADMIN_MARKETING_REVIEW'
   ],
   operator: [
     'ADMIN_DASHBOARD_VIEW',
@@ -72,6 +74,7 @@ export const ADMIN_PATH_PERMISSIONS = {
   '/admin/shops': ['ADMIN_SHOPS_VIEW'],
   '/admin/orders': ['ADMIN_ORDERS_READ'],
   '/admin/reports': ['ADMIN_REPORTS_HANDLE'],
+  '/admin/marketing': ['ADMIN_MARKETING_REVIEW'],
   '/admin/mediation': ['ADMIN_MEDIATION_HANDLE'],
   '/admin/hot-search': ['ADMIN_SEARCH_GOVERN'],
   '/admin/support': ['ADMIN_SUPPORT_CONTEXT_VIEW']

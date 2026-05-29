@@ -5,6 +5,7 @@ import com.youyu.backend.common.enums.OrderStatus;
 import com.youyu.backend.common.exception.BusinessException;
 import com.youyu.backend.mapper.order.DigitalAccessMapper;
 import com.youyu.backend.mapper.product.ProductMapper;
+import com.youyu.backend.service.marketing.MarketingService;
 import com.youyu.backend.service.notification.NotificationService;
 import com.youyu.backend.service.order.OrderService;
 import com.youyu.backend.service.transaction.support.TransactionDataStore;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -25,15 +27,18 @@ public class OrderServiceImpl implements OrderService {
     private final ProductMapper productMapper;
     private final DigitalAccessMapper digitalAccessMapper;
     private final NotificationService notificationService;
+    private final MarketingService marketingService;
 
     public OrderServiceImpl(TransactionDataStore transactionDataStore,
                             ProductMapper productMapper,
                             DigitalAccessMapper digitalAccessMapper,
-                            NotificationService notificationService) {
+                            NotificationService notificationService,
+                            MarketingService marketingService) {
         this.transactionDataStore = transactionDataStore;
         this.productMapper = productMapper;
         this.digitalAccessMapper = digitalAccessMapper;
         this.notificationService = notificationService;
+        this.marketingService = marketingService;
     }
 
     @Override
@@ -95,13 +100,15 @@ public class OrderServiceImpl implements OrderService {
     public Map<String, Object> previewOrder(Long userId, Map<String, Object> command) {
         List<Map<String, Object>> cartItems = resolveSelectedCartItems(userId, command);
         String forcedFulfillmentType = optionalString(command, "fulfillmentType");
-        return buildOrderPreview(userId, cartItems, forcedFulfillmentType);
+        return buildOrderPreview(userId, cartItems, forcedFulfillmentType, optionalLong(command, "userCouponId"));
     }
 
     @Override
+    @Transactional
     public Map<String, Object> createOrder(Long userId, Map<String, Object> command) {
         List<Map<String, Object>> cartItems = resolveSelectedCartItems(userId, command);
-        Map<String, Object> preview = buildOrderPreview(userId, cartItems, requiredString(command, "fulfillmentType"));
+        Long userCouponId = optionalLong(command, "userCouponId");
+        Map<String, Object> preview = buildOrderPreview(userId, cartItems, requiredString(command, "fulfillmentType"), userCouponId);
         String fulfillmentType = String.valueOf(preview.get("selectedFulfillmentType"));
         // 地址在订单创建时快照（值拷贝），而非外键引用。
         // 用户后续修改地址不影响已有订单的收货地址。
@@ -129,15 +136,19 @@ public class OrderServiceImpl implements OrderService {
         // TransactionDataStore.createOrder() 在一个方法内原子执行：
         // 插入 orders + order_items + order_fulfillments + 删除购物车项。
         // 若中途失败，JDBC 事务回滚保证不会产生部分订单。
-        return transactionDataStore.createOrder(
+        Map<String, Object> order = transactionDataStore.createOrder(
                 userId,
                 enrichOrderItems(cartItems),
                 fulfillmentType,
                 addressSnapshot,
                 offlineMeetTime,
                 offlineMeetLocation,
-                optionalString(command, "buyerNote")
+                optionalString(command, "buyerNote"),
+                (BigDecimal) preview.get("discountAmount"),
+                castNullableMap(preview.get("appliedCoupon"))
         );
+        marketingService.markCouponUsed(userId, userCouponId, castLong(order.get("id")));
+        return order;
     }
 
     @Override
@@ -166,12 +177,14 @@ public class OrderServiceImpl implements OrderService {
         List<Map<String, Object>> orderItems = transactionDataStore.findOrderItems(orderId);
         List<Map<String, Object>> payments = transactionDataStore.findPayments(orderId);
         List<Map<String, Object>> refunds = transactionDataStore.findRefunds(orderId);
+        Map<String, Object> appliedCoupon = transactionDataStore.findOrderCouponApplication(orderId);
 
         Map<String, Object> detail = new LinkedHashMap<>(order);
         detail.put("items", orderItems);
         detail.put("fulfillment", fulfillment);
         detail.put("payments", payments);
         detail.put("refunds", refunds);
+        detail.put("appliedCoupon", appliedCoupon);
         // buildAvailableActions() 返回当前订单状态下可执行的操作列表，
         // 前端根据此列表渲染按钮，而非硬编码自己的状态机规则。
         detail.put("availableActions", buildAvailableActions(order, fulfillment, adminView));
@@ -399,18 +412,20 @@ public class OrderServiceImpl implements OrderService {
         return result;
     }
 
-    private Map<String, Object> buildOrderPreview(Long userId, List<Map<String, Object>> cartItems, String fulfillmentType) {
+    private Map<String, Object> buildOrderPreview(Long userId, List<Map<String, Object>> cartItems, String fulfillmentType, Long userCouponId) {
         if (cartItems.isEmpty()) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "请选择至少一项商品");
         }
         List<Map<String, Object>> items = new ArrayList<>();
         List<String> allowedFulfillmentTypes = null;
         Long sellerUserId = null;
+        Long shopId = null;
         for (Map<String, Object> cartItem : cartItems) {
             Map<String, Object> product = requireProduct(castLong(cartItem.get("productId")));
             ensureProductPurchasable(product);
             if (sellerUserId == null) {
                 sellerUserId = castLong(product.get("sellerUserId"));
+                shopId = nullableLong(product.get("shopId"));
             // 限制：当前 MVP 仅支持同一卖家商品合并下单。
             // 跨卖家拆分订单为未来迭代范围。
             } else if (!Objects.equals(sellerUserId, product.get("sellerUserId"))) {
@@ -448,6 +463,15 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal productAmount = items.stream()
                 .map(item -> (BigDecimal) item.get("subtotal"))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<Map<String, Object>> availableCoupons = marketingService.listApplicableUserCoupons(userId, shopId, productAmount);
+        Map<String, Object> appliedCoupon = marketingService.validateCouponForOrder(userId, userCouponId, shopId, productAmount);
+        BigDecimal couponDiscountAmount = appliedCoupon == null
+                ? BigDecimal.ZERO.setScale(2, java.math.RoundingMode.HALF_UP)
+                : (BigDecimal) appliedCoupon.get("couponDiscountAmount");
+        BigDecimal payableAmount = productAmount.subtract(couponDiscountAmount);
+        if (payableAmount.compareTo(BigDecimal.ZERO) < 0) {
+            payableAmount = BigDecimal.ZERO.setScale(2, java.math.RoundingMode.HALF_UP);
+        }
         Map<String, Object> preview = new LinkedHashMap<>();
         preview.put("items", items);
         preview.put("allowedFulfillmentTypes", allowedFulfillmentTypes);
@@ -455,8 +479,11 @@ public class OrderServiceImpl implements OrderService {
         preview.put("productAmount", productAmount);
         // TODO: 折扣/促销尚未实现，discountAmount 固定为零。
         // 未来扩展点：优惠券码、会员折扣、满减促销。
-        preview.put("discountAmount", BigDecimal.ZERO);
-        preview.put("payableAmount", productAmount);
+        preview.put("couponDiscountAmount", couponDiscountAmount);
+        preview.put("discountAmount", couponDiscountAmount);
+        preview.put("payableAmount", payableAmount);
+        preview.put("availableCoupons", availableCoupons);
+        preview.put("appliedCoupon", appliedCoupon);
         preview.put("addressOptions", transactionDataStore.findUserAddresses(userId));
         preview.put("requiresAddress", "logistics".equals(selectedFulfillmentType));
         preview.put("requiresOfflineAppointment", "offline".equals(selectedFulfillmentType));
@@ -704,6 +731,14 @@ public class OrderServiceImpl implements OrderService {
         return castLong(value);
     }
 
+    private Long optionalLong(Map<String, Object> command, String key) {
+        Object value = command.get(key);
+        if (value == null || String.valueOf(value).isBlank()) {
+            return null;
+        }
+        return castLong(value);
+    }
+
     private Integer requiredInteger(Map<String, Object> command, String key) {
         Object value = command.get(key);
         if (value == null) {
@@ -735,5 +770,13 @@ public class OrderServiceImpl implements OrderService {
             return null;
         }
         return castLong(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> castNullableMap(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return (Map<String, Object>) value;
     }
 }

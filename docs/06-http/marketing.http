@@ -1,0 +1,238 @@
+### Youyu - Marketing MVP
+### Prerequisite: backend started with seed data.
+### Use the created coupon/activity IDs from earlier responses in later requests.
+
+@baseUrl = http://localhost:8080
+@ownerToken = mock-1001-USER
+@buyerToken = mock-1011-USER
+@secondBuyerToken = mock-1012-USER
+@reviewerToken = mock-9103-REVIEWER
+@operatorToken = mock-9104-OPERATOR
+@shopId = 4001
+@couponId = 1
+@activityId = 1
+@userCouponId = 1
+@cartItemId = 1
+
+# ---------------------------------------------------------------------------
+# Shop-owner coupons
+# ---------------------------------------------------------------------------
+
+### List owner coupons
+GET {{baseUrl}}/api/marketing/owner/coupons
+Authorization: Bearer {{ownerToken}}
+
+###
+
+### Create fixed discount coupon
+POST {{baseUrl}}/api/marketing/owner/coupons
+Authorization: Bearer {{ownerToken}}
+Content-Type: application/json
+
+{
+  "title": "Opening week fixed coupon",
+  "description": "Fixed discount for the owner's shop.",
+  "couponType": "FIXED",
+  "discountAmount": 3.00,
+  "minimumSpendAmount": 0.00,
+  "totalQuantity": 20,
+  "startAt": "2026-05-29T00:00:00",
+  "endAt": "2026-12-31T23:59:00"
+}
+
+###
+
+### Create threshold discount coupon
+POST {{baseUrl}}/api/marketing/owner/coupons
+Authorization: Bearer {{ownerToken}}
+Content-Type: application/json
+
+{
+  "title": "Course pack threshold coupon",
+  "description": "Spend 30 and save 5.",
+  "couponType": "THRESHOLD",
+  "discountAmount": 5.00,
+  "minimumSpendAmount": 30.00,
+  "totalQuantity": 20,
+  "startAt": "2026-05-29T00:00:00",
+  "endAt": "2026-12-31T23:59:00"
+}
+
+###
+
+### Disable owner coupon
+PUT {{baseUrl}}/api/marketing/owner/coupons/{{couponId}}/status
+Authorization: Bearer {{ownerToken}}
+Content-Type: application/json
+
+{
+  "status": "disabled"
+}
+
+# ---------------------------------------------------------------------------
+# Admin coupon review
+# ---------------------------------------------------------------------------
+
+###
+
+### List pending marketing coupons
+GET {{baseUrl}}/api/admin/marketing/coupons?reviewStatus=pending_review
+Authorization: Bearer {{reviewerToken}}
+
+###
+
+### Approve coupon
+PUT {{baseUrl}}/api/admin/marketing/coupons/{{couponId}}/review
+Authorization: Bearer {{reviewerToken}}
+Content-Type: application/json
+
+{
+  "action": "approve",
+  "reviewNote": "Coupon scope is clear."
+}
+
+###
+
+### Reject coupon with reason
+PUT {{baseUrl}}/api/admin/marketing/coupons/{{couponId}}/review
+Authorization: Bearer {{reviewerToken}}
+Content-Type: application/json
+
+{
+  "action": "reject",
+  "rejectReason": "Coupon description is incomplete.",
+  "reviewNote": "Ask owner to clarify usage rules."
+}
+
+###
+
+### Disable risky coupon
+PUT {{baseUrl}}/api/admin/marketing/coupons/{{couponId}}/disable
+Authorization: Bearer {{reviewerToken}}
+
+###
+
+### Operator cannot access marketing review - expect 403
+GET {{baseUrl}}/api/admin/marketing/coupons
+Authorization: Bearer {{operatorToken}}
+
+# ---------------------------------------------------------------------------
+# Buyer coupon claim and order use
+# ---------------------------------------------------------------------------
+
+###
+
+### List available coupons for a shop
+GET {{baseUrl}}/api/marketing/coupons/available?shopId={{shopId}}
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Claim approved coupon
+POST {{baseUrl}}/api/marketing/coupons/{{couponId}}/claim
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Duplicate claim - expect BUSINESS_ERROR
+POST {{baseUrl}}/api/marketing/coupons/{{couponId}}/claim
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### List my coupons
+GET {{baseUrl}}/api/marketing/my-coupons
+Authorization: Bearer {{buyerToken}}
+
+###
+
+### Preview order with one coupon
+POST {{baseUrl}}/api/orders/preview
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "cartItemIds": [{{cartItemId}}],
+  "fulfillmentType": "digital",
+  "userCouponId": {{userCouponId}}
+}
+
+###
+
+### Create order with one coupon; server revalidates coupon state
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "cartItemIds": [{{cartItemId}}],
+  "fulfillmentType": "digital",
+  "userCouponId": {{userCouponId}},
+  "buyerNote": "Use one approved shop coupon."
+}
+
+# ---------------------------------------------------------------------------
+# Shop-owner activities
+# ---------------------------------------------------------------------------
+
+###
+
+### List owner activities
+GET {{baseUrl}}/api/marketing/owner/activities
+Authorization: Bearer {{ownerToken}}
+
+###
+
+### Create shop activity
+POST {{baseUrl}}/api/marketing/owner/activities
+Authorization: Bearer {{ownerToken}}
+Content-Type: application/json
+
+{
+  "title": "Dorm study bundle display",
+  "description": "Display-only shop activity. It does not auto-discount orders.",
+  "startAt": "2026-05-29T00:00:00",
+  "endAt": "2026-12-31T23:59:00"
+}
+
+###
+
+### List pending activities
+GET {{baseUrl}}/api/admin/marketing/activities?reviewStatus=pending_review
+Authorization: Bearer {{reviewerToken}}
+
+###
+
+### Approve activity
+PUT {{baseUrl}}/api/admin/marketing/activities/{{activityId}}/review
+Authorization: Bearer {{reviewerToken}}
+Content-Type: application/json
+
+{
+  "action": "approve",
+  "reviewNote": "Activity can be displayed."
+}
+
+###
+
+### Reject activity with reason
+PUT {{baseUrl}}/api/admin/marketing/activities/{{activityId}}/review
+Authorization: Bearer {{reviewerToken}}
+Content-Type: application/json
+
+{
+  "action": "reject",
+  "rejectReason": "Activity copy implies an automatic order discount.",
+  "reviewNote": "Remove unsupported pricing claim."
+}
+
+###
+
+### Public shop activities; approved effective rows only
+GET {{baseUrl}}/api/marketing/shops/{{shopId}}/activities
+
+###
+
+### Disable risky activity
+PUT {{baseUrl}}/api/admin/marketing/activities/{{activityId}}/disable
+Authorization: Bearer {{reviewerToken}}

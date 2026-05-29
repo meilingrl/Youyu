@@ -13,6 +13,7 @@ import { shopInsightMetricDefinitions } from '@/constants/insightMetrics'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useMarketStore } from '@/stores/market'
+import { couponDiscountLabel, useMarketingStore } from '@/stores/marketing'
 import { useReviewStore } from '@/stores/review'
 
 const props = defineProps({
@@ -26,6 +27,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const chatStore = useChatStore()
 const marketStore = useMarketStore()
+const marketingStore = useMarketingStore()
 const reviewStore = useReviewStore()
 
 const loading = ref(false)
@@ -35,6 +37,8 @@ const reviewPage = ref(1)
 const shop = computed(() => marketStore.getShopById(props.id))
 const products = computed(() => marketStore.getProductsByShopId(props.id))
 const shopInsight = computed(() => marketStore.getShopInsightById(props.id))
+const shopActivities = computed(() => marketingStore.getShopActivitiesByShop(props.id))
+const availableCoupons = computed(() => marketingStore.getAvailableCouponsByShop(props.id))
 const shopInsightReserved = computed(() => shopInsight.value?.metricSource !== 'real_query')
 const shopInsightFailed = computed(() => shopInsight.value?.metricSource === 'unavailable')
 
@@ -141,7 +145,9 @@ async function loadShop() {
     await Promise.allSettled([
       marketStore.loadShopInsightSnapshot(props.id),
       reviewStore.loadShopReviewSummary(Number(props.id)),
-      reviewStore.loadShopReviews(Number(props.id), reviewPage.value, 10)
+      reviewStore.loadShopReviews(Number(props.id), reviewPage.value, 10),
+      marketingStore.loadShopActivities(props.id),
+      authStore.isLoggedIn ? marketingStore.loadAvailableCoupons(props.id) : Promise.resolve([])
     ])
   } catch (error) {
     loadError.value = true
@@ -190,6 +196,26 @@ function handleOpenShopMessagesHub() {
 
 function handleGoProduct(productId) {
   router.push(`/app/products/${productId}`)
+}
+
+async function handleClaimCoupon(coupon) {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('领取优惠券前请先登录')
+    router.push({
+      path: '/login',
+      query: {
+        redirect: `/app/shops/${props.id}`
+      }
+    })
+    return
+  }
+
+  try {
+    await marketingStore.claimShopCoupon(coupon.id || coupon.couponId, props.id)
+    ElMessage.success('优惠券已领取')
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || error?.message || '优惠券领取失败')
+  }
 }
 
 function handleReviewPageChange(page) {
@@ -302,6 +328,55 @@ onMounted(loadShop)
           >
             {{ tag }}
           </el-tag>
+        </div>
+      </PageSection>
+
+      <PageSection title="店铺活动与优惠" description="这里只展示已审核且有效的店铺活动；活动本身不自动改价，订单优惠以结算页选择的优惠券为准。">
+        <div class="shop-grid shop-grid--intro">
+          <article class="shop-panel shell-card">
+            <h3>公开活动</h3>
+            <div v-if="shopActivities.length" class="shop-marketing-list">
+              <div v-for="activity in shopActivities" :key="activity.id || activity.activityId" class="shop-marketing-item">
+                <div>
+                  <strong>{{ activity.title || activity.name || '店铺活动' }}</strong>
+                  <p>{{ activity.description || activity.content || '活动说明待补充。' }}</p>
+                </div>
+                <el-tag effect="plain" type="success">已审核</el-tag>
+              </div>
+            </div>
+            <EmptyState
+              v-else
+              title="暂无公开活动"
+              description="当前店铺没有正在展示的审核通过活动。"
+            />
+          </article>
+
+          <article class="shop-panel shell-card">
+            <h3>可领取优惠券</h3>
+            <div v-if="authStore.isLoggedIn && availableCoupons.length" class="shop-marketing-list">
+              <div v-for="coupon in availableCoupons" :key="coupon.id || coupon.couponId" class="shop-marketing-item">
+                <div>
+                  <strong>{{ coupon.title || coupon.name || '店铺优惠券' }}</strong>
+                  <p>{{ couponDiscountLabel(coupon) }} · 结算时可选择一张可用券</p>
+                </div>
+                <el-button type="primary" plain @click="handleClaimCoupon(coupon)">领取</el-button>
+              </div>
+            </div>
+            <EmptyState
+              v-else-if="authStore.isLoggedIn"
+              title="暂无可领取优惠券"
+              description="当前店铺没有可领取的审核通过优惠券。"
+            />
+            <EmptyState
+              v-else
+              title="登录后查看优惠券"
+              description="可领取优惠券需要登录后由接口按用户状态返回。"
+            >
+              <el-button type="primary" @click="$router.push({ path: '/login', query: { redirect: `/app/shops/${props.id}` } })">
+                登录后查看
+              </el-button>
+            </EmptyState>
+          </article>
         </div>
       </PageSection>
 
@@ -664,6 +739,28 @@ onMounted(loadShop)
   gap: 14px;
 }
 
+.shop-marketing-list {
+  display: grid;
+  gap: 12px;
+}
+
+.shop-marketing-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--cm-border);
+}
+
+.shop-marketing-item:last-child {
+  border-bottom: none;
+}
+
+.shop-marketing-item strong {
+  font-size: 16px;
+}
+
 .shop-hot-list__item,
 .shop-hot-list__foot {
   display: flex;
@@ -713,6 +810,7 @@ onMounted(loadShop)
 
   .shop-hero__actions,
   .shop-reserved-actions,
+  .shop-marketing-item,
   .shop-hot-list__item,
   .shop-hot-list__foot {
     align-items: flex-start;
