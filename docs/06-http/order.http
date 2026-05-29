@@ -29,6 +29,20 @@ Content-Type: application/json
 
 ###
 
+### Preview order with a claimed coupon
+### Replace userCouponId with a value returned by POST /api/marketing/coupons/{couponId}/claim.
+POST {{baseUrl}}/api/orders/preview
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "cartItemIds": [1],
+  "fulfillmentType": "logistics",
+  "userCouponId": 1
+}
+
+###
+
 ### Create logistics order from selected cart items
 POST {{baseUrl}}/api/orders
 Authorization: Bearer {{buyerToken}}
@@ -39,6 +53,21 @@ Content-Type: application/json
   "fulfillmentType": "logistics",
   "addressId": 1,
   "buyerNote": "Please deliver to the campus gate."
+}
+
+###
+
+### Create order with a claimed coupon; server revalidates coupon eligibility
+POST {{baseUrl}}/api/orders
+Authorization: Bearer {{buyerToken}}
+Content-Type: application/json
+
+{
+  "cartItemIds": [1],
+  "fulfillmentType": "logistics",
+  "addressId": 1,
+  "userCouponId": 1,
+  "buyerNote": "Use one approved shop coupon."
 }
 
 ###

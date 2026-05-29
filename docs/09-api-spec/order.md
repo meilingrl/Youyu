@@ -7,7 +7,7 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/order/OrderController.java`
   - controller: `backend/src/main/java/com/youyu/backend/controller/order/AdminOrderController.java`
   - request sample: `docs/06-http/order.http`
-- Last updated: 2026-05-28
+- Last updated: 2026-05-29
 
 ## Scope
 
@@ -64,11 +64,17 @@ Preview an order before creation.
 - Body:
   - `cartItemIds`: required, array of selected cart item IDs
   - `fulfillmentType`: optional, can be used to force preview under a specific fulfillment mode
+  - `userCouponId`: optional, a claimed user coupon ID to apply to the preview
 
 #### Response
 
 - `data`: preview object returned by `OrderService.previewOrder(...)`
-- Current service behavior includes selected fulfillment result, order items, and amount-related preview data
+- Current service behavior includes selected fulfillment result, order items, amount-related preview data, applicable coupons, and the selected coupon when `userCouponId` is valid.
+- Coupon-related response fields:
+  - `availableCoupons`: claimed coupons that match the order shop and amount
+  - `appliedCoupon`: selected coupon snapshot, or `null`
+  - `couponDiscountAmount`: discount contributed by the selected coupon
+  - `discountAmount`: total discount amount for the order preview
 
 #### Error Cases
 
@@ -88,6 +94,7 @@ Create an order from selected cart items.
 - Body common fields:
   - `cartItemIds`: required, array
   - `fulfillmentType`: required
+  - `userCouponId`: optional, a claimed user coupon ID; the server revalidates it during order creation
 - Additional requirements by fulfillment type:
   - `logistics`:
     - `addressId`: required
@@ -102,7 +109,7 @@ Create an order from selected cart items.
 #### Error Cases
 
 - `400`: missing required fields, invalid address, invalid offline meeting time format
-- business error: cart item invalid, product unavailable, fulfillment type not allowed
+- business error: cart item invalid, product unavailable, fulfillment type not allowed, coupon already used, coupon inactive, coupon not applicable to the order shop, or coupon threshold not met
 
 ### `GET /api/orders/{orderId}`
 
@@ -123,6 +130,7 @@ Return order detail for the current buyer.
   - `orderItems`
   - `payments`
   - `refunds`
+  - `appliedCoupon`
   - `availableActions`
   - digital asset visibility data when applicable
 

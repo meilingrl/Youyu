@@ -34,13 +34,22 @@
 - [ ] 订单结算时优惠券应用
 - [ ] 并发控制（防止超发）
 
+第一阶段范围以 `docs/02-requirements/marketing-mvp-scope.md` 为准：
+
+- 店主创建优惠券，管理员审核后发行。
+- 用户主动领取优惠券，并在订单预览/下单时使用。
+- 仅支持立减券和满减券。
+- 建立领取与使用的基础并发控制。
+
 #### 3.2 店铺活动
 
 **数据库**：
 **任务**：
 - [ ] 活动创建和管理
-- [ ] 活动规则引擎（折扣、满减、包邮）
-- [ ] 活动效果统计
+- [ ] 管理员审核后展示
+- [ ] 前台有效活动展示
+
+第一阶段只做活动发布、审核和展示闭环，不做活动规则引擎和活动效果统计。
 
 #### 3.3 数据统计
 
@@ -163,3 +172,8 @@
 - `docs/03-architecture/data-management-and-privacy.md`
 - `docs/03-architecture/performance-and-scalability.md`
 - `docs/04-standards/operations-and-deployment.md`
+
+## 2026-05-29 Marketing MVP Note
+
+- The first marketing MVP slice is complete: coupons and shop activities now have owner submission, admin review, and buyer/public participation paths.
+- Remaining launch-preparation marketing items are later-stage extensions only: statistics, advanced rules, stacking, and automated selection are still deferred.

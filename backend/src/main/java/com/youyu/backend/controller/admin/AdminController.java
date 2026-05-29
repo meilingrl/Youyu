@@ -9,6 +9,7 @@ import com.youyu.backend.common.support.RequestContext;
 import com.youyu.backend.controller.admin.dto.ReviewVerificationRequest;
 import com.youyu.backend.controller.admin.dto.UpdateUserStatusRequest;
 import com.youyu.backend.service.admin.AdminService;
+import com.youyu.backend.service.marketing.MarketingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.Map;
@@ -28,9 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminController {
 
     private final AdminService adminService;
+    private final MarketingService marketingService;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(AdminService adminService, MarketingService marketingService) {
         this.adminService = adminService;
+        this.marketingService = marketingService;
     }
 
     @GetMapping("/dashboard")
@@ -266,6 +269,50 @@ public class AdminController {
                                                       @RequestParam(defaultValue = "10") int pageSize,
                                                       HttpServletRequest request) {
         return ApiResponse.success(adminService.listAuditLogs(action, targetType, page, pageSize), traceId(request));
+    }
+
+    @GetMapping("/marketing/coupons")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MARKETING_REVIEW})
+    public ApiResponse<java.util.List<Map<String, Object>>> marketingCoupons(@RequestParam(defaultValue = "") String reviewStatus,
+                                                                             HttpServletRequest request) {
+        return ApiResponse.success(marketingService.listAdminCoupons(reviewStatus), traceId(request));
+    }
+
+    @PutMapping("/marketing/coupons/{couponId}/review")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MARKETING_REVIEW})
+    public ApiResponse<Map<String, Object>> reviewMarketingCoupon(@PathVariable Long couponId,
+                                                                  @RequestBody Map<String, Object> payload,
+                                                                  HttpServletRequest request) {
+        return ApiResponse.success(marketingService.reviewCoupon(couponId, payload, currentAdminUserId()), traceId(request));
+    }
+
+    @PutMapping("/marketing/coupons/{couponId}/disable")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MARKETING_REVIEW})
+    public ApiResponse<Map<String, Object>> disableMarketingCoupon(@PathVariable Long couponId,
+                                                                   HttpServletRequest request) {
+        return ApiResponse.success(marketingService.disableCoupon(couponId, currentAdminUserId()), traceId(request));
+    }
+
+    @GetMapping("/marketing/activities")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MARKETING_REVIEW})
+    public ApiResponse<java.util.List<Map<String, Object>>> marketingActivities(@RequestParam(defaultValue = "") String reviewStatus,
+                                                                                HttpServletRequest request) {
+        return ApiResponse.success(marketingService.listAdminActivities(reviewStatus), traceId(request));
+    }
+
+    @PutMapping("/marketing/activities/{activityId}/review")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MARKETING_REVIEW})
+    public ApiResponse<Map<String, Object>> reviewMarketingActivity(@PathVariable Long activityId,
+                                                                    @RequestBody Map<String, Object> payload,
+                                                                    HttpServletRequest request) {
+        return ApiResponse.success(marketingService.reviewActivity(activityId, payload, currentAdminUserId()), traceId(request));
+    }
+
+    @PutMapping("/marketing/activities/{activityId}/disable")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_MARKETING_REVIEW})
+    public ApiResponse<Map<String, Object>> disableMarketingActivity(@PathVariable Long activityId,
+                                                                     HttpServletRequest request) {
+        return ApiResponse.success(marketingService.disableActivity(activityId, currentAdminUserId()), traceId(request));
     }
 
     private Long currentAdminUserId() {

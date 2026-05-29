@@ -22,7 +22,8 @@ const form = reactive({
   addressId: null,
   offlineMeetTime: '',
   offlineMeetLocation: '',
-  buyerNote: ''
+  buyerNote: '',
+  userCouponId: null
 })
 
 const selectedIds = computed(() =>
@@ -36,6 +37,10 @@ const checkoutMobileHelper = computed(() => {
   const fulfillmentLabel = getFulfillmentTypeMeta(form.fulfillmentType || preview.value?.selectedFulfillmentType).label
   return `${count} 件 · ${fulfillmentLabel}`
 })
+
+const availableCoupons = computed(() => preview.value?.availableCoupons || [])
+const selectedCouponId = computed(() => form.userCouponId || preview.value?.appliedCoupon?.userCouponId || null)
+const couponDiscountAmount = computed(() => Number(preview.value?.couponDiscountAmount || preview.value?.discountAmount || 0))
 
 const metrics = computed(() => [
   {
@@ -61,11 +66,21 @@ watch(
     if (!value || value === previous || !selectedIds.value.length) {
       return
     }
-    await loadPreview(value)
+    await loadPreview(value, form.userCouponId)
   }
 )
 
-async function loadPreview(fulfillmentType = '') {
+watch(
+  () => form.userCouponId,
+  async (value, previous) => {
+    if (value === previous || !selectedIds.value.length || !form.fulfillmentType) {
+      return
+    }
+    await loadPreview(form.fulfillmentType, value)
+  }
+)
+
+async function loadPreview(fulfillmentType = '', userCouponId = form.userCouponId) {
   if (!selectedIds.value.length) {
     ElMessage.warning('未选择购物车商品')
     router.replace('/app/cart')
@@ -77,7 +92,8 @@ async function loadPreview(fulfillmentType = '') {
   try {
     const response = await previewOrder({
       cartItemIds: selectedIds.value,
-      fulfillmentType
+      fulfillmentType,
+      userCouponId: userCouponId || null
     })
     preview.value = response.data
     if (!form.fulfillmentType) {
@@ -131,7 +147,8 @@ async function submitOrder() {
       addressId: form.addressId,
       offlineMeetTime: form.offlineMeetTime,
       offlineMeetLocation: form.offlineMeetLocation,
-      buyerNote: form.buyerNote
+      buyerNote: form.buyerNote,
+      userCouponId: form.userCouponId || null
     })
     ElMessage.success('订单创建成功')
     router.replace(`/app/payments/${response.data.id}`)
@@ -140,6 +157,16 @@ async function submitOrder() {
   } finally {
     submitting.value = false
   }
+}
+
+function couponOptionLabel(coupon) {
+  const title = coupon.title || coupon.name || coupon.couponName || '店铺优惠券'
+  const discount = Number(coupon.discountAmount || coupon.amount || 0).toFixed(2)
+  const threshold = Number(coupon.thresholdAmount || coupon.minSpendAmount || coupon.minOrderAmount || 0)
+  const prefix = coupon.type === 'threshold' || coupon.couponType === 'threshold_discount'
+    ? `满 ${threshold.toFixed(2)} 减 ${discount}`
+    : `立减 ${discount}`
+  return `${title} · ${prefix}`
 }
 
 onMounted(() => loadPreview())
@@ -214,6 +241,25 @@ onMounted(() => loadPreview())
                 </el-radio-group>
               </el-form-item>
 
+              <el-form-item label="优惠券">
+                <el-select
+                  v-model="form.userCouponId"
+                  clearable
+                  placeholder="不使用优惠券"
+                  :disabled="!availableCoupons.length"
+                >
+                  <el-option
+                    v-for="coupon in availableCoupons"
+                    :key="coupon.userCouponId || coupon.id"
+                    :label="couponOptionLabel(coupon)"
+                    :value="coupon.userCouponId || coupon.id"
+                  />
+                </el-select>
+                <p class="checkout-field-hint">
+                  每个订单最多选择一张优惠券；提交订单时服务端会重新校验有效性。
+                </p>
+              </el-form-item>
+
               <el-form-item v-if="preview.requiresAddress" label="收货地址">
                 <el-select v-model="form.addressId" placeholder="请选择地址">
                   <el-option
@@ -260,6 +306,14 @@ onMounted(() => loadPreview())
             <div>
               <span>商品金额</span>
               <strong>{{ formatCurrency(preview.productAmount) }}</strong>
+            </div>
+            <div v-if="couponDiscountAmount > 0">
+              <span>优惠金额</span>
+              <strong>-{{ formatCurrency(couponDiscountAmount) }}</strong>
+            </div>
+            <div v-if="selectedCouponId && preview.appliedCoupon">
+              <span>已用优惠券</span>
+              <strong>{{ preview.appliedCoupon.title || preview.appliedCoupon.name || selectedCouponId }}</strong>
             </div>
             <div>
               <span>实付金额</span>
@@ -328,10 +382,15 @@ onMounted(() => loadPreview())
 
 .checkout-item__copy p,
 .checkout-summary__meta span,
+.checkout-field-hint,
 .checkout-tip p {
   color: var(--cm-text-secondary);
   font-size: 13px;
   line-height: 1.55;
+}
+
+.checkout-field-hint {
+  margin: 8px 0 0;
 }
 
 .checkout-summary__meta strong {

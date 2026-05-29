@@ -278,6 +278,91 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE INDEX idx_order_items_order ON order_items(order_id, id);
 CREATE INDEX idx_order_items_product ON order_items(product_id);
 
+CREATE TABLE IF NOT EXISTS marketing_coupons (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    shop_id BIGINT NOT NULL,
+    owner_user_id BIGINT NOT NULL,
+    title VARCHAR(128) NOT NULL,
+    description VARCHAR(500),
+    coupon_type VARCHAR(32) NOT NULL,
+    discount_amount DECIMAL(12,2) NOT NULL,
+    minimum_spend_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    total_quantity INT NOT NULL,
+    claimed_quantity INT NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL DEFAULT 'active',
+    review_status VARCHAR(32) NOT NULL DEFAULT 'pending_review',
+    reject_reason VARCHAR(255),
+    review_note VARCHAR(500),
+    reviewed_by BIGINT,
+    reviewed_at TIMESTAMP,
+    start_at TIMESTAMP NOT NULL,
+    end_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_marketing_coupons_shop FOREIGN KEY (shop_id) REFERENCES shops(id),
+    CONSTRAINT fk_marketing_coupons_owner FOREIGN KEY (owner_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_marketing_coupons_owner ON marketing_coupons(owner_user_id, created_at, id);
+CREATE INDEX idx_marketing_coupons_public ON marketing_coupons(shop_id, review_status, status, start_at, end_at);
+
+CREATE TABLE IF NOT EXISTS user_coupons (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    coupon_id BIGINT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'claimed',
+    claimed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    used_at TIMESTAMP,
+    order_id BIGINT,
+    CONSTRAINT fk_user_coupons_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_user_coupons_coupon FOREIGN KEY (coupon_id) REFERENCES marketing_coupons(id),
+    CONSTRAINT uk_user_coupons_user_coupon UNIQUE (user_id, coupon_id)
+);
+
+CREATE INDEX idx_user_coupons_user_status ON user_coupons(user_id, status, claimed_at, id);
+CREATE INDEX idx_user_coupons_order ON user_coupons(order_id);
+
+CREATE TABLE IF NOT EXISTS order_coupon_applications (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL UNIQUE,
+    user_coupon_id BIGINT NOT NULL,
+    coupon_id BIGINT NOT NULL,
+    coupon_title VARCHAR(128) NOT NULL,
+    coupon_type VARCHAR(32) NOT NULL,
+    discount_amount DECIMAL(12,2) NOT NULL,
+    minimum_spend_amount DECIMAL(12,2) NOT NULL,
+    order_goods_amount DECIMAL(12,2) NOT NULL,
+    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_order_coupon_app_order FOREIGN KEY (order_id) REFERENCES orders(id),
+    CONSTRAINT fk_order_coupon_app_user_coupon FOREIGN KEY (user_coupon_id) REFERENCES user_coupons(id),
+    CONSTRAINT fk_order_coupon_app_coupon FOREIGN KEY (coupon_id) REFERENCES marketing_coupons(id)
+);
+
+CREATE INDEX idx_order_coupon_app_coupon ON order_coupon_applications(coupon_id, applied_at, id);
+
+CREATE TABLE IF NOT EXISTS shop_activities (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    shop_id BIGINT NOT NULL,
+    owner_user_id BIGINT NOT NULL,
+    title VARCHAR(128) NOT NULL,
+    description VARCHAR(1000) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'active',
+    review_status VARCHAR(32) NOT NULL DEFAULT 'pending_review',
+    reject_reason VARCHAR(255),
+    review_note VARCHAR(500),
+    reviewed_by BIGINT,
+    reviewed_at TIMESTAMP,
+    start_at TIMESTAMP NOT NULL,
+    end_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_shop_activities_shop FOREIGN KEY (shop_id) REFERENCES shops(id),
+    CONSTRAINT fk_shop_activities_owner FOREIGN KEY (owner_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_shop_activities_owner ON shop_activities(owner_user_id, created_at, id);
+CREATE INDEX idx_shop_activities_public ON shop_activities(shop_id, review_status, status, start_at, end_at);
+
 CREATE TABLE IF NOT EXISTS order_fulfillments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     order_id BIGINT NOT NULL UNIQUE,

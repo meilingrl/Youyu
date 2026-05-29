@@ -81,6 +81,15 @@ export default {
       }
     },
     {
+      path: 'marketing',
+      name: 'admin-marketing',
+      component: () => import('@/views/admin/MarketingReviewView.vue'),
+      meta: {
+        title: '营销审核',
+        navKey: '/admin/marketing'
+      }
+    },
+    {
       path: 'mediation',
       name: 'admin-mediation',
       component: () => import('@/views/admin/MediationCaseListView.vue'),

@@ -252,6 +252,27 @@ public class TransactionDataStore {
                 orderId);
     }
 
+    public synchronized Map<String, Object> findOrderCouponApplication(Long orderId) {
+        return jdbcTemplate.query("""
+                        SELECT *
+                        FROM order_coupon_applications
+                        WHERE order_id = ?
+                        """,
+                (rs, rowNum) -> linkedMap(
+                        "id", rs.getLong("id"),
+                        "orderId", rs.getLong("order_id"),
+                        "userCouponId", rs.getLong("user_coupon_id"),
+                        "couponId", rs.getLong("coupon_id"),
+                        "couponTitle", rs.getString("coupon_title"),
+                        "couponType", rs.getString("coupon_type"),
+                        "discountAmount", rs.getBigDecimal("discount_amount"),
+                        "minimumSpendAmount", rs.getBigDecimal("minimum_spend_amount"),
+                        "orderGoodsAmount", rs.getBigDecimal("order_goods_amount"),
+                        "appliedAt", toLocalDateTime(rs.getTimestamp("applied_at"))
+                ),
+                orderId).stream().findFirst().map(this::copy).orElse(null);
+    }
+
     public synchronized Map<String, Object> getMutableFulfillment(Long orderId) {
         return jdbcTemplate.query("""
                         SELECT * FROM order_fulfillments WHERE order_id = ?
@@ -358,13 +379,18 @@ public class TransactionDataStore {
                                                         Map<String, Object> addressSnapshot,
                                                         String offlineMeetTime,
                                                         String offlineMeetLocation,
-                                                        String buyerNote) {
+                                                        String buyerNote,
+                                                        BigDecimal discountAmount,
+                                                        Map<String, Object> appliedCoupon) {
         LocalDateTime now = LocalDateTime.now();
         Map<String, Object> firstItem = selectedCartItems.get(0);
         Long sellerUserId = (Long) firstItem.get("sellerUserId");
         Long shopId = (Long) firstItem.get("shopId");
         BigDecimal productAmount = sumAmount(selectedCartItems);
-        BigDecimal payableAmount = productAmount;
+        BigDecimal resolvedDiscountAmount = discountAmount == null
+                ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                : discountAmount.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal payableAmount = productAmount.subtract(resolvedDiscountAmount).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
         String orderNo = nextOrderNo();
 
         Long orderId = insertAndReturnId("""
@@ -382,11 +408,29 @@ public class TransactionDataStore {
                 fulfillmentType,
                 "unpaid",
                 productAmount,
-                BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP),
+                resolvedDiscountAmount,
                 payableAmount,
                 defaultString(buyerNote),
                 Timestamp.valueOf(now),
                 "");
+
+        if (appliedCoupon != null) {
+            jdbcTemplate.update("""
+                            INSERT INTO order_coupon_applications (
+                                order_id, user_coupon_id, coupon_id, coupon_title, coupon_type,
+                                discount_amount, minimum_spend_amount, order_goods_amount, applied_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                    orderId,
+                    appliedCoupon.get("userCouponId"),
+                    appliedCoupon.get("couponId"),
+                    appliedCoupon.get("title"),
+                    appliedCoupon.get("couponType"),
+                    resolvedDiscountAmount,
+                    appliedCoupon.get("minimumSpendAmount"),
+                    productAmount,
+                    Timestamp.valueOf(now));
+        }
 
         for (Map<String, Object> cartItem : selectedCartItems) {
             Long productId = (Long) cartItem.get("productId");

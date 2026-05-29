@@ -120,11 +120,25 @@ onMounted(loadProfileData)
             <span>查看已收藏的商品</span>
           </span>
         </button>
+        <button class="category-chip" @click="$router.push('/app/coupons')">
+          <span class="category-chip__emoji">券</span>
+          <span class="category-chip__text">
+            <strong>我的优惠券</strong>
+            <span>查看已领取的店铺优惠券</span>
+          </span>
+        </button>
         <button class="category-chip" @click="$router.push('/app/seller/products')">
           <span class="category-chip__emoji">🏪</span>
           <span class="category-chip__text">
             <strong>我的店铺</strong>
             <span>管理在售商品与发布</span>
+          </span>
+        </button>
+        <button class="category-chip" @click="$router.push('/app/seller/marketing')">
+          <span class="category-chip__emoji">营</span>
+          <span class="category-chip__text">
+            <strong>店铺营销</strong>
+            <span>管理优惠券与店铺活动</span>
           </span>
         </button>
         <button class="category-chip" @click="$router.push('/app/settings/preferences')">

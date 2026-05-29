@@ -92,6 +92,7 @@ Formal API specification documents.
   - `admin.md`
   - `auth.md`
   - `cart.md`
+  - `marketing.md`
   - `order.md`
   - `payment.md`
   - `product.md`

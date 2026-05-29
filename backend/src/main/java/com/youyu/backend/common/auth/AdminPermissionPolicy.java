@@ -32,7 +32,8 @@ public final class AdminPermissionPolicy {
                 AdminPermission.ADMIN_PRODUCTS_VIEW,
                 AdminPermission.ADMIN_PRODUCTS_REVIEW,
                 AdminPermission.ADMIN_SHOPS_VIEW,
-                AdminPermission.ADMIN_SHOPS_MANAGE
+                AdminPermission.ADMIN_SHOPS_MANAGE,
+                AdminPermission.ADMIN_MARKETING_REVIEW
         ));
         ROLE_PERMISSIONS.put(UserRole.OPERATOR, EnumSet.of(
                 AdminPermission.ADMIN_DASHBOARD_VIEW,

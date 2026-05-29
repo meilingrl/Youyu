@@ -1,3 +1,22 @@
+## [2026-05-29] - Marketing MVP Foundation
+
+### feat
+- Added shop-owner fixed and threshold coupons with admin review before buyer claim.
+- Added shop-owner activities with admin review before public shop display.
+- Added buyer coupon claim, owned-coupon list, checkout selection, and one-coupon order preview/create integration with server-side revalidation.
+- Persisted actual order discount and coupon application snapshots, with duplicate claim, over-claim, duplicate-use, and cross-shop protections.
+- Added buyer, seller, and admin marketing frontend entries without adding duplicate top-level navigation.
+
+### docs
+- Added marketing API spec and HTTP smoke examples.
+- Updated order/admin API specs and order smoke examples for coupon usage.
+
+### test
+- Added backend marketing lifecycle and permission coverage.
+- Verified backend tests, frontend unit tests, and frontend production build.
+
+---
+
 ## [2026-05-28] - Seed Profile Startup Environment
 
 ### docs

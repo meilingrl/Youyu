@@ -12,7 +12,7 @@
   - audit mapper: `backend/src/main/java/com/youyu/backend/mapper/audit/AdminAuditLogMapper.java`
   - request sample: `docs/06-http/admin.http`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
-- Last updated: 2026-05-28
+- Last updated: 2026-05-29
 
 ## Scope
 
@@ -26,6 +26,7 @@ This document covers governance and operational endpoints under `/api/admin`:
 - shops
 - reports
 - mediation case escalation and admin mediation APIs
+- marketing coupon/activity review endpoints
 - search governance rules and search logs
 - admin audit logs
 
@@ -33,6 +34,8 @@ It does not cover admin login under `/api/admin/auth` or admin order operations 
 
 Formal mediation APIs under `/api/admin/reports/{reportId}/escalate-to-mediation`
 and `/api/admin/mediation-cases/**` are documented in `docs/09-api-spec/mediation.md`.
+
+Admin marketing APIs under `/api/admin/marketing/**` are documented in `docs/09-api-spec/marketing.md`.
 
 `/admin/support` is a frontend admin route, not an admin API namespace. The v1 support console scope reuses existing admin/report/order/search endpoints for context and does not introduce `/api/admin/support/**`; see `docs/02-requirements/admin-support-console-scope.md`.
 
@@ -50,7 +53,7 @@ and `/api/admin/mediation-cases/**` are documented in `docs/09-api-spec/mediatio
 |---|---|
 | `ADMIN` / `SUPER_ADMIN` | All admin permissions including audit logs and final mediation decisions |
 | `SUPPORT_AGENT` | Dashboard, support context, user/product/shop context, reports, search logs, order read, mediation handling except final decisions |
-| `REVIEWER` | Dashboard, student verification, product context, product review tasks, shop context and shop review/status handling |
+| `REVIEWER` | Dashboard, student verification, product context, product review tasks, shop context and shop review/status handling, marketing review |
 | `OPERATOR` | Dashboard, product context, search governance, search logs |
 | `ORDER_ADMIN` | Dashboard, order read/manage, mediation handling except final decisions |
 
