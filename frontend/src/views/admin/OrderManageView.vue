@@ -10,6 +10,7 @@ import {
   shipOrder
 } from '@/api/modules/order'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
 
 const loading = ref(false)
 const actionLoading = ref(false)
@@ -136,9 +137,17 @@ onBeforeUnmount(() => {
       <el-table v-loading="loading" :data="rows">
         <el-table-column prop="orderNo" label="订单号" min-width="180" />
         <el-table-column prop="productTitle" label="商品" min-width="200" />
-        <el-table-column prop="orderStatus" label="订单状态" min-width="100" />
-        <el-table-column prop="paymentStatus" label="支付状态" min-width="100" />
-        <el-table-column prop="fulfillmentType" label="履约方式" min-width="100" />
+        <el-table-column label="订单状态" min-width="100">
+          <template #default="{ row }">
+            <el-tag :type="adminTagType(row.orderStatus)" effect="plain">{{ adminLabel(row.orderStatus) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="支付状态" min-width="100">
+          <template #default="{ row }">{{ adminLabel(row.paymentStatus) }}</template>
+        </el-table-column>
+        <el-table-column label="履约方式" min-width="100">
+            <template #default="{ row }">{{ adminLabel(row.fulfillmentType === 'digital' ? 'digital_fulfillment' : row.fulfillmentType) }}</template>
+        </el-table-column>
         <el-table-column label="金额" min-width="100">
           <template #default="{ row }">
             <span class="admin-order-card__amount">￥{{ Number(row.payableAmount).toFixed(2) }}</span>
@@ -158,16 +167,16 @@ onBeforeUnmount(() => {
       <section class="drawer-panel">
         <h3>订单总览</h3>
         <p>订单号：{{ detail.orderNo }}</p>
-        <p>主状态：{{ detail.orderStatus }}</p>
-        <p>支付状态：{{ detail.paymentStatus }}</p>
-        <p>履约方式：{{ detail.fulfillmentType }}</p>
+        <p>主状态：{{ adminLabel(detail.orderStatus) }}</p>
+        <p>支付状态：{{ adminLabel(detail.paymentStatus) }}</p>
+        <p>履约方式：{{ adminLabel(detail.fulfillmentType === 'digital' ? 'digital_fulfillment' : detail.fulfillmentType) }}</p>
         <p v-if="detail.buyerNote">买家备注：{{ detail.buyerNote }}</p>
         <p>应付金额：<strong>￥{{ Number(detail.payableAmount).toFixed(2) }}</strong></p>
       </section>
 
       <section class="drawer-panel">
         <h3>履约信息</h3>
-        <p>履约状态：{{ detail.fulfillment.fulfillmentStatus }}</p>
+        <p>履约状态：{{ adminLabel(detail.fulfillment.fulfillmentStatus) }}</p>
         <p v-if="detail.fulfillment.offlineMeetTime">
           约定时间：{{ detail.fulfillment.offlineMeetTime }}
         </p>
@@ -183,7 +192,7 @@ onBeforeUnmount(() => {
         <h3>支付记录</h3>
         <article v-for="payment in detail.payments" :key="payment.id" class="line-item">
           <strong>{{ payment.paymentNo }}</strong>
-          <span>{{ payment.paymentStatus }}</span>
+          <span>{{ adminLabel(payment.paymentStatus) }}</span>
           <span>￥{{ Number(payment.payableAmount || payment.amount).toFixed(2) }}</span>
         </article>
       </section>
@@ -207,7 +216,7 @@ onBeforeUnmount(() => {
         <h3>退款记录</h3>
         <article v-for="refund in detail.refunds" :key="refund.id" class="line-item">
           <strong>{{ refund.refundNo }}</strong>
-          <span>{{ refund.refundStatus }}</span>
+          <span>{{ adminLabel(refund.refundStatus) }}</span>
           <span>￥{{ Number(refund.refundAmount).toFixed(2) }}</span>
           <el-button
             v-if="detail.availableActions.includes('complete_refund') && refund.refundStatus !== 'completed'"

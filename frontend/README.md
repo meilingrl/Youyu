@@ -20,7 +20,7 @@ npm run test:all        # Vitest + Playwright
 ```
 src/
   views/
-    app/        19 user-facing pages (home, products, cart, orders, reviews, etc.)
+    app/        user-facing pages (home, products, cart, orders, support tickets, reviews, etc.)
     admin/      10 admin pages (dashboard, users, products, orders, etc.)
     auth/       LoginView, RegisterView
   components/
@@ -33,7 +33,7 @@ src/
   layouts/      AppLayout.vue, AdminLayout.vue
   stores/       auth, market, search, recommend, review, app
   router/       index.js, guards.js, modules/app.js, modules/admin.js
-  api/          client.js + 11 domain modules
+  api/          client.js + domain modules
   utils/        auth.js, storage.js, market-normalizers.js, error-utils.js
   constants/    navigation.js, insightMetrics.js
   styles/       variables.css, index.css

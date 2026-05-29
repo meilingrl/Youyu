@@ -11,6 +11,8 @@ import com.youyu.backend.controller.admin.dto.UpdateUserStatusRequest;
 import com.youyu.backend.service.admin.AdminService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -78,6 +80,21 @@ public class AdminController {
         );
     }
 
+    @PutMapping("/users/batch-status")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_USERS_MANAGE})
+    public ApiResponse<Map<String, Object>> batchUpdateUserStatus(@RequestBody Map<String, Object> payload,
+                                                                  HttpServletRequest request) {
+        return ApiResponse.success(
+                adminService.batchUpdateUserStatus(
+                        idsFrom(payload),
+                        stringValue(payload, "status"),
+                        stringValue(payload, "restrictionReason"),
+                        currentAdminUserId()
+                ),
+                traceId(request)
+        );
+    }
+
     @GetMapping("/verifications")
     @LoginRequired(permissions = {AdminPermission.ADMIN_VERIFICATIONS_REVIEW})
     public ApiResponse<Map<String, Object>> verifications(@RequestParam(defaultValue = "") String keyword,
@@ -100,6 +117,23 @@ public class AdminController {
                         payload.getAction(),
                         payload.getRejectReason(),
                         payload.getReviewNote(),
+                        adminUserId
+                ),
+                traceId(request)
+        );
+    }
+
+    @PutMapping("/verifications/batch-review")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_VERIFICATIONS_REVIEW})
+    public ApiResponse<Map<String, Object>> batchReviewVerifications(@RequestBody Map<String, Object> payload,
+                                                                     HttpServletRequest request) {
+        Long adminUserId = currentAdminUserId();
+        return ApiResponse.success(
+                adminService.batchReviewVerifications(
+                        idsFrom(payload),
+                        stringValue(payload, "action"),
+                        stringValue(payload, "rejectReason"),
+                        stringValue(payload, "reviewNote"),
                         adminUserId
                 ),
                 traceId(request)
@@ -132,6 +166,20 @@ public class AdminController {
         );
     }
 
+    @PutMapping("/products/batch-status")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_PRODUCTS_REVIEW})
+    public ApiResponse<Map<String, Object>> batchUpdateProductStatus(@RequestBody Map<String, Object> payload,
+                                                                     HttpServletRequest request) {
+        return ApiResponse.success(
+                adminService.batchUpdateProductStatus(
+                        idsFrom(payload),
+                        stringValue(payload, "status"),
+                        currentAdminUserId()
+                ),
+                traceId(request)
+        );
+    }
+
     @GetMapping("/review-tasks")
     @LoginRequired(permissions = {AdminPermission.ADMIN_PRODUCTS_REVIEW})
     public ApiResponse<Map<String, Object>> reviewTasks(@RequestParam(defaultValue = "") String keyword,
@@ -140,6 +188,13 @@ public class AdminController {
                                                         @RequestParam(defaultValue = "10") int pageSize,
                                                         HttpServletRequest request) {
         return ApiResponse.success(adminService.listReviewTasks(keyword, status, page, pageSize), traceId(request));
+    }
+
+    @GetMapping("/review-tasks/{reviewTaskId}")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_PRODUCTS_REVIEW})
+    public ApiResponse<Map<String, Object>> reviewTaskDetail(@PathVariable Long reviewTaskId,
+                                                             HttpServletRequest request) {
+        return ApiResponse.success(adminService.reviewTaskDetail(reviewTaskId), traceId(request));
     }
 
     @PutMapping("/review-tasks/{reviewTaskId}/review")
@@ -154,6 +209,23 @@ public class AdminController {
                         payload.getOrDefault("action", ""),
                         payload.getOrDefault("rejectReason", ""),
                         payload.getOrDefault("reviewNote", ""),
+                        adminUserId
+                ),
+                traceId(request)
+        );
+    }
+
+    @PutMapping("/review-tasks/batch-review")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_PRODUCTS_REVIEW})
+    public ApiResponse<Map<String, Object>> batchReviewTasks(@RequestBody Map<String, Object> payload,
+                                                             HttpServletRequest request) {
+        Long adminUserId = currentAdminUserId();
+        return ApiResponse.success(
+                adminService.batchReviewTasks(
+                        idsFrom(payload),
+                        stringValue(payload, "action"),
+                        stringValue(payload, "rejectReason"),
+                        stringValue(payload, "reviewNote"),
                         adminUserId
                 ),
                 traceId(request)
@@ -194,6 +266,22 @@ public class AdminController {
         );
     }
 
+    @PutMapping("/shops/batch-status")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_SHOPS_MANAGE})
+    public ApiResponse<Map<String, Object>> batchUpdateShopStatus(@RequestBody Map<String, Object> payload,
+                                                                  HttpServletRequest request) {
+        return ApiResponse.success(
+                adminService.batchUpdateShopStatus(
+                        idsFrom(payload),
+                        stringValue(payload, "status"),
+                        stringValue(payload, "reviewStatus"),
+                        stringValue(payload, "rejectReason"),
+                        currentAdminUserId()
+                ),
+                traceId(request)
+        );
+    }
+
     @GetMapping("/reports")
     @LoginRequired(permissions = {AdminPermission.ADMIN_REPORTS_HANDLE})
     public ApiResponse<Map<String, Object>> reports(@RequestParam(defaultValue = "") String keyword,
@@ -215,6 +303,21 @@ public class AdminController {
                         reportId,
                         payload.getOrDefault("status", ""),
                         payload.getOrDefault("resolution", ""),
+                        currentAdminUserId()
+                ),
+                traceId(request)
+        );
+    }
+
+    @PutMapping("/reports/batch-process")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_REPORTS_HANDLE})
+    public ApiResponse<Map<String, Object>> batchProcessReports(@RequestBody Map<String, Object> payload,
+                                                                HttpServletRequest request) {
+        return ApiResponse.success(
+                adminService.batchProcessReports(
+                        idsFrom(payload),
+                        stringValue(payload, "status"),
+                        stringValue(payload, "resolution"),
                         currentAdminUserId()
                 ),
                 traceId(request)
@@ -270,6 +373,29 @@ public class AdminController {
 
     private Long currentAdminUserId() {
         return AuthContextHolder.get() == null ? null : AuthContextHolder.get().getUserId();
+    }
+
+    private List<Long> idsFrom(Map<String, Object> payload) {
+        Object value = payload.get("ids");
+        List<Long> ids = new ArrayList<>();
+        if (value instanceof Iterable<?> iterable) {
+            for (Object item : iterable) {
+                ids.add(toLong(item));
+            }
+        }
+        return ids;
+    }
+
+    private Long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return Long.parseLong(String.valueOf(value));
+    }
+
+    private String stringValue(Map<String, Object> payload, String key) {
+        Object value = payload.get(key);
+        return value == null ? "" : String.valueOf(value);
     }
 
     private String traceId(HttpServletRequest request) {

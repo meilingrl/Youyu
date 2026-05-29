@@ -215,6 +215,17 @@ export default {
       }
     },
     {
+      path: 'support',
+      name: 'app-support',
+      component: () => import('@/views/app/SupportTicketsView.vue'),
+      meta: {
+        title: '平台客服工单',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/messages'
+      }
+    },
+    {
       path: 'messages/:conversationId',
       name: 'app-message-detail',
       component: () => import('@/views/app/MessagesView.vue'),

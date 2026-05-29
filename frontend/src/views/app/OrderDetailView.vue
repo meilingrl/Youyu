@@ -197,13 +197,25 @@ async function handleSubmitReport() {
 }
 
 function openOrderMessage(intent = 'after_sales') {
+  if (intent === 'support') {
+    router.push({
+      path: '/app/support',
+      query: {
+        category: 'order',
+        relatedType: 'order',
+        relatedId: String(detail.value?.id || '')
+      }
+    })
+    return
+  }
+
   router.push({
     path: '/app/messages',
     query: {
-      category: intent === 'support' ? 'support' : 'trade',
+      category: 'trade',
       entry: 'order',
       entryId: String(detail.value?.id || ''),
-      targetType: intent === 'support' ? 'support' : 'shop',
+      targetType: 'shop',
       targetId: String(detail.value?.shopId || detail.value?.sellerId || ''),
       intent
     }

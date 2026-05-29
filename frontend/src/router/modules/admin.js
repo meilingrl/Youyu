@@ -85,7 +85,7 @@ export default {
       name: 'admin-mediation',
       component: () => import('@/views/admin/MediationCaseListView.vue'),
       meta: {
-        title: 'Mediation Cases',
+        title: '调解案件',
         navKey: '/admin/mediation'
       }
     },
@@ -94,7 +94,7 @@ export default {
       name: 'admin-mediation-detail',
       component: () => import('@/views/admin/MediationCaseDetailView.vue'),
       meta: {
-        title: 'Mediation Detail',
+        title: '调解详情',
         navKey: '/admin/mediation',
         hiddenInNav: true
       }
@@ -113,7 +113,7 @@ export default {
       name: 'admin-support',
       component: () => import('@/views/admin/SupportView.vue'),
       meta: {
-        title: '支持上下文',
+        title: '客服工作台',
         navKey: '/admin/support'
       }
     }

@@ -2,8 +2,10 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
-import { getAdminVerifications, reviewAdminVerification } from '@/api/modules/admin'
+import { batchReviewAdminVerifications, getAdminVerifications, reviewAdminVerification } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
+import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const loading = ref(false)
 const error = ref('')
@@ -11,10 +13,14 @@ const rows = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
+const tableRef = ref(null)
+const selectedRows = ref([])
 const filters = reactive({
   keyword: '',
   status: ''
 })
+
+useAdminRowSwipeSelection(tableRef, rows, selectedRows)
 
 async function loadVerifications() {
   loading.value = true
@@ -48,6 +54,10 @@ function onSearch() {
   loadVerifications()
 }
 
+function onSelectionChange(selection) {
+  selectedRows.value = selection
+}
+
 async function review(row, action) {
   try {
     let rejectReason = ''
@@ -76,6 +86,39 @@ async function review(row, action) {
   }
 }
 
+async function batchReview(action) {
+  if (!selectedRows.value.length) return
+  try {
+    let rejectReason = ''
+    let reviewNote = ''
+    if (action === 'reject') {
+      const result = await ElMessageBox.prompt('请填写批量驳回原因', '批量驳回认证', {
+        confirmButtonText: '提交驳回',
+        cancelButtonText: '取消'
+      })
+      rejectReason = result.value
+    } else {
+      await ElMessageBox.confirm(`确认批量通过 ${selectedRows.value.length} 条学生认证吗？`, '批量通过认证', {
+        type: 'warning'
+      })
+      reviewNote = '认证信息批量核验通过'
+    }
+    await batchReviewAdminVerifications({
+      ids: selectedRows.value.map((row) => row.id),
+      action,
+      rejectReason,
+      reviewNote
+    })
+    ElMessage.success(action === 'approve' ? '认证已批量通过' : '认证已批量驳回')
+    selectedRows.value = []
+    await loadVerifications()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(resolveErrorMessage(error))
+    }
+  }
+}
+
 onMounted(loadVerifications)
 </script>
 
@@ -86,6 +129,7 @@ onMounted(loadVerifications)
     :rows="rows"
     :loading="loading"
     :error="error"
+    :selected-count="selectedRows.length"
     empty-title="暂无认证申请"
     empty-description="当前没有待处理的认证记录。"
     @retry="loadVerifications"
@@ -102,13 +146,28 @@ onMounted(loadVerifications)
       </div>
     </template>
 
+    <template #batch>
+      <span>已选择 {{ selectedRows.length }} 条认证申请</span>
+      <div class="shell-inline-actions">
+        <el-button size="small" :disabled="!selectedRows.length" @click="batchReview('approve')">批量通过</el-button>
+        <el-button size="small" type="danger" plain :disabled="!selectedRows.length" @click="batchReview('reject')">
+          批量驳回
+        </el-button>
+      </div>
+    </template>
+
     <template #table>
-      <el-table v-loading="loading" :data="rows">
+      <el-table ref="tableRef" v-loading="loading" class="admin-select-table" row-key="id" :data="rows" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="48" />
         <el-table-column prop="studentNo" label="学号" min-width="120" />
         <el-table-column prop="realName" label="姓名" min-width="100" />
         <el-table-column prop="collegeName" label="学院" min-width="140" />
         <el-table-column prop="majorName" label="专业" min-width="140" />
-        <el-table-column prop="verificationStatus" label="认证状态" min-width="120" />
+        <el-table-column label="认证状态" min-width="120">
+          <template #default="{ row }">
+            <el-tag :type="adminTagType(row.verificationStatus)" effect="plain">{{ adminLabel(row.verificationStatus) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="submittedAt" label="提交时间" min-width="160" />
         <el-table-column prop="rejectReason" label="驳回原因" min-width="200" />
         <el-table-column label="操作" min-width="180" fixed="right">

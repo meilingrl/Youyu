@@ -31,6 +31,7 @@ public class AdminServiceImpl implements AdminService {
     private static final int DEFAULT_PAGE = 1;
     private static final int DEFAULT_PAGE_SIZE = 10;
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_BATCH_SIZE = 100;
     private static final List<String> USER_STATUSES = List.of("active", "disabled", "locked");
     private static final List<String> PRODUCT_STATUSES = List.of("draft", "on_sale", "off_sale", "closed");
     private static final List<String> SHOP_STATUSES = List.of("active", "inactive", "disabled");
@@ -373,6 +374,17 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
+    public Map<String, Object> batchUpdateUserStatus(List<Long> userIds, String status, String restrictionReason, Long adminUserId) {
+        List<Long> ids = requireBatchIds(userIds);
+        String normalizedStatus = requireAllowed(status, USER_STATUSES, "Unsupported user status");
+        for (Long userId : ids) {
+            updateUserStatus(userId, normalizedStatus, restrictionReason, adminUserId);
+        }
+        return batchResult(ids);
+    }
+
+    @Override
     public Map<String, Object> listVerifications(String keyword, String status, int page, int pageSize) {
         int ps = clampPageSize(pageSize);
         int pg = Math.max(1, page);
@@ -421,6 +433,16 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
+    public Map<String, Object> batchReviewVerifications(List<Long> verificationIds, String action, String rejectReason, String reviewNote, Long adminUserId) {
+        List<Long> ids = requireBatchIds(verificationIds);
+        for (Long verificationId : ids) {
+            reviewVerification(verificationId, action, rejectReason, reviewNote, adminUserId);
+        }
+        return batchResult(ids);
+    }
+
+    @Override
     public Map<String, Object> listProducts(String keyword, String status, String reviewStatus, String productType, int page, int pageSize) {
         int ps = clampPageSize(pageSize);
         int pg = Math.max(1, page);
@@ -445,6 +467,17 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
+    public Map<String, Object> batchUpdateProductStatus(List<Long> productIds, String status, Long adminUserId) {
+        List<Long> ids = requireBatchIds(productIds);
+        String normalizedStatus = requireAllowed(status, PRODUCT_STATUSES, "Unsupported product status");
+        for (Long productId : ids) {
+            updateProductStatus(productId, normalizedStatus, adminUserId);
+        }
+        return batchResult(ids);
+    }
+
+    @Override
     public Map<String, Object> listReviewTasks(String keyword, String status, int page, int pageSize) {
         int ps = clampPageSize(pageSize);
         int pg = Math.max(1, page);
@@ -454,6 +487,19 @@ public class AdminServiceImpl implements AdminService {
                 .toList();
         long total = productReviewTaskMapper.countReviewTasks(keyword, status);
         return pagedResponse(items, total, pg, ps);
+    }
+
+    @Override
+    public Map<String, Object> reviewTaskDetail(Long reviewTaskId) {
+        Map<String, Object> reviewTask = copy(findReviewTask(reviewTaskId));
+        Long productId = toLong(reviewTask.get("productId"));
+        Map<String, Object> product = copy(findProduct(productId));
+        return linkedMap(
+                "reviewTask", reviewTask,
+                "product", product,
+                "media", productMapper.findMediaByProductId(productId).stream().map(this::copy).toList(),
+                "digitalAssets", productMapper.findDigitalAssetsByProductId(productId).stream().map(this::copy).toList()
+        );
     }
 
     @Override
@@ -491,6 +537,16 @@ public class AdminServiceImpl implements AdminService {
                         "reviewNote=" + defaultString(reviewNote)
                 ));
         return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> batchReviewTasks(List<Long> reviewTaskIds, String action, String rejectReason, String reviewNote, Long adminUserId) {
+        List<Long> ids = requireBatchIds(reviewTaskIds);
+        for (Long reviewTaskId : ids) {
+            reviewTask(reviewTaskId, action, rejectReason, reviewNote, adminUserId);
+        }
+        return batchResult(ids);
     }
 
     @Override
@@ -560,6 +616,18 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
+    public Map<String, Object> batchUpdateShopStatus(List<Long> shopIds, String status, String reviewStatus, String rejectReason, Long adminUserId) {
+        List<Long> ids = requireBatchIds(shopIds);
+        String normalizedStatus = optionalAllowed(status, SHOP_STATUSES, "Unsupported shop status");
+        String normalizedReviewStatus = optionalAllowed(reviewStatus, SHOP_REVIEW_STATUSES, "Unsupported shop review status");
+        for (Long shopId : ids) {
+            updateShopStatus(shopId, normalizedStatus, normalizedReviewStatus, rejectReason, adminUserId);
+        }
+        return batchResult(ids);
+    }
+
+    @Override
     public Map<String, Object> listReports(String keyword, String status, String targetType, int page, int pageSize) {
         int ps = clampPageSize(pageSize);
         int pg = Math.max(1, page);
@@ -580,6 +648,17 @@ public class AdminServiceImpl implements AdminService {
         audit(adminUserId, "REPORT_PROCESS", "REPORT", reportId,
                 auditSummary("status=" + normalizedStatus, "resolution=" + defaultString(resolution)));
         return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> batchProcessReports(List<Long> reportIds, String status, String resolution, Long adminUserId) {
+        List<Long> ids = requireBatchIds(reportIds);
+        String normalizedStatus = requireAllowed(status, REPORT_STATUSES, "Unsupported report status");
+        for (Long reportId : ids) {
+            processReport(reportId, normalizedStatus, resolution, adminUserId);
+        }
+        return batchResult(ids);
     }
 
     @Override
@@ -681,6 +760,26 @@ public class AdminServiceImpl implements AdminService {
     private Map<String, Object> findReport(Long reportId) {
         return reportMapper.findById(reportId)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "举报不存在"));
+    }
+
+    private List<Long> requireBatchIds(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "批量操作至少选择一条记录");
+        }
+        if (ids.size() > MAX_BATCH_SIZE) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "批量操作一次最多处理 " + MAX_BATCH_SIZE + " 条记录");
+        }
+        if (ids.stream().anyMatch(Objects::isNull)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "批量操作记录 ID 不能为空");
+        }
+        return ids;
+    }
+
+    private Map<String, Object> batchResult(List<Long> ids) {
+        return linkedMap(
+                "successCount", ids.size(),
+                "ids", ids
+        );
     }
 
     private Map<String, Object> metricCard(String label, long value, long secondaryValue, String secondaryLabel) {

@@ -22,6 +22,7 @@ public final class AdminPermissionPolicy {
                 AdminPermission.ADMIN_PRODUCTS_VIEW,
                 AdminPermission.ADMIN_SHOPS_VIEW,
                 AdminPermission.ADMIN_REPORTS_HANDLE,
+                AdminPermission.ADMIN_SUPPORT_TICKETS_HANDLE,
                 AdminPermission.ADMIN_SEARCH_LOGS_VIEW,
                 AdminPermission.ADMIN_ORDERS_READ,
                 AdminPermission.ADMIN_MEDIATION_HANDLE

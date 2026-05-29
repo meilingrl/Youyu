@@ -386,6 +386,91 @@ Content-Type: application/json
   "enforcementSummary": "Order module remains the owner of operational state."
 }
 
+# ADMIN BATCH OPERATIONS
+
+###
+
+### Review task detail for admin drawer
+GET {{baseUrl}}/api/admin/review-tasks/5001
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Batch update user status
+PUT {{baseUrl}}/api/admin/users/batch-status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ids": [1002],
+  "status": "active",
+  "restrictionReason": ""
+}
+
+###
+
+### Batch review student verifications
+PUT {{baseUrl}}/api/admin/verifications/batch-review
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ids": [2002],
+  "action": "approve",
+  "reviewNote": "Batch smoke approve"
+}
+
+###
+
+### Batch update product status
+PUT {{baseUrl}}/api/admin/products/batch-status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ids": [3010],
+  "status": "off_sale"
+}
+
+###
+
+### Batch review product tasks
+PUT {{baseUrl}}/api/admin/review-tasks/batch-review
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ids": [5001],
+  "action": "approve",
+  "reviewNote": "Batch smoke approve"
+}
+
+###
+
+### Batch update shop status
+PUT {{baseUrl}}/api/admin/shops/batch-status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ids": [4003],
+  "status": "active",
+  "reviewStatus": "approved"
+}
+
+###
+
+### Batch process reports
+PUT {{baseUrl}}/api/admin/reports/batch-process
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "ids": [6001],
+  "status": "processing",
+  "resolution": "Batch smoke processing"
+}
+
 # AUDIT LOGS
 
 ###
@@ -445,3 +530,65 @@ Content-Type: application/json
 ### Order admin can access order queue
 GET {{baseUrl}}/api/admin/orders
 Authorization: Bearer {{orderAdminToken}}
+
+# SUPPORT TICKETS
+
+###
+
+### Support agent can list support tickets
+GET {{baseUrl}}/api/admin/support/tickets?page=1&pageSize=10
+Authorization: Bearer {{supportToken}}
+
+###
+
+### Support agent can filter support tickets
+GET {{baseUrl}}/api/admin/support/tickets?status=open&category=order&assignedToMe=false&page=1&pageSize=10
+Authorization: Bearer {{supportToken}}
+
+###
+
+### Admin support ticket detail includes public replies and internal notes
+GET {{baseUrl}}/api/admin/support/tickets/6201
+Authorization: Bearer {{supportToken}}
+
+###
+
+### Support agent changes support ticket status and assigns to self
+PUT {{baseUrl}}/api/admin/support/tickets/6201/status
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "assignToMe": true
+}
+
+###
+
+### Support agent adds public ticket reply
+POST {{baseUrl}}/api/admin/support/tickets/6201/messages
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "messageType": "public_reply",
+  "content": "We are checking the platform context for this support ticket."
+}
+
+###
+
+### Support agent adds internal note
+POST {{baseUrl}}/api/admin/support/tickets/6201/messages
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "messageType": "internal_note",
+  "content": "Context note only. Do not mutate order, report, mediation, or chat state from support."
+}
+
+###
+
+### User cannot access admin support ticket queue - expect 403
+GET {{baseUrl}}/api/admin/support/tickets
+Authorization: Bearer {{userToken}}

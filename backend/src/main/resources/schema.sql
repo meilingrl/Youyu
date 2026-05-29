@@ -356,6 +356,46 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE INDEX idx_reports_submitted ON reports(submitted_at);
 CREATE INDEX idx_reports_status_submitted ON reports(status, submitted_at);
 
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ticket_no VARCHAR(40) NOT NULL UNIQUE,
+    requester_user_id BIGINT NOT NULL,
+    category VARCHAR(32) NOT NULL,
+    subject VARCHAR(120) NOT NULL,
+    content TEXT NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'open',
+    priority VARCHAR(32) NOT NULL DEFAULT 'normal',
+    related_type VARCHAR(32),
+    related_id BIGINT,
+    assigned_admin_user_id BIGINT,
+    last_replied_by VARCHAR(32),
+    last_replied_at TIMESTAMP,
+    resolved_at TIMESTAMP,
+    closed_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_support_ticket_requester FOREIGN KEY (requester_user_id) REFERENCES users(id),
+    CONSTRAINT fk_support_ticket_assignee FOREIGN KEY (assigned_admin_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_support_tickets_requester_updated ON support_tickets(requester_user_id, updated_at, id);
+CREATE INDEX idx_support_tickets_status_updated ON support_tickets(status, updated_at, id);
+CREATE INDEX idx_support_tickets_assignee_updated ON support_tickets(assigned_admin_user_id, updated_at, id);
+
+CREATE TABLE IF NOT EXISTS support_ticket_messages (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ticket_id BIGINT NOT NULL,
+    sender_user_id BIGINT,
+    sender_role VARCHAR(32) NOT NULL,
+    message_type VARCHAR(32) NOT NULL DEFAULT 'public_reply',
+    content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_support_ticket_message_ticket FOREIGN KEY (ticket_id) REFERENCES support_tickets(id),
+    CONSTRAINT fk_support_ticket_message_sender FOREIGN KEY (sender_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_support_ticket_messages_ticket_created ON support_ticket_messages(ticket_id, created_at, id);
+
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     operator_user_id BIGINT NOT NULL,

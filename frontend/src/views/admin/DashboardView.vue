@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from '@/plugins/element-plus-services'
 import { getAdminDashboard } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import { adminLabel } from '@/utils/admin-display-labels'
 
 const loading = ref(false)
 const summary = ref({})
@@ -12,11 +13,24 @@ const statusBreakdowns = ref({ orders: [], mediation: [] })
 const unavailableMetrics = ref([])
 
 const heroStats = computed(() => [
-  { label: '用户', value: summary.value.userCount || 0 },
-  { label: '商品', value: summary.value.productCount || 0 },
-  { label: '店铺', value: summary.value.shopCount || 0 },
-  { label: '订单', value: summary.value.orderCount || 0 }
+  { label: '用户', value: summary.value.userCount || 0, hint: '账号总量' },
+  { label: '商品', value: summary.value.productCount || 0, hint: '商品池' },
+  { label: '店铺', value: summary.value.shopCount || 0, hint: '入驻主体' },
+  { label: '订单', value: summary.value.orderCount || 0, hint: '交易记录' }
 ])
+
+const visibleQueueMetrics = computed(() =>
+  queueMetrics.value.filter((metric) => metric.available && Number(metric.value || 0) > 0)
+)
+const visibleGovernanceSignals = computed(() =>
+  governanceSignals.value.filter((metric) => metric.available && Number(metric.value || 0) > 0)
+)
+const visibleOrderBreakdowns = computed(() =>
+  (statusBreakdowns.value.orders || []).filter((item) => Number(item.value || 0) > 0)
+)
+const visibleMediationBreakdowns = computed(() =>
+  (statusBreakdowns.value.mediation || []).filter((item) => Number(item.value || 0) > 0)
+)
 
 function metricTarget(metric) {
   if (!metric?.target?.path) {
@@ -68,15 +82,16 @@ onMounted(loadDashboard)
   <div class="page-stack admin-dashboard" v-loading="loading">
     <section class="shell-hero shell-hero--compact dashboard-hero">
       <div>
-        <span class="eyebrow">Governance Workbench</span>
+        <span class="eyebrow">治理工作台</span>
         <h1>治理总览</h1>
         <p>集中查看真实待办队列、治理信号和正式调解进度，帮助管理员进入后台后先处理有明确归属的工作。</p>
       </div>
 
-      <div class="dashboard-hero__stats" aria-label="Dashboard totals">
+      <div class="dashboard-hero__stats" aria-label="后台核心数据">
         <div v-for="item in heroStats" :key="item.label" class="dashboard-hero__stat">
+          <span class="dashboard-hero__stat-label">{{ item.label }}</span>
           <strong>{{ item.value }}</strong>
-          <span>{{ item.label }}</span>
+          <small>{{ item.hint }}</small>
         </div>
       </div>
     </section>
@@ -89,10 +104,10 @@ onMounted(loadDashboard)
         </div>
       </div>
 
-      <div class="observability-grid">
+      <div v-if="visibleQueueMetrics.length" class="observability-grid">
         <component
           :is="metricComponent(metric)"
-          v-for="metric in queueMetrics"
+          v-for="metric in visibleQueueMetrics"
           :key="metric.id"
           v-bind="metricTarget(metric)"
           class="queue-card"
@@ -100,12 +115,13 @@ onMounted(loadDashboard)
         >
           <div class="queue-card__top">
             <span>{{ metric.label }}</span>
-            <el-tag :type="tagType(metric.severity)" effect="plain">{{ metric.available ? 'live' : 'unavailable' }}</el-tag>
+            <el-tag :type="tagType(metric.severity)" effect="plain">待处理</el-tag>
           </div>
           <strong class="queue-card__value">{{ metric.value }}</strong>
           <p>{{ metric.description }}</p>
         </component>
       </div>
+      <div v-else class="admin-empty-line">当前没有待处理队列。</div>
     </section>
 
     <section class="dashboard-section">
@@ -116,10 +132,10 @@ onMounted(loadDashboard)
         </div>
       </div>
 
-      <div class="signal-grid">
+      <div v-if="visibleGovernanceSignals.length" class="signal-grid">
         <component
           :is="metricComponent(metric)"
-          v-for="metric in governanceSignals"
+          v-for="metric in visibleGovernanceSignals"
           :key="metric.id"
           v-bind="metricTarget(metric)"
           class="signal-row"
@@ -130,6 +146,7 @@ onMounted(loadDashboard)
           <small>{{ metric.description }}</small>
         </component>
       </div>
+      <div v-else class="admin-empty-line">当前没有需要额外关注的治理信号。</div>
     </section>
 
     <section class="dashboard-section dashboard-section--split">
@@ -143,14 +160,15 @@ onMounted(loadDashboard)
 
         <div class="breakdown-list">
           <router-link
-            v-for="item in statusBreakdowns.orders || []"
+            v-for="item in visibleOrderBreakdowns"
             :key="item.status"
             :to="item.target?.path || '/admin/orders'"
             class="breakdown-row"
           >
-            <span>{{ item.status }}</span>
+            <span>{{ adminLabel(item.status) }}</span>
             <strong>{{ item.value }}</strong>
           </router-link>
+          <div v-if="!visibleOrderBreakdowns.length" class="admin-empty-line">暂无非零订单状态。</div>
         </div>
       </div>
 
@@ -164,14 +182,15 @@ onMounted(loadDashboard)
 
         <div class="breakdown-list">
           <router-link
-            v-for="item in statusBreakdowns.mediation || []"
+            v-for="item in visibleMediationBreakdowns"
             :key="item.status"
             :to="item.target?.path || '/admin/mediation'"
             class="breakdown-row"
           >
-            <span>{{ item.status }}</span>
+            <span>{{ adminLabel(item.status) }}</span>
             <strong>{{ item.value }}</strong>
           </router-link>
+          <div v-if="!visibleMediationBreakdowns.length" class="admin-empty-line">暂无进行中的调解案件。</div>
         </div>
       </div>
     </section>
@@ -190,7 +209,7 @@ onMounted(loadDashboard)
             <strong>{{ metric.label }}</strong>
             <span>{{ metric.description }}</span>
           </div>
-          <el-tag type="info" effect="plain">unavailable</el-tag>
+          <el-tag type="info" effect="plain">暂无数据源</el-tag>
         </div>
       </div>
     </section>
@@ -222,23 +241,41 @@ onMounted(loadDashboard)
 
 .dashboard-hero__stat {
   display: grid;
-  gap: 4px;
-  min-height: 76px;
-  place-items: center;
+  gap: 6px;
+  min-height: 96px;
+  align-content: center;
+  justify-items: start;
+  padding: 16px;
   border-radius: 16px;
+  box-shadow: var(--cm-shadow-soft);
 }
 
 .dashboard-hero__stat strong {
-  font-size: 24px;
+  font-size: 30px;
   line-height: 1;
 }
 
-.dashboard-hero__stat span,
+.dashboard-hero__stat-label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dashboard-hero__stat small,
 .dashboard-section__header p,
 .queue-card p,
 .signal-row small,
 .unavailable-row span {
   color: var(--cm-text-secondary);
+}
+
+.admin-empty-line {
+  min-height: 56px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--cm-border-strong);
+  border-radius: 16px;
+  color: var(--cm-text-tertiary);
+  background: rgba(255, 255, 255, 0.52);
 }
 
 .dashboard-section {
