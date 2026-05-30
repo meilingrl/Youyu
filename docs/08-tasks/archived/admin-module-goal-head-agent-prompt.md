@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: admin-module-goal-head-agent-prompt
-- Status: active
+- Status: archived
 - Owner: next head Agent
 - Track: cross-cutting
 - Depends on: `docs/05-roadmap/current/admin-module-goal-roadmap.md`
 - Priority: high
 - Planned date: 2026-05-28
-- Completed date:
+- Completed date: 2026-05-29
 
 ## Prompt
 
@@ -86,11 +86,13 @@ After a sub-agent returns:
 - Role permissions accepted: `feat: enforce admin role permissions`
 - Full seed flow accepted: `test: seed full admin workflow`
 
-## First Recommended Action
+## Completion Notes
 
-Start with `docs/08-tasks/active/admin-entry-workbench-navigation.md` unless the human explicitly changes priority.
+Archived after `docs/05-roadmap/current/admin-module-goal-roadmap.md` was closed and the admin module sequence was completed.
 
-Do not start platform mediation implementation until both of these are complete:
+The original first recommended action and mediation blockers are no longer current execution instructions:
 
+- `admin-entry-workbench-navigation` is completed and archived.
 - `docs/02-requirements/chat-mvp-scope.md` exists and is accepted.
-- `docs/08-tasks/active/platform-mediation-boundary-and-contract.md` has been completed or superseded by an archived accepted task.
+- `platform-mediation-boundary-and-contract` and `platform-mediation-implementation` are completed and archived.
+- The admin module now has backend-enforced staff roles, audit logs, observability dashboard coverage, mediation workflow, and full-flow seed verification.
