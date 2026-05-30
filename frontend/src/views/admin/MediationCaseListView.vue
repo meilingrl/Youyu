@@ -5,6 +5,7 @@ import { ElMessage } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
 import { getAdminMediationCases } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
 
 const router = useRouter()
 const loading = ref(false)
@@ -104,64 +105,68 @@ onMounted(loadCases)
 
 <template>
   <ListPageShell
-    title="Mediation Cases"
-    description="Formal platform dispute cases escalated from eligible order-backed reports."
+    title="调解案件"
+    description="处理由订单举报升级来的正式平台争议，记录证据核查、处理进度和最终裁决。"
     :rows="rows"
     :loading="loading"
     :error="error"
-    empty-title="No mediation cases"
-    empty-description="Eligible order reports can be escalated from the report management page."
+    empty-title="暂无调解案件"
+    empty-description="符合条件的订单举报可从举报页面升级为调解案件。"
     @retry="loadCases"
   >
     <template #filters>
       <div class="filter-row mediation-filters">
-        <el-input v-model="filters.keyword" placeholder="Case no / report / order keyword" clearable @keyup.enter="onSearch" />
-        <el-select v-model="filters.status" placeholder="Status" clearable>
-          <el-option v-for="status in statusOptions" :key="status" :label="status" :value="status" />
+        <el-input v-model="filters.keyword" placeholder="搜索案件号 / 举报 / 订单" clearable @keyup.enter="onSearch" />
+        <el-select v-model="filters.status" placeholder="案件状态" clearable>
+          <el-option v-for="status in statusOptions" :key="status" :label="adminLabel(status)" :value="status" />
         </el-select>
-        <el-select v-model="filters.decisionCategory" placeholder="Decision" clearable>
-          <el-option v-for="item in decisionOptions" :key="item" :label="item" :value="item" />
+        <el-select v-model="filters.decisionCategory" placeholder="裁决类型" clearable>
+          <el-option v-for="item in decisionOptions" :key="item" :label="adminLabel(item)" :value="item" />
         </el-select>
-        <el-input v-model="filters.reportId" placeholder="Report ID" clearable @keyup.enter="onSearch" />
-        <el-input v-model="filters.orderId" placeholder="Order ID" clearable @keyup.enter="onSearch" />
-        <el-button type="primary" :loading="loading" @click="onSearch">Search</el-button>
+        <el-input v-model="filters.reportId" placeholder="举报 ID" clearable @keyup.enter="onSearch" />
+        <el-input v-model="filters.orderId" placeholder="订单 ID" clearable @keyup.enter="onSearch" />
+        <el-button type="primary" :loading="loading" @click="onSearch">查询</el-button>
       </div>
     </template>
 
     <template #table>
       <el-table v-loading="loading" :data="rows">
-        <el-table-column prop="caseNo" label="Case No" min-width="180" />
-        <el-table-column prop="status" label="Status" min-width="140" />
-        <el-table-column prop="decisionCategory" label="Decision" min-width="220">
+        <el-table-column prop="caseNo" label="案件号" min-width="180" />
+        <el-table-column label="案件状态" min-width="140">
           <template #default="{ row }">
-            <span>{{ row.decisionCategory || '-' }}</span>
+            <el-tag :type="adminTagType(row.status)" effect="plain">{{ adminLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="Source Report" min-width="220">
+        <el-table-column label="裁决类型" min-width="220">
+          <template #default="{ row }">
+            <span>{{ adminLabel(row.decisionCategory, '-') }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="来源举报" min-width="220">
           <template #default="{ row }">
             <strong>#{{ row.sourceReportId }}</strong>
             <div class="muted">{{ row.sourceReport?.targetLabel || row.sourceReport?.reasonType || '-' }}</div>
           </template>
         </el-table-column>
-        <el-table-column label="Order" min-width="240">
+        <el-table-column label="关联订单" min-width="240">
           <template #default="{ row }">
             <strong>{{ row.orderSummary?.orderNo || `#${row.relatedOrderId}` }}</strong>
             <div class="muted">
-              {{ row.orderSummary?.productTitle || '-' }} / {{ row.orderSummary?.orderStatus || '-' }}
+              {{ row.orderSummary?.productTitle || '-' }} / {{ adminLabel(row.orderSummary?.orderStatus, '-') }}
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="Participants" min-width="260">
+        <el-table-column label="参与方" min-width="260">
           <template #default="{ row }">
-            <div>Buyer: {{ participantLabel(row, 'buyer') }}</div>
-            <div>Seller: {{ participantLabel(row, 'seller') }}</div>
-            <div>Reporter: {{ participantLabel(row, 'reporter') }}</div>
+            <div>买家：{{ participantLabel(row, 'buyer') }}</div>
+            <div>卖家：{{ participantLabel(row, 'seller') }}</div>
+            <div>举报人：{{ participantLabel(row, 'reporter') }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="updatedAt" label="Updated" min-width="180" />
-        <el-table-column label="Actions" min-width="120" fixed="right">
+        <el-table-column prop="updatedAt" label="更新时间" min-width="180" />
+        <el-table-column label="操作" min-width="120" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openDetail(row)">Detail</el-button>
+            <el-button link type="primary" @click="openDetail(row)">详情</el-button>
           </template>
         </el-table-column>
       </el-table>

@@ -297,16 +297,12 @@ function handleContactSupport() {
   if (!requireLogin('联系平台客服')) {
     return
   }
-  ElMessage.info('客服功能正在建设中')
   router.push({
-    path: '/app/messages',
+    path: '/app/support',
     query: {
-      category: 'support',
-      entry: 'product',
-      entryId: String(detailModel.value?.id || ''),
-      targetType: 'support',
-      targetId: 'platform-support',
-      intent: 'support'
+      category: 'product',
+      relatedType: 'product',
+      relatedId: String(detailModel.value?.id || '')
     }
   })
 }

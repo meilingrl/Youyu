@@ -1,6 +1,7 @@
 package com.youyu.backend.service.admin;
 
 import java.util.Map;
+import java.util.List;
 
 public interface AdminService {
 
@@ -14,17 +15,27 @@ public interface AdminService {
 
     Map<String, Object> updateUserStatus(Long userId, String status, String restrictionReason, Long adminUserId);
 
+    Map<String, Object> batchUpdateUserStatus(List<Long> userIds, String status, String restrictionReason, Long adminUserId);
+
     Map<String, Object> listVerifications(String keyword, String status, int page, int pageSize);
 
     Map<String, Object> reviewVerification(Long verificationId, String action, String rejectReason, String reviewNote, Long adminUserId);
+
+    Map<String, Object> batchReviewVerifications(List<Long> verificationIds, String action, String rejectReason, String reviewNote, Long adminUserId);
 
     Map<String, Object> listProducts(String keyword, String status, String reviewStatus, String productType, int page, int pageSize);
 
     Map<String, Object> updateProductStatus(Long productId, String status, Long adminUserId);
 
+    Map<String, Object> batchUpdateProductStatus(List<Long> productIds, String status, Long adminUserId);
+
     Map<String, Object> listReviewTasks(String keyword, String status, int page, int pageSize);
 
+    Map<String, Object> reviewTaskDetail(Long reviewTaskId);
+
     Map<String, Object> reviewTask(Long reviewTaskId, String action, String rejectReason, String reviewNote, Long adminUserId);
+
+    Map<String, Object> batchReviewTasks(List<Long> reviewTaskIds, String action, String rejectReason, String reviewNote, Long adminUserId);
 
     Map<String, Object> listShops(String keyword, String status, String reviewStatus, int page, int pageSize);
 
@@ -32,9 +43,13 @@ public interface AdminService {
 
     Map<String, Object> updateShopStatus(Long shopId, String status, String reviewStatus, String rejectReason, Long adminUserId);
 
+    Map<String, Object> batchUpdateShopStatus(List<Long> shopIds, String status, String reviewStatus, String rejectReason, Long adminUserId);
+
     Map<String, Object> listReports(String keyword, String status, String targetType, int page, int pageSize);
 
     Map<String, Object> processReport(Long reportId, String status, String resolution, Long adminUserId);
+
+    Map<String, Object> batchProcessReports(List<Long> reportIds, String status, String resolution, Long adminUserId);
 
     java.util.List<Map<String, Object>> listSearchGovernanceRules();
 

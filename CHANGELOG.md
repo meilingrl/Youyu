@@ -1,3 +1,55 @@
+## [2026-05-30] - Customer Service Ticket MVP
+
+### added
+- Added durable customer-service tickets with user create/list/detail/reply APIs and admin queue/detail/status/reply/internal-note APIs.
+- Added `/app/support` for asynchronous user support tickets and rebuilt `/admin/support` as a ticket queue/detail workspace.
+- Added support-ticket schema, seed examples, backend coverage, API spec, and HTTP smoke coverage.
+
+### verify
+- Backend and frontend verification pending final head-Agent run.
+
+---
+
+## [2026-05-30] - Roadmap Split for Feature Completion and Launch Preparation
+
+### docs
+- Reworked the feature roadmap into an F0-F6 function-completion sequence covering contract gaps, support/after-sales, payment upgrade, analytics visualization, personalization, operations, and UI closeout.
+- Reworked the launch-preparation roadmap into an L0-L7 infrastructure, security, compliance, deployment, monitoring, and release-readiness checklist.
+- Updated the stage roadmap to reference the separated feature and launch routes instead of mixing product work with deployment hardening.
+
+---
+
+## [2026-05-29] - Admin Workbench Polish Follow-up
+
+### changed
+- Tightened the admin sidebar with two-character labels, icons, narrower layout, database-backed account display, and a circular logout button.
+- Reworked admin table action buttons and batch-action spacing, and added drag-follow right-swipe row selection for batch-capable admin tables.
+- Rebuilt the customer-service page as a queue-based customer-service workspace with non-empty queues only and Chinese status labels.
+
+### verify
+- `npm test`
+- `npm run build`
+
+---
+
+## [2026-05-29] - Admin Workbench UX And Batch Improvements
+
+### changed
+- Polished admin navigation, left-sidebar logout placement, dashboard zero-value display, table filters, table spacing, Chinese status labels, mediation copy, and the customer-service workspace framing.
+- Added product review-task detail access so admins can open submitted material before approving or rejecting it.
+
+### added
+- Added batch endpoints and UI actions for users, student verifications, products, product review tasks, shops, and reports.
+- Updated admin API docs and HTTP smoke samples for the new batch and review-detail endpoints.
+
+### verify
+- `npm test`
+- `npm run build`
+- `.\mvnw.cmd test -Dtest=AdminGovernanceTest`
+- `.\mvnw.cmd test`
+
+---
+
 ## [2026-05-29] - Marketing MVP Foundation
 
 ### feat
@@ -14,6 +66,15 @@
 ### test
 - Added backend marketing lifecycle and permission coverage.
 - Verified backend tests, frontend unit tests, and frontend production build.
+
+---
+
+## [2026-05-29] - Roadmap and Active Task Sync
+
+### docs
+- Replaced the stale launch-preparation roadmap content with the current Phase 0-4 上线准备计划.
+- Archived the completed admin module head-agent prompt so active tasks only represent current execution scope.
+- Aligned the stage roadmap reference with the Phase 0-4 launch-preparation plan.
 
 ---
 

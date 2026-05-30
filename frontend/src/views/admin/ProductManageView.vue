@@ -2,8 +2,10 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
-import { getAdminProducts, updateAdminProductStatus } from '@/api/modules/admin'
+import { batchUpdateAdminProductStatus, getAdminProducts, updateAdminProductStatus } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
+import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const loading = ref(false)
 const error = ref('')
@@ -11,12 +13,16 @@ const rows = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
+const tableRef = ref(null)
+const selectedRows = ref([])
 const filters = reactive({
   keyword: '',
   status: '',
   reviewStatus: '',
   productType: ''
 })
+
+useAdminRowSwipeSelection(tableRef, rows, selectedRows)
 
 async function loadProducts() {
   loading.value = true
@@ -50,6 +56,10 @@ function onSearch() {
   loadProducts()
 }
 
+function onSelectionChange(selection) {
+  selectedRows.value = selection
+}
+
 function canPutOnSale(row) {
   return row.status !== 'on_sale' && row.status !== 'closed' && ['approved', 'not_required'].includes(row.reviewStatus)
 }
@@ -60,11 +70,31 @@ function hasProductAction(row) {
 
 async function changeStatus(row, status) {
   try {
-    await ElMessageBox.confirm(`确认将商品状态调整为 ${status} 吗？`, '商品状态变更', {
+    await ElMessageBox.confirm(`确认将商品状态调整为${adminLabel(status)}吗？`, '商品状态变更', {
       type: 'warning'
     })
     await updateAdminProductStatus(row.id, { status })
     ElMessage.success('商品状态已更新')
+    await loadProducts()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(resolveErrorMessage(error))
+    }
+  }
+}
+
+async function batchChangeStatus(status) {
+  if (!selectedRows.value.length) return
+  try {
+    await ElMessageBox.confirm(`确认批量将 ${selectedRows.value.length} 个商品调整为${adminLabel(status)}吗？`, '批量商品状态变更', {
+      type: 'warning'
+    })
+    await batchUpdateAdminProductStatus({
+      ids: selectedRows.value.map((row) => row.id),
+      status
+    })
+    ElMessage.success('批量商品状态已更新')
+    selectedRows.value = []
     await loadProducts()
   } catch (error) {
     if (error !== 'cancel') {
@@ -83,6 +113,7 @@ onMounted(loadProducts)
     :rows="rows"
     :loading="loading"
     :error="error"
+    :selected-count="selectedRows.length"
     empty-title="暂无商品记录"
     empty-description="当前没有符合条件的商品。"
     @retry="loadProducts"
@@ -109,14 +140,36 @@ onMounted(loadProducts)
       </div>
     </template>
 
+    <template #batch>
+      <span>已选择 {{ selectedRows.length }} 个商品</span>
+      <div class="shell-inline-actions">
+        <el-button size="small" :disabled="!selectedRows.length" @click="batchChangeStatus('on_sale')">批量上架</el-button>
+        <el-button size="small" :disabled="!selectedRows.length" @click="batchChangeStatus('off_sale')">批量下架</el-button>
+        <el-button size="small" type="danger" plain :disabled="!selectedRows.length" @click="batchChangeStatus('closed')">
+          批量关闭
+        </el-button>
+      </div>
+    </template>
+
     <template #table>
-      <el-table v-loading="loading" :data="rows">
+      <el-table ref="tableRef" v-loading="loading" class="admin-select-table" row-key="id" :data="rows" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="48" />
         <el-table-column prop="title" label="商品标题" min-width="220" />
         <el-table-column prop="sellerName" label="卖家" min-width="100" />
         <el-table-column prop="categoryName" label="分类" min-width="120" />
-        <el-table-column prop="productType" label="类型" min-width="100" />
-        <el-table-column prop="status" label="商品状态" min-width="100" />
-        <el-table-column prop="reviewStatus" label="审核状态" min-width="120" />
+        <el-table-column label="类型" min-width="100">
+          <template #default="{ row }">{{ adminLabel(row.productType) }}</template>
+        </el-table-column>
+        <el-table-column label="商品状态" min-width="100">
+          <template #default="{ row }">
+            <el-tag :type="adminTagType(row.status)" effect="plain">{{ adminLabel(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="审核状态" min-width="120">
+          <template #default="{ row }">
+            <el-tag :type="adminTagType(row.reviewStatus)" effect="plain">{{ adminLabel(row.reviewStatus) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="reviewRejectReason" label="驳回原因" min-width="220" />
         <el-table-column label="操作" min-width="160" fixed="right">
           <template #default="{ row }">

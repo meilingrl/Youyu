@@ -1,0 +1,181 @@
+### Youyu - Support Tickets
+### Run this file after every change to support-ticket endpoints.
+### Prerequisite: backend started with -Dspring-boot.run.profiles=seed
+
+@baseUrl = http://localhost:8080
+@userToken = mock-1001-USER
+@otherUserToken = mock-1002-USER
+@adminToken = mock-9001-ADMIN
+@supportToken = mock-9102-SUPPORT_AGENT
+@ticketId = 6201
+
+# ---------------------------------------------------------------------------
+# USER SUPPORT TICKETS
+# ---------------------------------------------------------------------------
+
+### Create support ticket
+POST {{baseUrl}}/api/support/tickets
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "category": "order",
+  "subject": "Order delivery status needs help",
+  "content": "The seller has not updated delivery progress. Please help me check the platform record.",
+  "relatedType": "order",
+  "relatedId": 8001
+}
+
+###
+
+### List my support tickets
+GET {{baseUrl}}/api/support/tickets?page=1&pageSize=10
+Authorization: Bearer {{userToken}}
+
+###
+
+### List my open support tickets
+GET {{baseUrl}}/api/support/tickets?status=open&page=1&pageSize=10
+Authorization: Bearer {{userToken}}
+
+###
+
+### Read my support ticket detail
+### Expected: public messages only; no internal_note messages.
+GET {{baseUrl}}/api/support/tickets/{{ticketId}}
+Authorization: Bearer {{userToken}}
+
+###
+
+### Add user public reply
+POST {{baseUrl}}/api/support/tickets/{{ticketId}}/messages
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "content": "I can provide more order screenshots if needed."
+}
+
+###
+
+### User cannot read another user's ticket - expect 403
+GET {{baseUrl}}/api/support/tickets/{{ticketId}}
+Authorization: Bearer {{otherUserToken}}
+
+###
+
+### Reject invalid ticket category - expect 400 BAD_REQUEST
+POST {{baseUrl}}/api/support/tickets
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "category": "chat",
+  "subject": "Invalid category smoke",
+  "content": "Support tickets must use the closed category set."
+}
+
+###
+
+### Reject blank user reply - expect 400 BAD_REQUEST
+POST {{baseUrl}}/api/support/tickets/{{ticketId}}/messages
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "content": ""
+}
+
+# ---------------------------------------------------------------------------
+# ADMIN SUPPORT TICKETS
+# ---------------------------------------------------------------------------
+
+###
+
+### Admin list support tickets
+GET {{baseUrl}}/api/admin/support/tickets?page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Support agent list open order tickets
+GET {{baseUrl}}/api/admin/support/tickets?status=open&category=order&page=1&pageSize=10
+Authorization: Bearer {{supportToken}}
+
+###
+
+### Support agent list tickets assigned to me
+GET {{baseUrl}}/api/admin/support/tickets?assignedToMe=true&page=1&pageSize=10
+Authorization: Bearer {{supportToken}}
+
+###
+
+### Admin search tickets by keyword
+GET {{baseUrl}}/api/admin/support/tickets?keyword=delivery&page=1&pageSize=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Admin ticket detail
+### Expected: public_reply and internal_note messages are visible to admin.
+GET {{baseUrl}}/api/admin/support/tickets/{{ticketId}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+### Admin move ticket to in_progress and assign to self
+PUT {{baseUrl}}/api/admin/support/tickets/{{ticketId}}/status
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "assignToMe": true
+}
+
+###
+
+### Admin add public reply
+POST {{baseUrl}}/api/admin/support/tickets/{{ticketId}}/messages
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "messageType": "public_reply",
+  "content": "We are checking the order context and will update this ticket after review."
+}
+
+###
+
+### Admin add internal note
+POST {{baseUrl}}/api/admin/support/tickets/{{ticketId}}/messages
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "messageType": "internal_note",
+  "content": "Check report/order context only. Do not mutate order or mediation state from this ticket."
+}
+
+###
+
+### Reject invalid status transition - expect 400 BAD_REQUEST
+PUT {{baseUrl}}/api/admin/support/tickets/{{ticketId}}/status
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "status": "open"
+}
+
+###
+
+### Reject invalid message type - expect 400 BAD_REQUEST
+POST {{baseUrl}}/api/admin/support/tickets/{{ticketId}}/messages
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "messageType": "private_chat",
+  "content": "Invalid support-ticket message type."
+}

@@ -2,8 +2,10 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
-import { getAdminUserDetail, getAdminUsers, updateAdminUserStatus } from '@/api/modules/admin'
+import { batchUpdateAdminUserStatus, getAdminUserDetail, getAdminUsers, updateAdminUserStatus } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
+import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const loading = ref(false)
 const error = ref('')
@@ -12,6 +14,8 @@ const rows = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
+const tableRef = ref(null)
+const selectedRows = ref([])
 const detailVisible = ref(false)
 const detail = ref({ user: null, verifications: [], reports: [], products: [] })
 const filters = reactive({
@@ -19,6 +23,8 @@ const filters = reactive({
   status: '',
   verificationStatus: ''
 })
+
+useAdminRowSwipeSelection(tableRef, rows, selectedRows)
 
 async function loadUsers() {
   loading.value = true
@@ -52,6 +58,10 @@ function onSearch() {
   loadUsers()
 }
 
+function onSelectionChange(selection) {
+  selectedRows.value = selection
+}
+
 async function openDetail(row) {
   detailVisible.value = true
   detailLoading.value = true
@@ -77,13 +87,43 @@ async function changeStatus(row, status) {
       })
       restrictionReason = result.value
     } else {
-      await ElMessageBox.confirm(`确认将用户状态调整为 ${status} 吗？`, '状态变更', {
+      await ElMessageBox.confirm(`确认将用户状态调整为${adminLabel(status)}吗？`, '状态变更', {
         type: 'warning'
       })
     }
 
     await updateAdminUserStatus(row.id, { status, restrictionReason })
     ElMessage.success('用户状态已更新')
+    await loadUsers()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(resolveErrorMessage(error))
+    }
+  }
+}
+
+async function batchChangeStatus(status) {
+  if (!selectedRows.value.length) return
+  try {
+    let restrictionReason = ''
+    if (status === 'disabled') {
+      const result = await ElMessageBox.prompt('请填写批量禁用原因', '批量禁用用户', {
+        confirmButtonText: '确认禁用',
+        cancelButtonText: '取消'
+      })
+      restrictionReason = result.value
+    } else {
+      await ElMessageBox.confirm(`确认批量启用 ${selectedRows.value.length} 个用户吗？`, '批量启用用户', {
+        type: 'warning'
+      })
+    }
+    await batchUpdateAdminUserStatus({
+      ids: selectedRows.value.map((row) => row.id),
+      status,
+      restrictionReason
+    })
+    ElMessage.success('批量用户状态已更新')
+    selectedRows.value = []
     await loadUsers()
   } catch (error) {
     if (error !== 'cancel') {
@@ -102,6 +142,7 @@ onMounted(loadUsers)
     :rows="rows"
     :loading="loading"
     :error="error"
+    :selected-count="selectedRows.length"
     empty-title="暂无用户记录"
     empty-description="当前没有符合条件的用户。"
     @retry="loadUsers"
@@ -122,13 +163,32 @@ onMounted(loadUsers)
       </div>
     </template>
 
+    <template #batch>
+      <span>已选择 {{ selectedRows.length }} 个用户</span>
+      <div class="shell-inline-actions">
+        <el-button size="small" :disabled="!selectedRows.length" @click="batchChangeStatus('active')">批量启用</el-button>
+        <el-button size="small" type="danger" plain :disabled="!selectedRows.length" @click="batchChangeStatus('disabled')">
+          批量禁用
+        </el-button>
+      </div>
+    </template>
+
     <template #table>
-      <el-table v-loading="loading" :data="rows">
+      <el-table ref="tableRef" v-loading="loading" class="admin-select-table" row-key="id" :data="rows" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="48" />
         <el-table-column prop="nickname" label="用户昵称" min-width="120" />
         <el-table-column prop="username" label="账号" min-width="120" />
         <el-table-column prop="studentNo" label="学号" min-width="120" />
-        <el-table-column prop="status" label="用户状态" min-width="100" />
-        <el-table-column prop="verificationStatus" label="认证状态" min-width="120" />
+        <el-table-column label="用户状态" min-width="100">
+          <template #default="{ row }">
+            <el-tag :type="adminTagType(row.status)" effect="plain">{{ adminLabel(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="认证状态" min-width="120">
+          <template #default="{ row }">
+            <el-tag :type="adminTagType(row.verificationStatus)" effect="plain">{{ adminLabel(row.verificationStatus) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="privilegeLabel" label="权限档位" min-width="180" />
         <el-table-column prop="restrictionReason" label="限制原因" min-width="180" />
         <el-table-column label="操作" min-width="220" fixed="right">
@@ -176,8 +236,8 @@ onMounted(loadUsers)
         <span>账号：{{ detail.user.username }}</span>
         <span>邮箱：{{ detail.user.email }}</span>
         <span>手机号：{{ detail.user.phone }}</span>
-        <span>状态：{{ detail.user.status }}</span>
-        <span>认证状态：{{ detail.user.verificationStatus }}</span>
+        <span>状态：{{ adminLabel(detail.user.status) }}</span>
+        <span>认证状态：{{ adminLabel(detail.user.verificationStatus) }}</span>
         <span>信用等级：{{ detail.user.creditLevel }}</span>
         <span>权限：{{ detail.user.privilegeLabel }}</span>
       </div>
@@ -186,7 +246,9 @@ onMounted(loadUsers)
         <div class="section-heading"><h3>认证记录</h3></div>
         <el-table :data="detail.verifications || []">
           <el-table-column prop="studentNo" label="学号" min-width="120" />
-          <el-table-column prop="verificationStatus" label="状态" min-width="100" />
+          <el-table-column label="状态" min-width="100">
+            <template #default="{ row }">{{ adminLabel(row.verificationStatus) }}</template>
+          </el-table-column>
           <el-table-column prop="rejectReason" label="驳回原因" min-width="180" />
         </el-table>
       </div>

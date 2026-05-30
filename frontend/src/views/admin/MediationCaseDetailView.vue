@@ -10,6 +10,7 @@ import {
   updateAdminMediationStatus
 } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,7 +83,7 @@ async function submitStatus() {
       status: statusForm.status,
       cancelReason: statusForm.cancelReason
     })
-    ElMessage.success('Status updated')
+    ElMessage.success('调解状态已更新')
     await loadDetail()
   } catch (err) {
     ElMessage.error(resolveErrorMessage(err))
@@ -94,9 +95,9 @@ async function submitStatus() {
 async function submitDecision() {
   if (terminal.value || actionLoading.value) return
   try {
-    await ElMessageBox.confirm('Record final write-once platform decision?', 'Final decision', {
-      confirmButtonText: 'Record',
-      cancelButtonText: 'Cancel',
+    await ElMessageBox.confirm('确认记录最终裁决吗？裁决提交后不可重复写入。', '最终裁决', {
+      confirmButtonText: '记录裁决',
+      cancelButtonText: '取消',
       type: 'warning'
     })
   } catch (err) {
@@ -106,7 +107,7 @@ async function submitDecision() {
   actionLoading.value = true
   try {
     await recordAdminMediationDecision(caseRecord.value.id, decisionForm)
-    ElMessage.success('Final decision recorded')
+    ElMessage.success('最终裁决已记录')
     await loadDetail()
   } catch (err) {
     ElMessage.error(resolveErrorMessage(err))
@@ -131,13 +132,13 @@ onMounted(loadDetail)
   <div class="page-stack mediation-detail">
     <section class="shell-hero shell-hero--compact mediation-detail__hero">
       <div>
-        <span class="eyebrow">Platform Mediation</span>
-        <h1>{{ caseRecord.caseNo || 'Mediation Case' }}</h1>
-        <p>Read-only dispute context and formal write-once platform decision workspace.</p>
+        <span class="eyebrow">平台调解</span>
+        <h1>{{ caseRecord.caseNo || '调解案件' }}</h1>
+        <p>查看争议上下文、推进处理状态，并记录一次性的正式平台裁决。</p>
       </div>
       <div class="shell-inline-actions">
-        <el-button plain @click="router.push('/admin/mediation')">Back to list</el-button>
-        <el-tag v-if="caseRecord.status" effect="plain">{{ caseRecord.status }}</el-tag>
+        <el-button plain @click="router.push('/admin/mediation')">返回列表</el-button>
+        <el-tag v-if="caseRecord.status" :type="adminTagType(caseRecord.status)" effect="plain">{{ adminLabel(caseRecord.status) }}</el-tag>
       </div>
     </section>
 
@@ -147,33 +148,33 @@ onMounted(loadDetail)
     <template v-else-if="detail">
       <section class="mediation-detail__grid">
         <article class="shell-card detail-panel">
-          <h2>Case</h2>
+          <h2>案件信息</h2>
           <dl>
-            <dt>Case no</dt>
+            <dt>案件号</dt>
             <dd>{{ caseRecord.caseNo }}</dd>
-            <dt>Status</dt>
-            <dd>{{ caseRecord.status }}</dd>
-            <dt>Source report</dt>
+            <dt>状态</dt>
+            <dd>{{ adminLabel(caseRecord.status) }}</dd>
+            <dt>来源举报</dt>
             <dd>#{{ caseRecord.sourceReportId }}</dd>
-            <dt>Related order</dt>
+            <dt>关联订单</dt>
             <dd>#{{ caseRecord.relatedOrderId }}</dd>
-            <dt>Decision</dt>
-            <dd>{{ caseRecord.decisionCategory || '-' }}</dd>
-            <dt>Created</dt>
+            <dt>裁决</dt>
+            <dd>{{ adminLabel(caseRecord.decisionCategory, '-') }}</dd>
+            <dt>创建时间</dt>
             <dd>{{ caseRecord.createdAt || '-' }}</dd>
-            <dt>Updated</dt>
+            <dt>更新时间</dt>
             <dd>{{ caseRecord.updatedAt || '-' }}</dd>
           </dl>
         </article>
 
         <article class="shell-card detail-panel">
-          <h2>Participants</h2>
+          <h2>参与方</h2>
           <dl>
-            <dt>Buyer</dt>
+            <dt>买家</dt>
             <dd>{{ userLabel(detail.participants.buyer) }} (#{{ detail.participants.buyer.id }})</dd>
-            <dt>Seller</dt>
+            <dt>卖家</dt>
             <dd>{{ userLabel(detail.participants.seller) }} (#{{ detail.participants.seller.id }})</dd>
-            <dt>Reporter</dt>
+            <dt>举报人</dt>
             <dd>{{ userLabel(detail.participants.reporter) }} (#{{ detail.participants.reporter.id }})</dd>
           </dl>
         </article>
@@ -181,52 +182,52 @@ onMounted(loadDetail)
 
       <section class="mediation-detail__grid">
         <article class="shell-card detail-panel">
-          <h2>Source Report</h2>
+          <h2>来源举报</h2>
           <dl>
-            <dt>Target</dt>
-            <dd>{{ detail.sourceReport.targetType }} #{{ detail.sourceReport.targetId }}</dd>
-            <dt>Label</dt>
+            <dt>对象</dt>
+            <dd>{{ adminLabel(detail.sourceReport.targetType) }} #{{ detail.sourceReport.targetId }}</dd>
+            <dt>对象名称</dt>
             <dd>{{ detail.sourceReport.targetLabel || '-' }}</dd>
-            <dt>Reason</dt>
+            <dt>原因</dt>
             <dd>{{ detail.sourceReport.reasonType || '-' }}</dd>
-            <dt>Status</dt>
-            <dd>{{ detail.sourceReport.status }}</dd>
-            <dt>Resolution</dt>
+            <dt>状态</dt>
+            <dd>{{ adminLabel(detail.sourceReport.status) }}</dd>
+            <dt>处理结论</dt>
             <dd>{{ detail.sourceReport.resolution || '-' }}</dd>
           </dl>
           <p class="detail-text">{{ detail.sourceReport.content }}</p>
         </article>
 
         <article class="shell-card detail-panel">
-          <h2>Order And Refund Context</h2>
+          <h2>订单与退款上下文</h2>
           <dl>
-            <dt>Order no</dt>
+            <dt>订单号</dt>
             <dd>{{ detail.order.orderNo }}</dd>
-            <dt>Product</dt>
+            <dt>商品</dt>
             <dd>{{ detail.order.productTitle || '-' }}</dd>
-            <dt>Status</dt>
-            <dd>{{ detail.order.orderStatus }} / {{ detail.order.paymentStatus }}</dd>
-            <dt>Fulfillment</dt>
-            <dd>{{ detail.order.fulfillmentType }}</dd>
-            <dt>Amount</dt>
+            <dt>状态</dt>
+            <dd>{{ adminLabel(detail.order.orderStatus) }} / {{ adminLabel(detail.order.paymentStatus) }}</dd>
+            <dt>履约</dt>
+            <dd>{{ adminLabel(detail.order.fulfillmentType) }}</dd>
+            <dt>金额</dt>
             <dd>{{ money(detail.order.payAmount) }}</dd>
-            <dt>Refunds</dt>
+            <dt>退款数</dt>
             <dd>{{ detail.refunds.length }}</dd>
           </dl>
 
           <div v-if="detail.refunds.length" class="compact-list">
             <article v-for="refund in detail.refunds" :key="refund.id">
               <strong>{{ refund.refundNo }}</strong>
-              <span>{{ refund.refundStatus }} / {{ money(refund.refundAmount) }}</span>
+              <span>{{ adminLabel(refund.refundStatus) }} / {{ money(refund.refundAmount) }}</span>
             </article>
           </div>
         </article>
       </section>
 
       <section class="shell-card detail-panel">
-        <h2>Read-Only Chat Context</h2>
+        <h2>只读聊天上下文</h2>
         <p class="detail-text">
-          Scope: chat_messages.order_id = {{ detail.chatContext.orderId }}. This view does not call /api/chat/** and does not mutate chat read state.
+          范围：仅展示订单 #{{ detail.chatContext.orderId }} 相关消息。此页不调用聊天发送接口，也不改变用户消息已读状态。
         </p>
 
         <div v-if="chatItems.length" class="chat-context-list">
@@ -235,53 +236,53 @@ onMounted(loadDetail)
               <strong>{{ userLabel(message.sender) }}</strong>
               <span>{{ message.createdAt }}</span>
             </header>
-            <p>{{ message.isRecalled ? '[recalled]' : message.body }}</p>
+            <p>{{ message.isRecalled ? '[已撤回]' : message.body }}</p>
             <small>{{ message.messageType }} / conversation #{{ message.conversationId }}</small>
           </article>
         </div>
-        <div v-else class="empty-inline">No scoped order chat messages.</div>
+        <div v-else class="empty-inline">暂无该订单关联聊天消息。</div>
       </section>
 
       <section class="mediation-detail__grid">
         <article class="shell-card detail-panel">
-          <h2>Status Action</h2>
-          <p class="detail-text">Only non-final transitions and cancellation are available in mediation v1.</p>
+          <h2>状态操作</h2>
+          <p class="detail-text">当前版本只允许推进非终态状态，或取消仍在处理中的案件。</p>
           <div v-if="nextStatusOptions.length" class="action-stack">
-            <el-select v-model="statusForm.status" placeholder="Next status">
-              <el-option v-for="status in nextStatusOptions" :key="status" :label="status" :value="status" />
+            <el-select v-model="statusForm.status" placeholder="下一状态">
+              <el-option v-for="status in nextStatusOptions" :key="status" :label="adminLabel(status)" :value="status" />
             </el-select>
             <el-input
               v-if="statusForm.status === 'cancelled'"
               v-model="statusForm.cancelReason"
-              placeholder="Cancel reason"
+              placeholder="取消原因"
             />
             <el-button type="primary" :loading="actionLoading" :disabled="!statusForm.status" @click="submitStatus">
-              Update status
+              更新状态
             </el-button>
           </div>
-          <el-tag v-else type="info" effect="plain">No status action available</el-tag>
+          <el-tag v-else type="info" effect="plain">当前无可用状态操作</el-tag>
         </article>
 
         <article class="shell-card detail-panel">
-          <h2>Final Decision</h2>
-          <p class="detail-text">Final decisions are write-once and transition the case to resolved.</p>
+          <h2>最终裁决</h2>
+          <p class="detail-text">最终裁决只能记录一次，提交后案件进入已解决状态。</p>
           <div class="action-stack">
-            <el-select v-model="decisionForm.decisionCategory" :disabled="terminal" placeholder="Decision category">
-              <el-option v-for="item in decisionOptions" :key="item" :label="item" :value="item" />
+            <el-select v-model="decisionForm.decisionCategory" :disabled="terminal" placeholder="裁决类型">
+              <el-option v-for="item in decisionOptions" :key="item" :label="adminLabel(item)" :value="item" />
             </el-select>
             <el-input
               v-model="decisionForm.decisionSummary"
               :disabled="terminal"
               type="textarea"
               :rows="4"
-              placeholder="Decision summary"
+              placeholder="裁决说明"
             />
             <el-input
               v-model="decisionForm.enforcementSummary"
               :disabled="terminal"
               type="textarea"
               :rows="3"
-              placeholder="Enforcement summary"
+              placeholder="执行说明"
             />
             <el-button
               type="warning"
@@ -289,7 +290,7 @@ onMounted(loadDetail)
               :disabled="terminal || !decisionForm.decisionCategory || !decisionForm.decisionSummary"
               @click="submitDecision"
             >
-              Record final decision
+              记录最终裁决
             </el-button>
           </div>
         </article>
