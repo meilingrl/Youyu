@@ -10,6 +10,7 @@ const ADMIN_ROLES = new Set([
 const ALL_PERMISSIONS = [
   'ADMIN_DASHBOARD_VIEW',
   'ADMIN_SUPPORT_CONTEXT_VIEW',
+  'ADMIN_SUPPORT_TICKETS_HANDLE',
   'ADMIN_USERS_VIEW',
   'ADMIN_USERS_MANAGE',
   'ADMIN_VERIFICATIONS_REVIEW',
@@ -40,7 +41,8 @@ const PERMISSIONS_BY_ROLE = {
     'ADMIN_REPORTS_HANDLE',
     'ADMIN_SEARCH_LOGS_VIEW',
     'ADMIN_ORDERS_READ',
-    'ADMIN_MEDIATION_HANDLE'
+    'ADMIN_MEDIATION_HANDLE',
+    'ADMIN_SUPPORT_TICKETS_HANDLE'
   ],
   reviewer: [
     'ADMIN_DASHBOARD_VIEW',
@@ -77,7 +79,7 @@ export const ADMIN_PATH_PERMISSIONS = {
   '/admin/marketing': ['ADMIN_MARKETING_REVIEW'],
   '/admin/mediation': ['ADMIN_MEDIATION_HANDLE'],
   '/admin/hot-search': ['ADMIN_SEARCH_GOVERN'],
-  '/admin/support': ['ADMIN_SUPPORT_CONTEXT_VIEW']
+  '/admin/support': ['ADMIN_SUPPORT_TICKETS_HANDLE']
 }
 
 export function normalizeRole(role) {

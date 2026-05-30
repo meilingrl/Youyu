@@ -11,7 +11,6 @@ import {
 } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
-import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const router = useRouter()
 const loading = ref(false)
@@ -27,9 +26,6 @@ const filters = reactive({
   status: '',
   targetType: ''
 })
-
-useAdminRowSwipeSelection(tableRef, rows, selectedRows)
-
 async function loadReports() {
   loading.value = true
   error.value = ''

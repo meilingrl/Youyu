@@ -6,6 +6,7 @@ import com.youyu.backend.mapper.chat.AutoReplySettingsMapper;
 import com.youyu.backend.mapper.chat.ChatConversationMapper;
 import com.youyu.backend.mapper.chat.ChatMessageMapper;
 import com.youyu.backend.service.chat.ChatService;
+import com.youyu.backend.service.chat.SupportFaqKnowledgeBase;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -34,17 +35,25 @@ public class ChatServiceImpl implements ChatService {
     private static final String MESSAGE_TYPE_IMAGE = "image";
     private static final String MESSAGE_TYPE_PRODUCT_CARD = "product_card";
     private static final String MESSAGE_TYPE_ORDER_CARD = "order_card";
+    private static final String CONVERSATION_TYPE_SUPPORT = "support";
+    private static final String SUPPORT_STATUS_AI = "ai";
+    private static final String SUPPORT_STATUS_PENDING = "pending";
+    private static final String SUPPORT_STATUS_HUMAN = "human";
+    private static final String SUPPORT_STATUS_CLOSED = "closed";
 
     private final ChatConversationMapper conversationMapper;
     private final ChatMessageMapper messageMapper;
     private final AutoReplySettingsMapper autoReplySettingsMapper;
+    private final SupportFaqKnowledgeBase supportFaqKnowledgeBase;
 
     public ChatServiceImpl(ChatConversationMapper conversationMapper,
                            ChatMessageMapper messageMapper,
-                           AutoReplySettingsMapper autoReplySettingsMapper) {
+                           AutoReplySettingsMapper autoReplySettingsMapper,
+                           SupportFaqKnowledgeBase supportFaqKnowledgeBase) {
         this.conversationMapper = conversationMapper;
         this.messageMapper = messageMapper;
         this.autoReplySettingsMapper = autoReplySettingsMapper;
+        this.supportFaqKnowledgeBase = supportFaqKnowledgeBase;
     }
 
     @Override
@@ -177,6 +186,7 @@ public class ChatServiceImpl implements ChatService {
         validateMessagePayload(normalizedBody, normalizedType, normalizedMediaUrl, productId, orderId);
 
         Map<String, Object> conversation = requireParticipant(conversationId, currentUserId);
+        assertSupportSessionOpen(conversation);
         Long userAId = (Long) conversation.get("userAId");
         Long userBId = (Long) conversation.get("userBId");
         Map<String, Object> product = validateProductCard(normalizedType, productId);
@@ -200,7 +210,11 @@ public class ChatServiceImpl implements ChatService {
 
         Long recipientUserId = currentUserId.equals(userAId) ? userBId : userAId;
         conversationMapper.incrementUnreadCount(conversationId, recipientUserId);
-        maybeSendAutoReply(conversation, currentUserId, recipientUserId, now);
+        if (CONVERSATION_TYPE_SUPPORT.equals(String.valueOf(conversation.get("type")))) {
+            maybeSupportAiReply(conversation, currentUserId, normalizedType, normalizedBody, now);
+        } else {
+            maybeSendAutoReply(conversation, currentUserId, recipientUserId, now);
+        }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", messageId);
@@ -258,7 +272,10 @@ public class ChatServiceImpl implements ChatService {
     @Transactional
     public void deleteConversation(Long conversationId, Long currentUserId) {
         requireLogin(currentUserId);
-        requireParticipant(conversationId, currentUserId);
+        Map<String, Object> conversation = requireParticipant(conversationId, currentUserId);
+        if (CONVERSATION_TYPE_SUPPORT.equals(String.valueOf(conversation.get("type")))) {
+            closeSupportSessionInternal(conversation, currentUserId, false);
+        }
         conversationMapper.softDelete(conversationId, currentUserId);
         conversationMapper.clearUnreadCount(conversationId, currentUserId);
     }
@@ -303,6 +320,255 @@ public class ChatServiceImpl implements ChatService {
         autoReplySettingsMapper.upsert(currentUserId, Boolean.TRUE.equals(enabled), normalizeAutoReplyContent(replyContent));
     }
 
+    @Override
+    @Transactional
+    public Map<String, Object> startSupportSession(Long currentUserId) {
+        requireLogin(currentUserId);
+        Long csUserId = conversationMapper.findPlatformCsUserId();
+        if (csUserId == null) {
+            throw new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "平台客服账号未配置，请联系管理员或重启后端服务");
+        }
+        if (csUserId.equals(currentUserId)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Customer-service account cannot start a support session");
+        }
+
+        Map<String, Object> existing = conversationMapper.findSupportByRequesterAndCs(currentUserId, csUserId);
+        if (existing == null) {
+            Map<String, Object> legacy = conversationMapper.findByParticipants(currentUserId, csUserId, null, null);
+            if (legacy != null) {
+                Long legacyId = toLong(legacy.get("id"));
+                conversationMapper.updateType(legacyId, CONVERSATION_TYPE_SUPPORT);
+                requireSupportStatusUpdate(legacyId, SUPPORT_STATUS_AI);
+                existing = conversationMapper.findById(legacyId);
+            }
+        }
+        if (existing != null) {
+            Long conversationId = toLong(existing.get("id"));
+            String status = String.valueOf(existing.getOrDefault("supportStatus", ""));
+            if (SUPPORT_STATUS_CLOSED.equals(status)) {
+                reopenSupportSession(conversationId);
+            } else if (status.isBlank() || "null".equals(status)) {
+                requireSupportStatusUpdate(conversationId, SUPPORT_STATUS_AI);
+            }
+            conversationMapper.restoreForUser(conversationId, currentUserId);
+            Map<String, Object> reopened = conversationMapper.findById(conversationId);
+            if (SUPPORT_STATUS_CLOSED.equals(String.valueOf(reopened.getOrDefault("supportStatus", "")))) {
+                throw new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "无法重新开启客服会话，请稍后重试");
+            }
+            return buildConversationResponse(reopened, currentUserId);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        Map<String, Object> conversationData = new LinkedHashMap<>();
+        conversationData.put("type", CONVERSATION_TYPE_SUPPORT);
+        conversationData.put("productId", null);
+        conversationData.put("shopId", null);
+        conversationData.put("userAId", currentUserId);
+        conversationData.put("userBId", csUserId);
+        conversationData.put("lastMessageAt", now);
+        conversationData.put("createdAt", now);
+
+        Long conversationId;
+        try {
+            conversationId = conversationMapper.insert(conversationData);
+        } catch (DuplicateKeyException e) {
+            existing = conversationMapper.findByParticipants(currentUserId, csUserId, null, null);
+            if (existing != null) {
+                return buildConversationResponse(existing, currentUserId);
+            }
+            throw new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "Failed to start support session");
+        }
+        requireSupportStatusUpdate(conversationId, SUPPORT_STATUS_AI);
+
+        Map<String, Object> greeting = new LinkedHashMap<>();
+        greeting.put("conversationId", conversationId);
+        greeting.put("senderUserId", csUserId);
+        greeting.put("body", SupportFaqKnowledgeBase.GREETING);
+        greeting.put("messageType", MESSAGE_TYPE_TEXT);
+        greeting.put("mediaUrl", null);
+        greeting.put("productId", null);
+        greeting.put("orderId", null);
+        greeting.put("isRead", false);
+        greeting.put("readAt", null);
+        greeting.put("createdAt", now.plusNanos(1000));
+        messageMapper.insert(greeting);
+        conversationMapper.incrementUnreadCount(conversationId, currentUserId);
+        conversationMapper.updateLastMessageAt(conversationId, now.plusNanos(1000).toString());
+
+        Map<String, Object> created = conversationMapper.findById(conversationId);
+        if (created == null) {
+            throw new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "Failed to start support session");
+        }
+        return buildConversationResponse(created, currentUserId);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> closeSupportSession(Long conversationId, Long currentUserId) {
+        requireLogin(currentUserId);
+        Map<String, Object> conversation = requireParticipant(conversationId, currentUserId);
+        if (!CONVERSATION_TYPE_SUPPORT.equals(String.valueOf(conversation.get("type")))) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Not a support conversation");
+        }
+        Long requesterId = toLong(conversation.get("userAId"));
+        if (!currentUserId.equals(requesterId)) {
+            throw new BusinessException(ResultCode.FORBIDDEN, "Only the requester can end a support session");
+        }
+        closeSupportSessionInternal(conversation, currentUserId, true);
+        return buildConversationResponse(conversationMapper.findById(conversationId), currentUserId);
+    }
+
+    @Override
+    @Transactional
+    public void escalateSupportConversation(Long conversationId, Long currentUserId) {
+        requireLogin(currentUserId);
+        Map<String, Object> conversation = requireParticipant(conversationId, currentUserId);
+        conversation = ensureSupportConversationForEscalation(conversation, conversationId);
+        String status = String.valueOf(conversation.getOrDefault("supportStatus", ""));
+        if (SUPPORT_STATUS_CLOSED.equals(status)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Support session is already closed");
+        }
+        if (!SUPPORT_STATUS_PENDING.equals(status) && !SUPPORT_STATUS_HUMAN.equals(status)) {
+            requireSupportStatusUpdate(conversationId, SUPPORT_STATUS_PENDING);
+            conversationMapper.clearSupportAssignment(conversationId);
+
+            LocalDateTime replyAt = LocalDateTime.now();
+            Long csUserId = toLong(conversation.get("userBId"));
+            Map<String, Object> systemNote = new LinkedHashMap<>();
+            systemNote.put("conversationId", conversationId);
+            systemNote.put("senderUserId", csUserId);
+            systemNote.put("body", "已为你转接人工客服，平台客服会尽快接入处理，请稍候。");
+            systemNote.put("messageType", MESSAGE_TYPE_TEXT);
+            systemNote.put("mediaUrl", null);
+            systemNote.put("productId", null);
+            systemNote.put("orderId", null);
+            systemNote.put("isRead", false);
+            systemNote.put("readAt", null);
+            systemNote.put("createdAt", replyAt);
+            messageMapper.insert(systemNote);
+            conversationMapper.incrementUnreadCount(conversationId, currentUserId);
+            if (csUserId != null) {
+                conversationMapper.incrementUnreadCount(conversationId, csUserId);
+            }
+            conversationMapper.updateLastMessageAt(conversationId, replyAt.toString());
+        }
+    }
+
+    private Map<String, Object> ensureSupportConversationForEscalation(Map<String, Object> conversation, Long conversationId) {
+        if (CONVERSATION_TYPE_SUPPORT.equals(String.valueOf(conversation.get("type")))) {
+            return conversation;
+        }
+        Long csUserId = conversationMapper.findPlatformCsUserId();
+        Long userAId = toLong(conversation.get("userAId"));
+        Long userBId = toLong(conversation.get("userBId"));
+        if (csUserId == null || (!csUserId.equals(userAId) && !csUserId.equals(userBId))) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Not a support conversation");
+        }
+        conversationMapper.updateType(conversationId, CONVERSATION_TYPE_SUPPORT);
+        String status = String.valueOf(conversation.getOrDefault("supportStatus", ""));
+        if (status.isBlank() || "null".equals(status) || SUPPORT_STATUS_CLOSED.equals(status)) {
+            requireSupportStatusUpdate(conversationId, SUPPORT_STATUS_AI);
+        }
+        Map<String, Object> refreshed = conversationMapper.findById(conversationId);
+        if (refreshed == null) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "Conversation not found");
+        }
+        return refreshed;
+    }
+
+    private void reopenSupportSession(Long conversationId) {
+        requireSupportStatusUpdate(conversationId, SUPPORT_STATUS_AI);
+        conversationMapper.clearSupportAssignment(conversationId);
+    }
+
+    private void closeSupportSessionInternal(Map<String, Object> conversation, Long currentUserId, boolean notifyUser) {
+        Long conversationId = toLong(conversation.get("id"));
+        String status = String.valueOf(conversation.getOrDefault("supportStatus", ""));
+        if (SUPPORT_STATUS_CLOSED.equals(status)) {
+            return;
+        }
+        requireSupportStatusUpdate(conversationId, SUPPORT_STATUS_CLOSED);
+        conversationMapper.clearSupportAssignment(conversationId);
+        if (!notifyUser) {
+            return;
+        }
+        Long csUserId = toLong(conversation.get("userBId"));
+        LocalDateTime replyAt = LocalDateTime.now();
+        Map<String, Object> systemNote = new LinkedHashMap<>();
+        systemNote.put("conversationId", conversationId);
+        systemNote.put("senderUserId", csUserId);
+        systemNote.put("body", "本次客服会话已结束。如需继续咨询，请点击「再次咨询」重新发起。");
+        systemNote.put("messageType", MESSAGE_TYPE_TEXT);
+        systemNote.put("mediaUrl", null);
+        systemNote.put("productId", null);
+        systemNote.put("orderId", null);
+        systemNote.put("isRead", false);
+        systemNote.put("readAt", null);
+        systemNote.put("createdAt", replyAt);
+        messageMapper.insert(systemNote);
+        conversationMapper.incrementUnreadCount(conversationId, currentUserId);
+        conversationMapper.updateLastMessageAt(conversationId, replyAt.toString());
+    }
+
+    private void assertSupportSessionOpen(Map<String, Object> conversation) {
+        if (!CONVERSATION_TYPE_SUPPORT.equals(String.valueOf(conversation.get("type")))) {
+            return;
+        }
+        String status = String.valueOf(conversation.getOrDefault("supportStatus", ""));
+        if (SUPPORT_STATUS_CLOSED.equals(status)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "客服会话已结束，请点击「再次咨询」重新发起");
+        }
+    }
+
+    private void requireSupportStatusUpdate(Long conversationId, String expectedStatus) {
+        int updated = conversationMapper.updateSupportStatus(conversationId, expectedStatus);
+        if (updated > 0) {
+            return;
+        }
+        Map<String, Object> fresh = conversationMapper.findById(conversationId);
+        String actual = fresh == null ? "" : String.valueOf(fresh.getOrDefault("supportStatus", ""));
+        if (expectedStatus.equals(actual)) {
+            return;
+        }
+        throw new BusinessException(
+                ResultCode.INTERNAL_SERVER_ERROR,
+                "客服会话状态更新失败，请确认数据库已执行 support 字段迁移后重启后端"
+        );
+    }
+
+    private void maybeSupportAiReply(Map<String, Object> conversation, Long senderUserId, String messageType, String body, LocalDateTime originalMessageAt) {
+        Long requesterId = toLong(conversation.get("userAId"));
+        Long csUserId = toLong(conversation.get("userBId"));
+        if (!senderUserId.equals(requesterId)) {
+            return;
+        }
+        String status = String.valueOf(conversation.getOrDefault("supportStatus", ""));
+        if (!SUPPORT_STATUS_AI.equals(status)) {
+            return;
+        }
+
+        String answer = MESSAGE_TYPE_TEXT.equals(messageType)
+                ? supportFaqKnowledgeBase.answer(body)
+                : SupportFaqKnowledgeBase.FALLBACK_REPLY;
+
+        Long conversationId = toLong(conversation.get("id"));
+        LocalDateTime replyAt = originalMessageAt.plusNanos(1000);
+        Map<String, Object> autoMessage = new LinkedHashMap<>();
+        autoMessage.put("conversationId", conversationId);
+        autoMessage.put("senderUserId", csUserId);
+        autoMessage.put("body", answer);
+        autoMessage.put("messageType", MESSAGE_TYPE_TEXT);
+        autoMessage.put("mediaUrl", null);
+        autoMessage.put("productId", null);
+        autoMessage.put("orderId", null);
+        autoMessage.put("isRead", false);
+        autoMessage.put("readAt", null);
+        autoMessage.put("createdAt", replyAt);
+        messageMapper.insert(autoMessage);
+        conversationMapper.incrementUnreadCount(conversationId, requesterId);
+        conversationMapper.updateLastMessageAt(conversationId, replyAt.toString());
+    }
+
     private Map<String, Object> requireParticipant(Long conversationId, Long currentUserId) {
         Map<String, Object> conversation = conversationMapper.findById(conversationId);
         if (conversation == null) {
@@ -345,6 +611,8 @@ public class ChatServiceImpl implements ChatService {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", conversation.get("id"));
         result.put("type", conversation.get("type"));
+        result.put("supportStatus", conversation.get("supportStatus"));
+        result.put("assignedAdminId", conversation.get("assignedAdminId"));
         result.put("productId", conversation.get("productId"));
         result.put("shopId", conversation.get("shopId"));
         result.put("peerUser", peerUser);

@@ -189,7 +189,7 @@ onMounted(loadRows)
 <template>
   <ListPageShell
     title="营销审核"
-    description="集中处理店铺优惠券和店铺活动审核。权限失败以接口返回为准，前端导航不替代后端鉴权。"
+    description="集中审核店铺优惠券和店铺活动，及时处理待审核与风险营销内容。"
     :rows="activeRows()"
     :loading="loading"
     :error="error"
@@ -226,8 +226,8 @@ onMounted(loadRows)
             </div>
             <p>{{ row.description || row.ruleDescription || row.content || '暂无说明' }}</p>
             <div class="marketing-review-row__meta">
-              <span>店铺：{{ row.shopName || row.shop?.name || row.shopId || '未返回' }}</span>
-              <span>提交人：{{ row.ownerName || row.creatorName || row.ownerId || '未返回' }}</span>
+              <span>店铺：{{ row.shopName || row.shop?.name || row.shopId || '店铺信息待补充' }}</span>
+              <span>提交人：{{ row.ownerName || row.creatorName || row.ownerId || '提交人待补充' }}</span>
               <span>{{ validityText(row) }}</span>
             </div>
             <p v-if="row.rejectReason || row.reviewRejectReason" class="marketing-review-row__reason">

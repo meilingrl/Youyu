@@ -24,6 +24,7 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
     private Boolean unreadColumnsAvailable;
     private Boolean managementColumnsAvailable;
     private Boolean autoReplyColumnsAvailable;
+    private Boolean supportColumnsAvailable;
 
     public JdbcChatConversationMapper(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -40,8 +41,12 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         String autoReplySelect = autoReplyColumnsAvailable()
                 ? "cc.auto_replied_to_a_at, cc.auto_replied_to_b_at,"
                 : "NULL as auto_replied_to_a_at, NULL as auto_replied_to_b_at,";
+        String supportSelect = supportColumnsAvailable()
+                ? "cc.support_status, cc.assigned_admin_id,"
+                : "NULL as support_status, NULL as assigned_admin_id,";
         String sql = """
             SELECT cc.id, cc.type, cc.product_id, cc.shop_id, cc.user_a_id, cc.user_b_id,
+                   %s
                    %s
                    %s
                    %s
@@ -52,7 +57,7 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
             LEFT JOIN users ua ON cc.user_a_id = ua.id
             LEFT JOIN users ub ON cc.user_b_id = ub.id
             WHERE cc.id = ?
-            """.formatted(unreadSelect, managementSelect, autoReplySelect);
+            """.formatted(unreadSelect, managementSelect, autoReplySelect, supportSelect);
         List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, id);
         return results.isEmpty() ? null : normalizeConversation(results.get(0));
     }
@@ -68,6 +73,9 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         String autoReplySelect = autoReplyColumnsAvailable()
                 ? "cc.auto_replied_to_a_at, cc.auto_replied_to_b_at,"
                 : "NULL as auto_replied_to_a_at, NULL as auto_replied_to_b_at,";
+        String supportSelect = supportColumnsAvailable()
+                ? "cc.support_status, cc.assigned_admin_id,"
+                : "NULL as support_status, NULL as assigned_admin_id,";
         String whereClause = managementColumnsAvailable()
                 ? "WHERE (cc.user_a_id = ? AND cc.deleted_by_a_at IS NULL) OR (cc.user_b_id = ? AND cc.deleted_by_b_at IS NULL)"
                 : "WHERE cc.user_a_id = ? OR cc.user_b_id = ?";
@@ -76,6 +84,7 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
                 : "ORDER BY cc.last_message_at DESC";
         String sql = """
             SELECT cc.id, cc.type, cc.product_id, cc.shop_id, cc.user_a_id, cc.user_b_id,
+                   %s
                    %s
                    %s
                    %s
@@ -88,7 +97,7 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
             %s
             %s
             LIMIT ? OFFSET ?
-            """.formatted(unreadSelect, managementSelect, autoReplySelect, whereClause, orderClause);
+            """.formatted(unreadSelect, managementSelect, autoReplySelect, supportSelect, whereClause, orderClause);
         Object[] params = managementColumnsAvailable()
                 ? new Object[] {userId, userId, userId, userId, limit, offset}
                 : new Object[] {userId, userId, limit, offset};
@@ -121,8 +130,12 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         String autoReplySelect = autoReplyColumnsAvailable()
                 ? "cc.auto_replied_to_a_at, cc.auto_replied_to_b_at,"
                 : "NULL as auto_replied_to_a_at, NULL as auto_replied_to_b_at,";
+        String supportSelect = supportColumnsAvailable()
+                ? "cc.support_status, cc.assigned_admin_id,"
+                : "NULL as support_status, NULL as assigned_admin_id,";
         StringBuilder sql = new StringBuilder("""
             SELECT cc.id, cc.type, cc.product_id, cc.shop_id, cc.user_a_id, cc.user_b_id,
+                   %s
                    %s
                    %s
                    %s
@@ -133,7 +146,7 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
             LEFT JOIN users ua ON cc.user_a_id = ua.id
             LEFT JOIN users ub ON cc.user_b_id = ub.id
             WHERE cc.user_a_id = ? AND cc.user_b_id = ?
-            """.formatted(unreadSelect, managementSelect, autoReplySelect));
+            """.formatted(unreadSelect, managementSelect, autoReplySelect, supportSelect));
 
         List<Object> params = new ArrayList<>();
         params.add(userAId);
@@ -158,6 +171,43 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
     }
 
     @Override
+    public Map<String, Object> findSupportByRequesterAndCs(Long requesterUserId, Long csUserId) {
+        String unreadSelect = unreadColumnsAvailable()
+                ? "cc.unread_count_a, cc.unread_count_b,"
+                : "0 as unread_count_a, 0 as unread_count_b,";
+        String managementSelect = managementColumnsAvailable()
+                ? "cc.is_pinned_a, cc.is_pinned_b, cc.is_muted_a, cc.is_muted_b, cc.deleted_by_a_at, cc.deleted_by_b_at,"
+                : "FALSE as is_pinned_a, FALSE as is_pinned_b, FALSE as is_muted_a, FALSE as is_muted_b, NULL as deleted_by_a_at, NULL as deleted_by_b_at,";
+        String autoReplySelect = autoReplyColumnsAvailable()
+                ? "cc.auto_replied_to_a_at, cc.auto_replied_to_b_at,"
+                : "NULL as auto_replied_to_a_at, NULL as auto_replied_to_b_at,";
+        String supportSelect = supportColumnsAvailable()
+                ? "cc.support_status, cc.assigned_admin_id,"
+                : "NULL as support_status, NULL as assigned_admin_id,";
+        String sql = """
+            SELECT cc.id, cc.type, cc.product_id, cc.shop_id, cc.user_a_id, cc.user_b_id,
+                   %s
+                   %s
+                   %s
+                   %s
+                   cc.last_message_at, cc.created_at,
+                   ua.id as user_a_id, ua.username as user_a_username, ua.nickname as user_a_nickname, ua.avatar as user_a_avatar,
+                   ub.id as user_b_id, ub.username as user_b_username, ub.nickname as user_b_nickname, ub.avatar as user_b_avatar
+            FROM chat_conversations cc
+            LEFT JOIN users ua ON cc.user_a_id = ua.id
+            LEFT JOIN users ub ON cc.user_b_id = ub.id
+            WHERE cc.type = 'support'
+              AND cc.user_a_id = ?
+              AND cc.user_b_id = ?
+              AND cc.product_id IS NULL
+              AND cc.shop_id IS NULL
+            LIMIT 1
+            """.formatted(unreadSelect, managementSelect, autoReplySelect, supportSelect);
+        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, requesterUserId, csUserId);
+        return results.isEmpty() ? null : normalizeConversation(results.get(0));
+    }
+
+    @Override
     public Long insert(Map<String, Object> conversation) {
         String sql = """
             INSERT INTO chat_conversations (type, product_id, shop_id, user_a_id, user_b_id, last_message_at, created_at)
@@ -176,6 +226,11 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
             return ps;
         }, keyHolder);
         return JdbcGeneratedKey.requiredLong(keyHolder, "conversation_id");
+    }
+
+    @Override
+    public int updateType(Long id, String type) {
+        return jdbcTemplate.update("UPDATE chat_conversations SET type = ? WHERE id = ?", type, id);
     }
 
     @Override
@@ -312,6 +367,45 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         return jdbcTemplate.update(sql, targetUserId, timestamp, targetUserId, timestamp, id, targetUserId, targetUserId);
     }
 
+    @Override
+    public Long findPlatformCsUserId() {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT id FROM users WHERE username = 'platform_cs' LIMIT 1");
+        if (rows.isEmpty()) {
+            return null;
+        }
+        Object id = rows.get(0).get("id");
+        return id instanceof Number number ? number.longValue() : null;
+    }
+
+    @Override
+    public int updateSupportStatus(Long id, String supportStatus) {
+        if (!supportColumnsAvailable()) {
+            return 0;
+        }
+        return jdbcTemplate.update(
+                "UPDATE chat_conversations SET support_status = ? WHERE id = ?", supportStatus, id);
+    }
+
+    @Override
+    public int clearSupportAssignment(Long id) {
+        if (!supportColumnsAvailable()) {
+            return 0;
+        }
+        return jdbcTemplate.update(
+                "UPDATE chat_conversations SET assigned_admin_id = NULL WHERE id = ?", id);
+    }
+
+    @Override
+    public int assignSupportAgent(Long id, Long adminId) {
+        if (!supportColumnsAvailable()) {
+            return 0;
+        }
+        return jdbcTemplate.update(
+                "UPDATE chat_conversations SET assigned_admin_id = ?, support_status = 'human' WHERE id = ?",
+                adminId, id);
+    }
+
     private Map<String, Object> normalizeConversation(Map<String, Object> raw) {
         Map<String, Object> normalized = new LinkedHashMap<>();
         normalized.put("id", raw.get("id"));
@@ -330,6 +424,8 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
         normalized.put("deletedByBAt", raw.get("deleted_by_b_at"));
         normalized.put("autoRepliedToAAt", raw.get("auto_replied_to_a_at"));
         normalized.put("autoRepliedToBAt", raw.get("auto_replied_to_b_at"));
+        normalized.put("supportStatus", raw.get("support_status"));
+        normalized.put("assignedAdminId", raw.get("assigned_admin_id"));
         normalized.put("lastMessageAt", raw.get("last_message_at"));
         normalized.put("createdAt", raw.get("created_at"));
 
@@ -377,6 +473,22 @@ public class JdbcChatConversationMapper implements ChatConversationMapper {
                     && columnExists("chat_conversations", "auto_replied_to_b_at");
         }
         return autoReplyColumnsAvailable;
+    }
+
+    private boolean supportColumnsAvailable() {
+        if (supportColumnsAvailable == null) {
+            supportColumnsAvailable = columnExists("chat_conversations", "support_status")
+                    && columnExists("chat_conversations", "assigned_admin_id");
+        }
+        return supportColumnsAvailable;
+    }
+
+    @Override
+    public void resetSchemaAvailabilityCache() {
+        unreadColumnsAvailable = null;
+        managementColumnsAvailable = null;
+        autoReplyColumnsAvailable = null;
+        supportColumnsAvailable = null;
     }
 
     private boolean columnExists(String tableName, String columnName) {

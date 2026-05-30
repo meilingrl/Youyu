@@ -5,7 +5,6 @@ import ListPageShell from '@/components/shell/ListPageShell.vue'
 import { batchUpdateAdminUserStatus, getAdminUserDetail, getAdminUsers, updateAdminUserStatus } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
-import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const loading = ref(false)
 const error = ref('')
@@ -23,9 +22,6 @@ const filters = reactive({
   status: '',
   verificationStatus: ''
 })
-
-useAdminRowSwipeSelection(tableRef, rows, selectedRows)
-
 async function loadUsers() {
   loading.value = true
   error.value = ''
@@ -138,7 +134,7 @@ onMounted(loadUsers)
 <template>
   <ListPageShell
     title="用户管理"
-    description="覆盖用户列表、详情和启用/禁用管理，先打通后台治理主链路。"
+    description="管理用户资料、认证状态与启用/禁用，保障校园账号使用秩序。"
     :rows="rows"
     :loading="loading"
     :error="error"

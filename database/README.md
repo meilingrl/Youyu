@@ -5,6 +5,7 @@ This directory stores the database design assets for `Youyu`.
 ## Current contents
 
 - `001_mvp_init.sql`: first-pass MySQL 8 design/init script for the MVP migration target
+- `002_support_chat_columns.sql`: manual reference for online CS columns on existing `chat_conversations` / related chat fields (also applied automatically by `ChatSupportSchemaUpgrader` on backend startup)
 - `mvp-data-dictionary.md`: table and field notes for the MVP
 - `mvp-db-development-status.md`: current database readiness assessment
 

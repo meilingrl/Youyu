@@ -625,18 +625,23 @@ CREATE TABLE IF NOT EXISTS chat_conversations (
     deleted_by_b_at TIMESTAMP NULL,
     auto_replied_to_a_at TIMESTAMP NULL,
     auto_replied_to_b_at TIMESTAMP NULL,
+    support_status VARCHAR(16) NULL,
+    assigned_admin_id BIGINT NULL,
     last_message_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_chat_conv_user_a FOREIGN KEY (user_a_id) REFERENCES users(id),
     CONSTRAINT fk_chat_conv_user_b FOREIGN KEY (user_b_id) REFERENCES users(id),
     CONSTRAINT fk_chat_conv_product FOREIGN KEY (product_id) REFERENCES products(id),
     CONSTRAINT fk_chat_conv_shop FOREIGN KEY (shop_id) REFERENCES shops(id),
+    CONSTRAINT fk_chat_conv_admin FOREIGN KEY (assigned_admin_id) REFERENCES users(id),
     INDEX idx_user_a_last_message (user_a_id, last_message_at DESC),
     INDEX idx_user_b_last_message (user_b_id, last_message_at DESC),
     INDEX idx_user_a_unread (user_a_id, unread_count_a),
     INDEX idx_user_b_unread (user_b_id, unread_count_b),
     INDEX idx_user_a_pinned (user_a_id, is_pinned_a),
     INDEX idx_user_b_pinned (user_b_id, is_pinned_b),
+    INDEX idx_support_status (support_status, last_message_at DESC),
+    INDEX idx_support_assigned (assigned_admin_id, support_status),
     UNIQUE INDEX uk_conversation_pair (user_a_id, user_b_id, product_id, shop_id)
 );
 

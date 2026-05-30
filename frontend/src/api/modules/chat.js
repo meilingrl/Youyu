@@ -56,6 +56,18 @@ export async function recallMessage(messageId) {
   return service.post(`/chat/messages/${messageId}/recall`)
 }
 
+export async function startSupportSession() {
+  return service.post('/chat/support/session')
+}
+
+export async function escalateSupportConversation(conversationId) {
+  return service.post(`/chat/conversations/${conversationId}/escalate`)
+}
+
+export async function closeSupportConversation(conversationId) {
+  return service.post(`/chat/conversations/${conversationId}/close-support`)
+}
+
 export async function getAutoReplySettings() {
   return service.get('/chat/auto-reply')
 }

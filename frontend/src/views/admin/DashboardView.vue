@@ -84,7 +84,7 @@ onMounted(loadDashboard)
       <div>
         <span class="eyebrow">治理工作台</span>
         <h1>治理总览</h1>
-        <p>集中查看真实待办队列、治理信号和正式调解进度，帮助管理员进入后台后先处理有明确归属的工作。</p>
+        <p>集中查看待办队列、治理信号和调解进度，帮助管理员优先处理有明确归属的工作。</p>
       </div>
 
       <div class="dashboard-hero__stats" aria-label="后台核心数据">
@@ -100,7 +100,7 @@ onMounted(loadDashboard)
       <div class="dashboard-section__header">
         <div>
           <h2>待处理工作队列</h2>
-          <p>每个数字都来自后台持久化数据，并指向负责处理的管理页面。</p>
+          <p>数据按业务队列汇总，并指向对应的处理页面。</p>
         </div>
       </div>
 
@@ -128,7 +128,7 @@ onMounted(loadDashboard)
       <div class="dashboard-section__header">
         <div>
           <h2>治理信号</h2>
-          <p>用于发现需要复核或持续关注的后台状态，不替代各业务列表的处理流。</p>
+          <p>用于发现需要复核或持续关注的后台状态，辅助各业务列表处理。</p>
         </div>
       </div>
 
@@ -168,7 +168,7 @@ onMounted(loadDashboard)
             <span>{{ adminLabel(item.status) }}</span>
             <strong>{{ item.value }}</strong>
           </router-link>
-          <div v-if="!visibleOrderBreakdowns.length" class="admin-empty-line">暂无非零订单状态。</div>
+          <div v-if="!visibleOrderBreakdowns.length" class="admin-empty-line">暂无待跟进订单状态。</div>
         </div>
       </div>
 
@@ -198,8 +198,8 @@ onMounted(loadDashboard)
     <section v-if="unavailableMetrics.length" class="dashboard-section">
       <div class="dashboard-section__header">
         <div>
-          <h2>暂不可用指标</h2>
-          <p>没有可靠数据源的指标不会被伪造成实时数据。</p>
+          <h2>待完善指标</h2>
+          <p>指标将在数据口径稳定后展示，避免造成误判。</p>
         </div>
       </div>
 
@@ -209,7 +209,7 @@ onMounted(loadDashboard)
             <strong>{{ metric.label }}</strong>
             <span>{{ metric.description }}</span>
           </div>
-          <el-tag type="info" effect="plain">暂无数据源</el-tag>
+          <el-tag type="info" effect="plain">待完善</el-tag>
         </div>
       </div>
     </section>

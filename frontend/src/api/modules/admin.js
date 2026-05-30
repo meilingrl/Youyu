@@ -143,3 +143,31 @@ export function updateAdminSupportTicketStatus(ticketId, payload) {
 export function createAdminSupportTicketMessage(ticketId, payload) {
   return service.post(`/admin/support/tickets/${ticketId}/messages`, payload)
 }
+
+export function getAdminSupportChatConversations(params) {
+  return service.get('/admin/support/chat/conversations', { params })
+}
+
+export function getAdminSupportChatConversation(id) {
+  return service.get(`/admin/support/chat/conversations/${id}`)
+}
+
+export function getAdminSupportChatMessages(id, params) {
+  return service.get(`/admin/support/chat/conversations/${id}/messages`, { params })
+}
+
+export function claimAdminSupportChatConversation(id) {
+  return service.post(`/admin/support/chat/conversations/${id}/claim`)
+}
+
+export function replyAdminSupportChatConversation(id, payload) {
+  return service.post(`/admin/support/chat/conversations/${id}/messages`, payload)
+}
+
+export function closeAdminSupportChatConversation(id) {
+  return service.post(`/admin/support/chat/conversations/${id}/close`)
+}
+
+export function markAdminSupportChatRead(id) {
+  return service.post(`/admin/support/chat/conversations/${id}/read`)
+}

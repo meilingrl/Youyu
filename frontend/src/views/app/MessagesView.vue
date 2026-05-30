@@ -16,6 +16,7 @@ import NotificationsView from '@/views/app/NotificationsView.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useChatStore } from '@/stores/chat'
 import { useNotificationStore } from '@/stores/notification'
+import { resolveErrorMessage } from '@/utils/error-utils'
 
 const props = defineProps({
   conversationId: {
@@ -95,6 +96,92 @@ const quickReplyScenario = computed(() => {
   return 'buyer'
 })
 
+const startingSupport = ref(false)
+const escalating = ref(false)
+const isSupportConversation = computed(() => activeConversation.value?.type === 'support')
+const supportStatus = computed(() => activeConversation.value?.supportStatus || '')
+const supportStatusLabel = computed(() => {
+  switch (supportStatus.value) {
+    case 'ai':
+      return '智能客服'
+    case 'pending':
+      return '等待人工接入'
+    case 'human':
+      return '人工客服处理中'
+    case 'closed':
+      return '会话已结束'
+    default:
+      return '在线客服'
+  }
+})
+const canEscalate = computed(() => isSupportConversation.value && supportStatus.value === 'ai')
+const canCloseSupport = computed(() => isSupportConversation.value && supportStatus.value !== 'closed')
+const supportSessionClosed = computed(() => isSupportConversation.value && supportStatus.value === 'closed')
+const hasOpenSupportSession = computed(() =>
+  chatStore.conversations.some((item) => item.type === 'support' && item.supportStatus !== 'closed')
+)
+const supportStartLabel = computed(() => {
+  if (startingSupport.value) return '正在接入...'
+  if (hasOpenSupportSession.value) return '继续咨询'
+  return '联系在线客服'
+})
+const closingSupport = ref(false)
+
+async function startSupportSession() {
+  if (startingSupport.value) return
+  startingSupport.value = true
+  try {
+    selectedCategory.value = 'support'
+    const conversation = await chatStore.startSupportSession()
+    chatStore.startPolling(conversation.id)
+    scrollToBottom()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '发起客服会话失败，请稍后再试'))
+  } finally {
+    startingSupport.value = false
+  }
+}
+
+async function escalateToHuman() {
+  if (!chatStore.activeConversationId || escalating.value) return
+  escalating.value = true
+  try {
+    await chatStore.escalateSupportConversation(chatStore.activeConversationId)
+    ElMessage.success('已转接人工客服，请稍候')
+    scrollToBottom()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '转人工失败，请稍后再试'))
+  } finally {
+    escalating.value = false
+  }
+}
+
+async function closeSupportSession() {
+  if (!chatStore.activeConversationId || closingSupport.value) return
+  try {
+    await ElMessageBox.confirm('结束后将无法继续发送消息，可稍后再发起新的咨询。', '结束客服会话', {
+      confirmButtonText: '结束会话',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    ElMessage.error(resolveErrorMessage(error, '结束会话失败，请稍后再试'))
+    return
+  }
+  closingSupport.value = true
+  try {
+    await chatStore.closeSupportConversation(chatStore.activeConversationId)
+    await chatStore.fetchConversations(0, 50, { silent: true })
+    ElMessage.success('客服会话已结束')
+    scrollToBottom()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error, '结束会话失败，请稍后再试'))
+  } finally {
+    closingSupport.value = false
+  }
+}
+
 function formatUnread(count) {
   const value = Number(count || 0)
   if (value <= 0) return ''
@@ -114,8 +201,8 @@ function categoryUnread(categoryId) {
 
 function categoryFor(conversation = {}) {
   const type = conversation.type || ''
+  if (type === 'support') return 'support'
   if (type === 'shop_inquiry' || conversation.shopId) return 'shop'
-  if (type === 'direct') return 'support'
   return 'trade'
 }
 
@@ -287,15 +374,28 @@ async function toggleMute(conversationId) {
 }
 
 async function deleteConversation(conversationId) {
+  const conversation = chatStore.conversations.find((item) => String(item.id) === String(conversationId))
+  const isSupport = conversation?.type === 'support'
   try {
-    await ElMessageBox.confirm('删除后将不再显示此会话，但历史消息会保留。', '删除会话', {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
+    await ElMessageBox.confirm(
+      isSupport
+        ? '结束并隐藏该客服会话，历史消息会保留。之后可点击「联系在线客服」或「再次咨询」重新发起。'
+        : '删除后将不再显示此会话，但历史消息会保留。',
+      isSupport ? '结束客服会话' : '删除会话',
+      {
+        confirmButtonText: isSupport ? '结束会话' : '删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
     await chatStore.deleteConversation(conversationId)
+    if (isSupport) {
+      ElMessage.success('客服会话已结束')
+    }
   } catch (error) {
-    if (error !== 'cancel' && error !== 'close') ElMessage.error('删除会话失败')
+    if (error !== 'cancel' && error !== 'close') {
+      ElMessage.error(resolveErrorMessage(error, isSupport ? '结束会话失败' : '删除会话失败'))
+    }
   }
 }
 
@@ -397,6 +497,16 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
+        <button
+          v-if="selectedCategory === 'support'"
+          type="button"
+          class="messages-support-start"
+          :disabled="startingSupport"
+          @click="startSupportSession"
+        >
+          {{ supportStartLabel }}
+        </button>
+
         <div v-if="chatStore.loading && !conversationRows.length" class="messages-loading">
           <el-skeleton animated :rows="3" />
         </div>
@@ -438,9 +548,39 @@ onBeforeUnmount(() => {
             <div>
               <h2>{{ activeConversation.peerUser?.nickname || activeConversation.peerUser?.username || '用户' }}</h2>
               <div class="messages-states">
+                <span v-if="isSupportConversation" class="messages-states__support">{{ supportStatusLabel }}</span>
                 <span v-if="activeConversation.isPinned">置顶</span>
                 <span v-if="activeConversation.isMuted">静音</span>
               </div>
+            </div>
+            <div class="messages-detail-actions">
+              <button
+                v-if="canEscalate"
+                type="button"
+                class="messages-escalate-btn"
+                :disabled="escalating"
+                @click="escalateToHuman"
+              >
+                {{ escalating ? '转接中...' : '转人工' }}
+              </button>
+              <button
+                v-if="canCloseSupport"
+                type="button"
+                class="messages-close-support-btn"
+                :disabled="closingSupport"
+                @click="closeSupportSession"
+              >
+                {{ closingSupport ? '结束中...' : '结束会话' }}
+              </button>
+              <button
+                v-if="supportSessionClosed"
+                type="button"
+                class="messages-escalate-btn"
+                :disabled="startingSupport"
+                @click="startSupportSession"
+              >
+                {{ startingSupport ? '接入中...' : '再次咨询' }}
+              </button>
             </div>
           </header>
 
@@ -503,7 +643,11 @@ onBeforeUnmount(() => {
             </article>
           </div>
 
-          <div class="messages-input-area">
+          <div v-if="supportSessionClosed" class="messages-support-closed-hint">
+            本次客服会话已结束。如需继续咨询，请点击上方「再次咨询」。
+          </div>
+
+          <div v-else class="messages-input-area">
             <QuickReplyPanel
               v-if="quickReplyOpen"
               class="messages-quick-reply-panel"
@@ -574,6 +718,7 @@ onBeforeUnmount(() => {
 .messages-categories,
 .messages-composer,
 .messages-detail-header,
+.messages-detail-actions,
 .messages-states {
   display: flex;
   align-items: center;
@@ -694,6 +839,62 @@ onBeforeUnmount(() => {
   color: var(--msg-primary);
   font-size: 12px;
   font-weight: 700;
+}
+
+.messages-states__support {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #2563eb !important;
+}
+
+.messages-support-start,
+.messages-escalate-btn {
+  border: none;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.messages-support-start {
+  width: 100%;
+  min-height: 44px;
+  background: var(--msg-primary);
+  color: #fff;
+}
+
+.messages-support-start:disabled,
+.messages-escalate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.messages-detail-actions {
+  margin-left: auto;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.messages-escalate-btn,
+.messages-close-support-btn {
+  height: 36px;
+  padding: 0 16px;
+  background: #fff;
+  color: var(--msg-primary);
+  border: 1px solid var(--msg-primary-soft);
+}
+
+.messages-close-support-btn {
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
+.messages-support-closed-hint {
+  padding: 16px 20px;
+  text-align: center;
+  color: var(--msg-muted);
+  font-size: 14px;
+  border-top: 1px solid #f3f4f6;
+  background: var(--msg-paper);
 }
 
 .messages-main {

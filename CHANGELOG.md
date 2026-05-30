@@ -1,3 +1,77 @@
+## [2026-05-31] - Online Customer Service Console (Chat + UX Polish)
+
+### added
+- In-app online CS on chat: `POST /api/chat/support/session`, rule-based FAQ bot (`SupportFaqKnowledgeBase`), `POST /api/chat/conversations/{id}/escalate`, user `POST /api/chat/conversations/{id}/close-support`.
+- Admin `/admin/support` rebuilt as real-time CS console (`/api/admin/support/chat/*`, filters 待接入/进行中/我处理的/已结束, claim/reply/close).
+- `chat_conversations.support_status` / `assigned_admin_id`, seeded `platform_cs`, ADR `docs/07-decisions/2026-05-30-online-customer-service-on-chat.md`.
+
+### fixed
+- `ChatSupportSchemaUpgrader` migrates legacy MySQL/H2 chat tables (missing `message_type`, `is_recalled`, `unread_count_*`, etc.) so admin queue no longer returns 500 on old databases.
+- Escalation persists `pending` reliably; admin queue includes legacy `direct` + `platform_cs` threads; user can end/restart sessions; admin permissions aligned (`ADMIN_SUPPORT_TICKETS_HANDLE`).
+- Admin sidebar icon visual harmony; removed admin table row swipe-select (`admin-row-swipe-selection.js`); admin copy sweep (no dev-draft hero text).
+
+### verify
+- Backend `mvnw.cmd test` — pass (`SupportChatTest` included).
+- Frontend `npm test` + `npm run build` — pass.
+
+---
+
+## [2026-05-31] - User Can End and Restart Support Sessions
+
+### fixed
+- Added `POST /api/chat/conversations/{id}/close-support` so users can end an online CS session; closed sessions block new messages with a clear prompt to restart.
+- `POST /api/chat/support/session` now fully reopens closed sessions (`ai` + clears `assigned_admin_id`); sidebar button shows「继续咨询」/「联系在线客服」; chat header adds「结束会话」and「再次咨询」.
+- Deleting a support conversation from the list ends the session (not just hide) so admins are not left with stale pending queues.
+
+### verify
+- Backend `mvnw.cmd test -Dtest=SupportChatTest` — pass.
+
+---
+
+## [2026-05-31] - Fix Admin Pending Queue After 转人工
+
+### fixed
+- Escalation now fails fast if `support_status` cannot be persisted (instead of silently leaving the session on `ai` while the UI shows 待接入).
+- Escalation increments unread for the platform CS account (`user_b`) so admin queue badges reflect new work.
+- Startup backfill recovers support conversations that already have the 转人工 system message but were stuck on `support_status = 'ai'`.
+- User chat store refetches conversations after escalate; admin `/admin/support` route requires `ADMIN_SUPPORT_TICKETS_HANDLE` (matches backend).
+
+### verify
+- Backend `mvnw.cmd test -Dtest=SupportChatTest` — pass.
+
+---
+
+## [2026-05-31] - Fix Missing Support Chat Columns on Existing MySQL
+
+### fixed
+- Added `ChatSupportSchemaUpgrader` to apply `support_status` and `assigned_admin_id` (plus FK/indexes) to pre-existing MySQL `chat_conversations` tables on startup; `CREATE TABLE IF NOT EXISTS` alone does not add new columns.
+- Startup upgrader now also seeds the `platform_cs` account when missing (normal dev run does not load `seed/data.sql`, which caused `POST /api/chat/support/session` to fail).
+- Reset JDBC schema-availability cache after migration; improved support-session lookup and frontend error messaging.
+- Added manual migration reference `database/002_support_chat_columns.sql`.
+
+### verify
+- Backend `mvnw.cmd test` — 163 tests, 0 failures.
+
+---
+
+## [2026-05-30] - Online Customer Service (Chat + AI Bot + Escalation)
+
+### added
+- Added an in-app online customer-service capability on top of the existing chat system: users can start an idempotent support session from the message center 客服 tab (`POST /api/chat/support/session`).
+- Added a rule-based FAQ bot (`SupportFaqKnowledgeBase`) that auto-replies as the platform CS account to support messages while a session is in AI-handling state, with an escalate fallback. No external LLM.
+- Added 转人工 escalation (`POST /api/chat/conversations/{id}/escalate`); escalated sessions stop the AI and surface in the admin queue.
+- Rebuilt `/admin/support` as an online customer-service console (queue with 待接入/进行中/我处理的/已结束 filters, chat thread + composer with support quick replies, requester context, claim/close actions) backed by `/api/admin/support/chat/*` (permission `ADMIN_SUPPORT_TICKETS_HANDLE`).
+- Added support state columns (`support_status`, `assigned_admin_id`) and indexes to `chat_conversations`, a seeded `platform_cs` account, and an example support conversation. Legacy support-ticket system kept intact.
+
+### changed
+- Message center 客服 tab now recognizes the proper `support` conversation type instead of the previous `type==='direct'` hack.
+
+### verify
+- Backend `mvnw.cmd test` — 163 tests, 0 failures.
+- Frontend `npm test` — 39 tests passing; `npm run build` succeeds.
+
+---
+
 ## [2026-05-30] - Customer Service Ticket MVP
 
 ### added
