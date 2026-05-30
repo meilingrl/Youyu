@@ -134,3 +134,24 @@ INSERT INTO reports (
  '2026-05-07 18:40:00', CURRENT_TIMESTAMP)
 ON DUPLICATE KEY UPDATE status = VALUES(status), processed_at = VALUES(processed_at),
     processed_by = VALUES(processed_by), resolution = VALUES(resolution);
+
+INSERT INTO support_tickets (
+    id, ticket_no, requester_user_id, category, subject, content, status, priority,
+    related_type, related_id, assigned_admin_user_id, last_replied_by, last_replied_at,
+    created_at, updated_at
+) VALUES
+(6201, 'SEED-SUP-0001', 1001, 'order', 'Order pickup support', 'I need help confirming an offline pickup detail.', 'waiting_user', 'normal',
+ 'order', 8001, 9102, 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(6202, 'SEED-SUP-0002', 1010, 'account', 'Account verification question', 'Please check my campus verification status.', 'open', 'normal',
+ NULL, NULL, NULL, 'user', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE status = VALUES(status), assigned_admin_user_id = VALUES(assigned_admin_user_id),
+    last_replied_by = VALUES(last_replied_by), last_replied_at = VALUES(last_replied_at), updated_at = VALUES(updated_at);
+
+INSERT INTO support_ticket_messages (
+    id, ticket_id, sender_user_id, sender_role, message_type, content, created_at
+) VALUES
+(6211, 6201, 1001, 'user', 'public_reply', 'I need help confirming an offline pickup detail.', CURRENT_TIMESTAMP),
+(6212, 6201, 9102, 'admin', 'public_reply', 'Please share the pickup time window.', CURRENT_TIMESTAMP),
+(6213, 6201, 9102, 'admin', 'internal_note', 'Check order context before final reply.', CURRENT_TIMESTAMP),
+(6214, 6202, 1010, 'user', 'public_reply', 'Please check my campus verification status.', CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE content = VALUES(content);

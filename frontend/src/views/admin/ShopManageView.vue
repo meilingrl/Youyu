@@ -2,8 +2,10 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
-import { getAdminShopDetail, getAdminShops, updateAdminShopStatus } from '@/api/modules/admin'
+import { batchUpdateAdminShopStatus, getAdminShopDetail, getAdminShops, updateAdminShopStatus } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
+import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const loading = ref(false)
 const error = ref('')
@@ -12,6 +14,8 @@ const rows = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
+const tableRef = ref(null)
+const selectedRows = ref([])
 const detailVisible = ref(false)
 const detail = ref({ shop: null, products: [] })
 const filters = reactive({
@@ -19,6 +23,8 @@ const filters = reactive({
   status: '',
   reviewStatus: ''
 })
+
+useAdminRowSwipeSelection(tableRef, rows, selectedRows)
 
 async function loadShops() {
   loading.value = true
@@ -52,6 +58,10 @@ function onSearch() {
   loadShops()
 }
 
+function onSelectionChange(selection) {
+  selectedRows.value = selection
+}
+
 async function openDetail(row) {
   detailVisible.value = true
   detailLoading.value = true
@@ -63,6 +73,36 @@ async function openDetail(row) {
     ElMessage.error(resolveErrorMessage(error))
   } finally {
     detailLoading.value = false
+  }
+}
+
+async function batchUpdate(payload, title, successMessage) {
+  if (!selectedRows.value.length) return
+  try {
+    let rejectReason = payload.rejectReason || ''
+    if (payload.reviewStatus === 'rejected') {
+      const result = await ElMessageBox.prompt('请填写批量驳回原因', title, {
+        confirmButtonText: '提交驳回',
+        cancelButtonText: '取消'
+      })
+      rejectReason = result.value
+    } else {
+      await ElMessageBox.confirm(`确认批量处理 ${selectedRows.value.length} 个店铺吗？`, title, {
+        type: 'warning'
+      })
+    }
+    await batchUpdateAdminShopStatus({
+      ids: selectedRows.value.map((row) => row.id),
+      ...payload,
+      rejectReason
+    })
+    ElMessage.success(successMessage)
+    selectedRows.value = []
+    await loadShops()
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(resolveErrorMessage(error))
+    }
   }
 }
 
@@ -109,6 +149,7 @@ onMounted(loadShops)
     :rows="rows"
     :loading="loading"
     :error="error"
+    :selected-count="selectedRows.length"
     empty-title="暂无店铺记录"
     empty-description="当前没有符合条件的店铺。"
     @retry="loadShops"
@@ -130,12 +171,50 @@ onMounted(loadShops)
       </div>
     </template>
 
+    <template #batch>
+      <span>已选择 {{ selectedRows.length }} 个店铺</span>
+      <div class="shell-inline-actions">
+        <el-button
+          size="small"
+          :disabled="!selectedRows.length"
+          @click="batchUpdate({ reviewStatus: 'approved', status: 'active' }, '批量通过店铺', '店铺已批量通过')"
+        >
+          批量通过
+        </el-button>
+        <el-button
+          size="small"
+          type="danger"
+          plain
+          :disabled="!selectedRows.length"
+          @click="batchUpdate({ reviewStatus: 'rejected', status: 'inactive' }, '批量驳回店铺', '店铺已批量驳回')"
+        >
+          批量驳回
+        </el-button>
+        <el-button
+          size="small"
+          :disabled="!selectedRows.length"
+          @click="batchUpdate({ status: 'disabled' }, '批量停用店铺', '店铺已批量停用')"
+        >
+          批量停用
+        </el-button>
+      </div>
+    </template>
+
     <template #table>
-      <el-table v-loading="loading" :data="rows">
+      <el-table ref="tableRef" v-loading="loading" class="admin-select-table" row-key="id" :data="rows" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="48" />
         <el-table-column prop="name" label="店铺名称" min-width="180" />
         <el-table-column prop="ownerName" label="店主" min-width="100" />
-        <el-table-column prop="status" label="店铺状态" min-width="100" />
-        <el-table-column prop="reviewStatus" label="审核状态" min-width="120" />
+        <el-table-column label="店铺状态" min-width="100">
+          <template #default="{ row }">
+            <el-tag :type="adminTagType(row.status)" effect="plain">{{ adminLabel(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="审核状态" min-width="120">
+          <template #default="{ row }">
+            <el-tag :type="adminTagType(row.reviewStatus)" effect="plain">{{ adminLabel(row.reviewStatus) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="capabilityLevel" label="能力等级" min-width="120" />
         <el-table-column prop="rejectReason" label="驳回原因" min-width="220" />
         <el-table-column label="操作" min-width="240" fixed="right">
@@ -189,8 +268,8 @@ onMounted(loadShops)
       <div v-if="detail.shop" class="shell-card detail-grid">
         <span>店铺名称：{{ detail.shop.name }}</span>
         <span>店主：{{ detail.shop.ownerName }}</span>
-        <span>店铺状态：{{ detail.shop.status }}</span>
-        <span>审核状态：{{ detail.shop.reviewStatus }}</span>
+        <span>店铺状态：{{ adminLabel(detail.shop.status) }}</span>
+        <span>审核状态：{{ adminLabel(detail.shop.reviewStatus) }}</span>
         <span>能力等级：{{ detail.shop.capabilityLevel }}</span>
         <span>店铺评分：{{ detail.shop.ratingScore }}</span>
         <span>驳回原因：{{ detail.shop.rejectReason || '无' }}</span>
@@ -201,8 +280,12 @@ onMounted(loadShops)
         <div class="section-heading"><h3>店铺商品</h3></div>
         <el-table :data="detail.products || []">
           <el-table-column prop="title" label="商品标题" min-width="200" />
-          <el-table-column prop="status" label="状态" min-width="100" />
-          <el-table-column prop="reviewStatus" label="审核状态" min-width="120" />
+          <el-table-column label="状态" min-width="100">
+            <template #default="{ row }">{{ adminLabel(row.status) }}</template>
+          </el-table-column>
+          <el-table-column label="审核状态" min-width="120">
+            <template #default="{ row }">{{ adminLabel(row.reviewStatus) }}</template>
+          </el-table-column>
         </el-table>
       </div>
     </div>

@@ -3,8 +3,15 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
-import { escalateAdminReportToMediation, getAdminReports, processAdminReport } from '@/api/modules/admin'
+import {
+  batchProcessAdminReports,
+  escalateAdminReportToMediation,
+  getAdminReports,
+  processAdminReport
+} from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
+import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const router = useRouter()
 const loading = ref(false)
@@ -13,11 +20,15 @@ const rows = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
+const tableRef = ref(null)
+const selectedRows = ref([])
 const filters = reactive({
   keyword: '',
   status: '',
   targetType: ''
 })
+
+useAdminRowSwipeSelection(tableRef, rows, selectedRows)
 
 async function loadReports() {
   loading.value = true
@@ -51,6 +62,10 @@ function onSearch() {
   loadReports()
 }
 
+function onSelectionChange(selection) {
+  selectedRows.value = selection
+}
+
 function canProcessReport(row) {
   return ['pending', 'processing'].includes(row.status)
 }
@@ -61,18 +76,40 @@ function canEscalateToMediation(row) {
 
 async function escalateToMediation(row) {
   try {
-    const result = await ElMessageBox.prompt('Escalation reason', 'Escalate to mediation', {
-      confirmButtonText: 'Submit',
-      cancelButtonText: 'Cancel'
+    const result = await ElMessageBox.prompt('请填写升级调解原因', '升级为调解案件', {
+      confirmButtonText: '提交',
+      cancelButtonText: '取消'
     })
     const response = await escalateAdminReportToMediation(row.id, {
       escalationReason: result.value
     })
-    ElMessage.success(response.data.created ? 'Mediation case created' : 'Existing mediation case returned')
+    ElMessage.success(response.data.created ? '调解案件已创建' : '已打开现有调解案件')
     await loadReports()
     if (response.data.case?.id) {
       router.push(`/admin/mediation/${response.data.case.id}`)
     }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(resolveErrorMessage(error))
+    }
+  }
+}
+
+async function batchProcess(status) {
+  if (!selectedRows.value.length) return
+  try {
+    const result = await ElMessageBox.prompt('请填写批量处理结论', `批量${adminLabel(status)}`, {
+      confirmButtonText: '提交',
+      cancelButtonText: '取消'
+    })
+    await batchProcessAdminReports({
+      ids: selectedRows.value.map((row) => row.id),
+      status,
+      resolution: result.value
+    })
+    ElMessage.success('举报已批量处理')
+    selectedRows.value = []
+    await loadReports()
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error(resolveErrorMessage(error))
@@ -109,6 +146,7 @@ onMounted(loadReports)
     :rows="rows"
     :loading="loading"
     :error="error"
+    :selected-count="selectedRows.length"
     empty-title="暂无举报记录"
     empty-description="当前没有待处理的举报信息。"
     @retry="loadReports"
@@ -120,8 +158,8 @@ onMounted(loadReports)
           <el-option label="用户" value="user" />
           <el-option label="商品" value="product" />
           <el-option label="店铺" value="shop" />
-          <el-option label="Order" value="order" />
-          <el-option label="Digital order" value="digital_order" />
+          <el-option label="订单" value="order" />
+          <el-option label="数字订单" value="digital_order" />
         </el-select>
         <el-select v-model="filters.status" placeholder="处理状态" clearable>
           <el-option label="待处理" value="pending" />
@@ -133,13 +171,31 @@ onMounted(loadReports)
       </div>
     </template>
 
+    <template #batch>
+      <span>已选择 {{ selectedRows.length }} 条举报</span>
+      <div class="shell-inline-actions">
+        <el-button size="small" :disabled="!selectedRows.length" @click="batchProcess('processing')">批量标记处理中</el-button>
+        <el-button size="small" :disabled="!selectedRows.length" @click="batchProcess('resolved')">批量处理完成</el-button>
+        <el-button size="small" type="danger" plain :disabled="!selectedRows.length" @click="batchProcess('rejected')">
+          批量驳回
+        </el-button>
+      </div>
+    </template>
+
     <template #table>
-      <el-table v-loading="loading" :data="rows">
-        <el-table-column prop="targetType" label="举报对象类型" min-width="120" />
+      <el-table ref="tableRef" v-loading="loading" class="admin-select-table" row-key="id" :data="rows" @selection-change="onSelectionChange">
+        <el-table-column type="selection" width="48" />
+        <el-table-column label="举报对象类型" min-width="120">
+          <template #default="{ row }">{{ adminLabel(row.targetType) }}</template>
+        </el-table-column>
         <el-table-column prop="targetLabel" label="对象名称" min-width="180" />
         <el-table-column prop="reporterName" label="举报人" min-width="100" />
         <el-table-column prop="reasonType" label="原因类型" min-width="120" />
-        <el-table-column prop="status" label="处理状态" min-width="120" />
+        <el-table-column label="处理状态" min-width="120">
+          <template #default="{ row }">
+            <el-tag :type="adminTagType(row.status)" effect="plain">{{ adminLabel(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="resolution" label="处理结论" min-width="220" />
         <el-table-column label="操作" min-width="220" fixed="right">
           <template #default="{ row }">
@@ -149,7 +205,7 @@ onMounted(loadReports)
               type="primary"
               @click="escalateToMediation(row)"
             >
-              Mediation
+              升级调解
             </el-button>
             <el-button
               v-if="row.status === 'pending'"

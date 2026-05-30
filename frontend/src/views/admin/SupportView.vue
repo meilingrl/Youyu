@@ -1,575 +1,711 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { ElMessage } from '@/plugins/element-plus-services'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
 import SkeletonCard from '@/components/common/SkeletonCard.vue'
 import {
-  getAdminDashboard,
-  getAdminProducts,
-  getAdminReports,
-  getAdminReviewTasks,
-  getAdminSearchLogs,
-  getAdminShops,
-  getAdminUsers
+  createAdminSupportTicketMessage,
+  getAdminSupportTicketDetail,
+  getAdminSupportTickets,
+  updateAdminSupportTicketStatus
 } from '@/api/modules/admin'
-import { getAdminOrderList } from '@/api/modules/order'
 import { resolveErrorMessage } from '@/utils/error-utils'
 
-const PAGE_SIZE = 5
+const categories = [
+  { label: '全部类型', value: '' },
+  { label: '账号', value: 'account' },
+  { label: '订单', value: 'order' },
+  { label: '商品', value: 'product' },
+  { label: '店铺', value: 'shop' },
+  { label: '支付', value: 'payment' },
+  { label: '举报', value: 'report' },
+  { label: '其他', value: 'other' }
+]
 
-const loading = ref(false)
+const statuses = [
+  { label: '全部状态', value: '' },
+  { label: '待受理', value: 'open' },
+  { label: '处理中', value: 'in_progress' },
+  { label: '待用户补充', value: 'waiting_user' },
+  { label: '已解决', value: 'resolved' },
+  { label: '已关闭', value: 'closed' }
+]
+
+const nextStatusMap = {
+  open: ['in_progress', 'closed'],
+  in_progress: ['waiting_user', 'resolved', 'closed'],
+  waiting_user: ['in_progress', 'resolved', 'closed'],
+  resolved: ['closed'],
+  closed: []
+}
+
+const quickLinks = [
+  { label: '订单', path: '/admin/orders' },
+  { label: '举报', path: '/admin/reports' },
+  { label: '调解', path: '/admin/mediation' },
+  { label: '用户', path: '/admin/users' },
+  { label: '商品', path: '/admin/products' },
+  { label: '店铺', path: '/admin/shops' }
+]
+
+const loadingList = ref(false)
+const loadingDetail = ref(false)
+const updatingStatus = ref(false)
+const submittingMessage = ref(false)
 const error = ref('')
-const dashboard = ref({})
-const reports = ref(emptyPage())
-const orders = ref([])
-const users = ref(emptyPage())
-const shops = ref(emptyPage())
-const products = ref(emptyPage())
-const reviewTasks = ref(emptyPage())
-const searchLogs = ref(emptyPage())
+const detailError = ref('')
+const tickets = ref([])
+const total = ref(0)
+const selectedTicketId = ref(null)
+const selectedTicket = ref(null)
+const messages = ref([])
+const filters = reactive({
+  status: '',
+  category: '',
+  keyword: '',
+  assignedToMe: false,
+  page: 1,
+  pageSize: 12
+})
+const messageForm = reactive({
+  messageType: 'public_reply',
+  content: ''
+})
 
-function emptyPage() {
+const selectedClosed = computed(() => selectedTicket.value?.status === 'closed')
+const nextStatuses = computed(() => nextStatusMap[selectedTicket.value?.status] || [])
+const publicMessages = computed(() => messages.value.filter((item) => messageType(item) !== 'internal_note'))
+const internalNotes = computed(() => messages.value.filter((item) => messageType(item) === 'internal_note'))
+
+function buildListParams() {
   return {
-    items: [],
-    total: 0,
-    page: 1,
-    pageSize: PAGE_SIZE
+    status: filters.status || undefined,
+    category: filters.category || undefined,
+    keyword: filters.keyword.trim() || undefined,
+    assignedToMe: filters.assignedToMe ? true : undefined,
+    page: filters.page,
+    pageSize: filters.pageSize
   }
 }
 
 function normalizePage(payload) {
-  if (Array.isArray(payload)) {
-    return {
-      ...emptyPage(),
-      items: payload,
-      total: payload.length
-    }
-  }
-
-  const items = Array.isArray(payload?.items) ? payload.items : []
+  const items = Array.isArray(payload) ? payload : Array.isArray(payload?.items) ? payload.items : []
   return {
-    ...emptyPage(),
-    ...payload,
     items,
     total: Number.isFinite(Number(payload?.total)) ? Number(payload.total) : items.length
   }
 }
 
-function sampleCount(list) {
-  return Array.isArray(list) ? list.length : 0
-}
-
-function formatCount(value, fallback = '0') {
-  const number = Number(value)
-  return Number.isFinite(number) ? String(number) : fallback
-}
-
-function describeReport(item) {
-  const label = item.targetLabel || `#${item.targetId || item.id}`
-  return `${label} / ${item.reasonType || '未标注原因'}`
-}
-
-function describeOrder(item) {
-  return item.orderNo || item.productTitle || `订单 #${item.id}`
-}
-
-function describeGovernance(item, fallback) {
-  return item.nickname || item.username || item.name || item.shopName || item.title || item.productTitle || fallback
-}
-
-function describeSearchLog(item) {
-  return item.keyword || item.normalizedKeyword || `搜索记录 #${item.id}`
-}
-
-const dashboardCards = computed(() => (Array.isArray(dashboard.value.cards) ? dashboard.value.cards : []))
-const dashboardTodo = computed(() => dashboard.value.todo || {})
-
-const liveLanes = computed(() => [
-  {
-    key: 'reports',
-    title: '举报治理协同',
-    eyebrow: 'Report triage',
-    owner: 'Report/AdminController',
-    statusLabel: '可复用',
-    tagType: 'success',
-    metricLabel: '待处理举报',
-    metricValue: formatCount(reports.value.total),
-    metricHint: '来自 GET /api/admin/reports?status=pending 的分页总数。',
-    description: '展示待处理举报上下文。处理、驳回和结论记录仍在举报处理页完成。',
-    routes: [{ label: '进入举报处理', path: '/admin/reports' }],
-    previewTitle: '待处理样本',
-    previewItems: reports.value.items.map((item) => ({
-      id: item.id,
-      title: describeReport(item),
-      meta: `${item.targetType || 'target'} · ${item.status || 'pending'} · ${item.submittedAt || '未记录时间'}`
-    })),
-    emptyTitle: '暂无待处理举报',
-    emptyDescription: '当前分页没有 pending 举报记录。'
-  },
-  {
-    key: 'orders',
-    title: '订单与退款协助',
-    eyebrow: 'Order/refund context',
-    owner: 'AdminOrderController',
-    statusLabel: '样本上下文',
-    tagType: 'success',
-    metricLabel: '订单样本',
-    metricValue: formatCount(sampleCount(orders.value)),
-    metricHint: 'GET /api/admin/orders 当前返回列表，不暴露支持专用总量。',
-    description: '展示订单/退款上下文入口。发货、线下确认和退款完成仍归订单管理页。',
-    routes: [{ label: '进入订单管理', path: '/admin/orders' }],
-    previewTitle: '最近订单样本',
-    previewItems: orders.value.slice(0, PAGE_SIZE).map((item) => ({
-      id: item.id || item.orderNo,
-      title: describeOrder(item),
-      meta: `${item.orderStatus || '未知订单状态'} · ${item.paymentStatus || '未知支付状态'} · ${item.fulfillmentType || '未知履约'}`
-    })),
-    emptyTitle: '暂无订单样本',
-    emptyDescription: '当前订单列表没有返回可展示记录。'
-  },
-  {
-    key: 'governance',
-    title: '用户/店铺/商品治理',
-    eyebrow: 'Governance context',
-    owner: 'AdminController',
-    statusLabel: '可复用',
-    tagType: 'success',
-    metricLabel: '治理对象',
-    metricValue: formatCount(users.value.total + shops.value.total + products.value.total),
-    metricHint: '合计用户、店铺、商品分页总量；资料审核单独展示。',
-    description: '汇总治理对象样本，并把状态变更留在各自 owner 页面。',
-    routes: [
-      { label: '用户', path: '/admin/users' },
-      { label: '店铺', path: '/admin/shops' },
-      { label: '商品', path: '/admin/products' },
-      { label: '资料审核', path: '/admin/review-tasks' }
-    ],
-    previewTitle: '治理样本',
-    previewItems: [
-      ...users.value.items.slice(0, 2).map((item) => ({
-        id: `user-${item.id || item.userId}`,
-        title: describeGovernance(item, '用户记录'),
-        meta: `用户 · ${item.status || '未知状态'} · ${item.verificationStatus || '认证未知'}`
-      })),
-      ...shops.value.items.slice(0, 2).map((item) => ({
-        id: `shop-${item.id || item.shopId}`,
-        title: describeGovernance(item, '店铺记录'),
-        meta: `店铺 · ${item.status || '未知状态'} · ${item.reviewStatus || '审核未知'}`
-      })),
-      ...products.value.items.slice(0, 2).map((item) => ({
-        id: `product-${item.id || item.productId}`,
-        title: describeGovernance(item, '商品记录'),
-        meta: `商品 · ${item.status || '未知状态'} · ${item.reviewStatus || '审核未知'}`
-      })),
-      ...reviewTasks.value.items.slice(0, 2).map((item) => ({
-        id: `review-${item.id || item.reviewTaskId}`,
-        title: describeGovernance(item, '资料审核记录'),
-        meta: `资料审核 · ${item.reviewStatus || '未知状态'}`
-      }))
-    ].slice(0, PAGE_SIZE),
-    emptyTitle: '暂无治理样本',
-    emptyDescription: '用户、店铺、商品和资料审核接口当前没有返回样本。'
-  },
-  {
-    key: 'search',
-    title: '搜索治理信号',
-    eyebrow: 'Search/risk signal',
-    owner: 'Search governance',
-    statusLabel: '部分可用',
-    tagType: 'warning',
-    metricLabel: '搜索日志',
-    metricValue: formatCount(searchLogs.value.total),
-    metricHint: '仅来自 GET /api/admin/search/logs；不是异常消息检测。',
-    description: '展示搜索日志上下文和热搜治理入口。异常聊天消息检测当前不存在。',
-    routes: [{ label: '进入热搜治理', path: '/admin/hot-search' }],
-    previewTitle: '搜索日志样本',
-    previewItems: searchLogs.value.items.map((item) => ({
-      id: item.id,
-      title: describeSearchLog(item),
-      meta: `结果 ${formatCount(item.resultCount)} · ${item.createdAt || '未记录时间'}`
-    })),
-    emptyTitle: '暂无搜索日志',
-    emptyDescription: '当前分页没有返回搜索日志样本。'
+function normalizeDetail(payload) {
+  return {
+    ticket: payload?.ticket || payload?.supportTicket || payload || null,
+    messages: Array.isArray(payload?.messages)
+      ? payload.messages
+      : Array.isArray(payload?.ticket?.messages)
+        ? payload.ticket.messages
+        : []
   }
-])
+}
 
-const blockedLanes = [
-  {
-    key: 'admin-chat',
-    title: '管理员聊天可见性',
-    eyebrow: 'Admin chat',
-    owner: 'ChatController 当前为 USER 流程',
-    statusLabel: '缺失',
-    tagType: 'info',
-    description: '不读取 /api/chat/**，不展示跨用户会话，不发送管理员消息。',
-    gaps: ['无 admin conversation lookup', '无管理员参与者模型', '无三方客服会话']
-  },
-  {
-    key: 'notification-group-risk',
-    title: '通知、群治理与异常消息',
-    eyebrow: 'Reserved lanes',
-    owner: '未定义或非 support owner',
-    statusLabel: '缺失',
-    tagType: 'info',
-    description: '通知仍是用户投递基础设施；群治理和异常消息检测没有当前 owner 或 API。',
-    gaps: ['不调用 /api/notifications/**', '无 group governance endpoint', '无 abnormal message detection endpoint']
+function categoryLabel(value) {
+  return categories.find((item) => item.value === value)?.label || value || '未分类'
+}
+
+function statusLabel(value) {
+  return statuses.find((item) => item.value === value)?.label || value || '未知状态'
+}
+
+function statusTagType(value) {
+  if (value === 'open') return 'warning'
+  if (value === 'in_progress') return 'primary'
+  if (value === 'waiting_user') return 'danger'
+  if (value === 'resolved') return 'success'
+  if (value === 'closed') return 'info'
+  return 'info'
+}
+
+function messageType(message) {
+  return message.messageType || message.message_type || 'public_reply'
+}
+
+function roleLabel(message) {
+  const role = message.senderRole || message.sender_role
+  if (role === 'admin') return '客服'
+  if (role === 'system') return '系统'
+  return '用户'
+}
+
+function formatTime(value) {
+  if (!value) return '未记录'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleString('zh-CN', { hour12: false })
+}
+
+function ticketNumber(ticket) {
+  return ticket?.ticketNo || ticket?.ticket_no || ticket?.id || ''
+}
+
+function requesterName(ticket) {
+  return ticket?.requesterName || ticket?.requester_name || ticket?.username || `用户 #${ticket?.requesterUserId || ticket?.requester_user_id || '-'}`
+}
+
+function relatedType(ticket) {
+  return ticket?.relatedType || ticket?.related_type || ''
+}
+
+function relatedId(ticket) {
+  return ticket?.relatedId || ticket?.related_id || ''
+}
+
+function selectedContextLinks(ticket) {
+  if (!ticket) return []
+  const links = []
+  const type = relatedType(ticket)
+  const id = relatedId(ticket)
+  const requesterId = ticket.requesterUserId || ticket.requester_user_id
+
+  if (requesterId) {
+    links.push({ label: '用户资料', path: `/admin/users?keyword=${encodeURIComponent(requesterId)}` })
   }
-]
+  if (type === 'order' && id) links.push({ label: '订单履约', path: `/admin/orders?keyword=${encodeURIComponent(id)}` })
+  if (type === 'report' && id) links.push({ label: '举报处置', path: `/admin/reports?keyword=${encodeURIComponent(id)}` })
+  if (type === 'product' && id) links.push({ label: '商品治理', path: `/admin/products?keyword=${encodeURIComponent(id)}` })
+  if (type === 'shop' && id) links.push({ label: '店铺准入', path: `/admin/shops?keyword=${encodeURIComponent(id)}` })
+  links.push({ label: '调解案件', path: '/admin/mediation' })
+  return links
+}
 
-const summaryMetrics = computed(() => [
-  {
-    label: '待处理举报',
-    value: formatCount(reports.value.total),
-    helper: '来自举报 owner 分页总数'
-  },
-  {
-    label: '订单样本',
-    value: formatCount(sampleCount(orders.value)),
-    helper: '订单接口当前无分页总数'
-  },
-  {
-    label: '资料审核',
-    value: formatCount(reviewTasks.value.total),
-    helper: '来自 review-task 分页总数'
-  },
-  {
-    label: '搜索日志',
-    value: formatCount(searchLogs.value.total),
-    helper: '搜索日志不是消息风险检测'
-  }
-])
-
-async function loadSupportContext() {
-  loading.value = true
+async function loadTickets() {
+  loadingList.value = true
   error.value = ''
 
   try {
-    const [
-      dashboardResponse,
-      reportResponse,
-      orderResponse,
-      userResponse,
-      shopResponse,
-      productResponse,
-      reviewTaskResponse,
-      searchLogResponse
-    ] = await Promise.all([
-      getAdminDashboard(),
-      getAdminReports({ status: 'pending', page: 1, pageSize: PAGE_SIZE }),
-      getAdminOrderList(),
-      getAdminUsers({ page: 1, pageSize: PAGE_SIZE }),
-      getAdminShops({ page: 1, pageSize: PAGE_SIZE }),
-      getAdminProducts({ page: 1, pageSize: PAGE_SIZE }),
-      getAdminReviewTasks({ page: 1, pageSize: PAGE_SIZE }),
-      getAdminSearchLogs({ page: 1, pageSize: PAGE_SIZE })
-    ])
-
-    dashboard.value = dashboardResponse.data || {}
-    reports.value = normalizePage(reportResponse.data)
-    orders.value = Array.isArray(orderResponse.data) ? orderResponse.data : []
-    users.value = normalizePage(userResponse.data)
-    shops.value = normalizePage(shopResponse.data)
-    products.value = normalizePage(productResponse.data)
-    reviewTasks.value = normalizePage(reviewTaskResponse.data)
-    searchLogs.value = normalizePage(searchLogResponse.data)
+    const response = await getAdminSupportTickets(buildListParams())
+    const page = normalizePage(response.data)
+    tickets.value = page.items
+    total.value = page.total
+    if (!selectedTicketId.value && tickets.value.length) {
+      selectedTicketId.value = tickets.value[0].id
+    }
   } catch (err) {
     error.value = resolveErrorMessage(err)
   } finally {
-    loading.value = false
+    loadingList.value = false
   }
 }
 
-onMounted(loadSupportContext)
+async function loadDetail(ticketId) {
+  if (!ticketId) {
+    selectedTicket.value = null
+    messages.value = []
+    return
+  }
+
+  loadingDetail.value = true
+  detailError.value = ''
+
+  try {
+    const response = await getAdminSupportTicketDetail(ticketId)
+    const detail = normalizeDetail(response.data)
+    selectedTicket.value = detail.ticket
+    messages.value = detail.messages
+  } catch (err) {
+    detailError.value = resolveErrorMessage(err)
+  } finally {
+    loadingDetail.value = false
+  }
+}
+
+function selectTicket(ticket) {
+  selectedTicketId.value = ticket.id
+}
+
+function onFilterChange() {
+  filters.page = 1
+  selectedTicketId.value = null
+  selectedTicket.value = null
+  messages.value = []
+  loadTickets()
+}
+
+function onPageChange(page) {
+  filters.page = page
+  selectedTicketId.value = null
+  loadTickets()
+}
+
+async function changeStatus(status) {
+  if (!selectedTicketId.value || updatingStatus.value) return
+
+  updatingStatus.value = true
+  try {
+    await updateAdminSupportTicketStatus(selectedTicketId.value, {
+      status,
+      assignToMe: true
+    })
+    ElMessage.success('工单状态已更新')
+    await Promise.all([loadTickets(), loadDetail(selectedTicketId.value)])
+  } catch (err) {
+    ElMessage.error(resolveErrorMessage(err))
+  } finally {
+    updatingStatus.value = false
+  }
+}
+
+async function submitMessage() {
+  if (!selectedTicketId.value || !messageForm.content.trim()) {
+    ElMessage.warning('请填写回复或备注内容')
+    return
+  }
+
+  submittingMessage.value = true
+  try {
+    await createAdminSupportTicketMessage(selectedTicketId.value, {
+      messageType: messageForm.messageType,
+      content: messageForm.content.trim()
+    })
+    ElMessage.success(messageForm.messageType === 'internal_note' ? '内部备注已保存' : '公开回复已发送')
+    messageForm.content = ''
+    await Promise.all([loadTickets(), loadDetail(selectedTicketId.value)])
+  } catch (err) {
+    ElMessage.error(resolveErrorMessage(err))
+  } finally {
+    submittingMessage.value = false
+  }
+}
+
+watch(selectedTicketId, (ticketId) => {
+  loadDetail(ticketId)
+})
+
+onMounted(loadTickets)
 </script>
 
 <template>
-  <div class="page-stack">
-    <section class="shell-hero shell-hero--compact admin-support-hero">
+  <div class="page-stack admin-support">
+    <section class="shell-hero shell-hero--compact admin-support__hero">
       <div>
-        <span class="eyebrow">Support Console</span>
-        <h1>客服支持上下文</h1>
-        <p>
-          这个页面只汇总现有后台治理上下文，帮助运营人员判断应该进入哪个 owner 页面处理。
-          它不创建客服工单、不处理调解案件、不读取用户聊天或通知接口。
-        </p>
+        <span class="eyebrow">客服工单</span>
+        <h1>平台客服工单队列</h1>
+        <p>处理用户提交的异步平台客服工单。这里不接入实时聊天，也不直接改变订单、举报、调解或用户状态。</p>
       </div>
-      <div class="shell-inline-actions">
-        <el-tag effect="plain" type="success">Frontend-only</el-tag>
-        <el-tag effect="plain" type="info">No support API</el-tag>
+      <div class="admin-support__metric">
+        <strong>{{ total }}</strong>
+        <span>筛选结果</span>
       </div>
     </section>
 
-    <ErrorBlock v-if="error" :message="error" @retry="loadSupportContext" />
+    <section class="admin-support__quick">
+      <router-link v-for="link in quickLinks" :key="link.path" :to="link.path" class="admin-support__quick-link">
+        {{ link.label }}
+      </router-link>
+    </section>
 
-    <template v-else>
-      <SkeletonCard v-if="loading" :count="4" />
+    <section class="admin-support__filters">
+      <el-input
+        v-model="filters.keyword"
+        placeholder="搜索工单号、标题、用户或内容"
+        clearable
+        @keyup.enter="onFilterChange"
+        @clear="onFilterChange"
+      />
+      <el-select v-model="filters.status" placeholder="状态" clearable @change="onFilterChange">
+        <el-option v-for="item in statuses" :key="item.value" :label="item.label" :value="item.value" />
+      </el-select>
+      <el-select v-model="filters.category" placeholder="类型" clearable @change="onFilterChange">
+        <el-option v-for="item in categories" :key="item.value" :label="item.label" :value="item.value" />
+      </el-select>
+      <label class="admin-support__switch">
+        <el-switch v-model="filters.assignedToMe" @change="onFilterChange" />
+        <span>只看分配给我</span>
+      </label>
+      <el-button type="primary" :loading="loadingList" @click="onFilterChange">查询</el-button>
+    </section>
 
-      <template v-else>
-        <section class="metric-grid metric-grid--wide">
-          <article v-for="metric in summaryMetrics" :key="metric.label" class="metric-card admin-support-metric">
-            <span>{{ metric.label }}</span>
-            <strong>{{ metric.value }}</strong>
-            <small>{{ metric.helper }}</small>
-          </article>
-        </section>
+    <section class="admin-support__workspace">
+      <aside class="admin-support__queue">
+        <ErrorBlock v-if="error" :message="error" @retry="loadTickets" />
+        <SkeletonCard v-else-if="loadingList" :count="4" />
+        <EmptyState
+          v-else-if="!tickets.length"
+          title="暂无客服工单"
+          description="当前筛选条件下没有需要处理的工单。"
+        />
+        <div v-else class="admin-support__ticket-list">
+          <button
+            v-for="ticket in tickets"
+            :key="ticket.id"
+            type="button"
+            class="admin-support__ticket"
+            :class="{ 'is-active': selectedTicketId === ticket.id }"
+            @click="selectTicket(ticket)"
+          >
+            <span class="admin-support__ticket-top">
+              <strong>{{ ticket.subject }}</strong>
+              <el-tag :type="statusTagType(ticket.status)" effect="plain">{{ statusLabel(ticket.status) }}</el-tag>
+            </span>
+            <span>{{ categoryLabel(ticket.category) }} · {{ ticketNumber(ticket) }}</span>
+            <span>{{ requesterName(ticket) }} · 更新于 {{ formatTime(ticket.updatedAt || ticket.updated_at) }}</span>
+          </button>
+        </div>
 
-        <section v-if="dashboardCards.length || Object.keys(dashboardTodo).length" class="shell-card admin-support-overview">
-          <div class="section-heading">
-            <h2>后台总览参考</h2>
-          </div>
-          <div class="admin-support-overview__grid">
-            <article v-for="card in dashboardCards" :key="card.label" class="admin-support-overview__item">
-              <span>{{ card.label }}</span>
-              <strong>{{ card.value }}</strong>
-              <small v-if="card.secondaryLabel">{{ card.secondaryLabel }}: {{ card.secondaryValue }}</small>
-            </article>
-            <article class="admin-support-overview__item">
-              <span>Dashboard todo</span>
-              <strong>{{ formatCount(dashboardTodo.pendingReportCount) }}</strong>
-              <small>dashboard 内的 pendingReportCount，仅作为参考。</small>
-            </article>
-          </div>
-        </section>
+        <el-pagination
+          v-if="total > filters.pageSize"
+          v-model:current-page="filters.page"
+          :page-size="filters.pageSize"
+          :total="total"
+          layout="prev, pager, next"
+          small
+          background
+          @current-change="onPageChange"
+        />
+      </aside>
 
-        <section class="admin-support-grid">
-          <article v-for="lane in liveLanes" :key="lane.key" class="shell-card admin-support-lane">
-            <header class="admin-support-lane__header">
-              <div>
-                <span class="admin-support-lane__eyebrow">{{ lane.eyebrow }}</span>
-                <h2>{{ lane.title }}</h2>
-              </div>
-              <el-tag effect="plain" :type="lane.tagType">{{ lane.statusLabel }}</el-tag>
-            </header>
+      <main class="admin-support__detail">
+        <ErrorBlock v-if="detailError" :message="detailError" @retry="loadDetail(selectedTicketId)" />
+        <SkeletonCard v-else-if="loadingDetail" :count="2" />
+        <EmptyState
+          v-else-if="!selectedTicket"
+          title="请选择一个工单"
+          description="选择左侧工单后，可以查看详情、推进状态、公开回复或记录内部备注。"
+        />
 
-            <div class="admin-support-lane__owner">
-              <span>Owner</span>
-              <strong>{{ lane.owner }}</strong>
+        <template v-else>
+          <header class="admin-support__detail-head">
+            <div>
+              <span class="eyebrow">工单 {{ ticketNumber(selectedTicket) }}</span>
+              <h2>{{ selectedTicket.subject }}</h2>
+              <p>
+                {{ requesterName(selectedTicket) }} · {{ categoryLabel(selectedTicket.category) }} ·
+                创建于 {{ formatTime(selectedTicket.createdAt || selectedTicket.created_at) }}
+              </p>
             </div>
+            <el-tag :type="statusTagType(selectedTicket.status)" effect="plain">{{ statusLabel(selectedTicket.status) }}</el-tag>
+          </header>
 
-            <p>{{ lane.description }}</p>
-
-            <div class="admin-support-lane__metric">
-              <span>{{ lane.metricLabel }}</span>
-              <strong>{{ lane.metricValue }}</strong>
-              <small>{{ lane.metricHint }}</small>
+          <section class="admin-support__context">
+            <div>
+              <strong>关联上下文</strong>
+              <span v-if="relatedType(selectedTicket) || relatedId(selectedTicket)">
+                {{ relatedType(selectedTicket) || '未指定类型' }} #{{ relatedId(selectedTicket) || '未指定编号' }}
+              </span>
+              <span v-else>用户未关联业务对象</span>
             </div>
-
-            <div class="admin-support-lane__actions">
+            <div class="admin-support__context-links">
               <router-link
-                v-for="route in lane.routes"
-                :key="route.path"
-                :to="route.path"
-                class="admin-support-link"
+                v-for="link in selectedContextLinks(selectedTicket)"
+                :key="link.label + link.path"
+                :to="link.path"
               >
-                {{ route.label }}
+                {{ link.label }}
               </router-link>
             </div>
+          </section>
 
-            <div class="admin-support-preview">
-              <h3>{{ lane.previewTitle }}</h3>
-              <div v-if="lane.previewItems.length" class="admin-support-preview__list">
-                <article v-for="item in lane.previewItems" :key="item.id || item.title" class="admin-support-preview__item">
-                  <strong>{{ item.title }}</strong>
-                  <span>{{ item.meta }}</span>
-                </article>
-              </div>
+          <section class="admin-support__content">
+            <h3>用户问题</h3>
+            <p>{{ selectedTicket.content }}</p>
+          </section>
+
+          <section class="admin-support__status">
+            <div>
+              <h3>状态推进</h3>
+              <p>按工单状态模型推进；状态变化只影响客服工单。</p>
+            </div>
+            <div class="admin-support__status-actions">
+              <el-button
+                v-for="status in nextStatuses"
+                :key="status"
+                :loading="updatingStatus"
+                @click="changeStatus(status)"
+              >
+                标记为{{ statusLabel(status) }}
+              </el-button>
+              <el-tag v-if="!nextStatuses.length" type="info" effect="plain">当前状态无后续动作</el-tag>
+            </div>
+          </section>
+
+          <section class="admin-support__message-panel">
+            <div class="admin-support__thread">
+              <h3>公开回复</h3>
               <EmptyState
-                v-else
-                :title="lane.emptyTitle"
-                :description="lane.emptyDescription"
+                v-if="!publicMessages.length"
+                title="暂无公开回复"
+                description="公开回复会展示给用户。"
               />
-            </div>
-          </article>
-        </section>
-
-        <section class="admin-support-blocked">
-          <article v-for="lane in blockedLanes" :key="lane.key" class="shell-card admin-support-lane admin-support-lane--blocked">
-            <header class="admin-support-lane__header">
-              <div>
-                <span class="admin-support-lane__eyebrow">{{ lane.eyebrow }}</span>
-                <h2>{{ lane.title }}</h2>
-              </div>
-              <el-tag effect="plain" :type="lane.tagType">{{ lane.statusLabel }}</el-tag>
-            </header>
-
-            <div class="admin-support-lane__owner">
-              <span>Owner</span>
-              <strong>{{ lane.owner }}</strong>
+              <template v-else>
+                <article v-for="message in publicMessages" :key="message.id" class="admin-support__message">
+                  <header>
+                    <strong>{{ roleLabel(message) }}</strong>
+                    <span>{{ formatTime(message.createdAt || message.created_at) }}</span>
+                  </header>
+                  <p>{{ message.content }}</p>
+                </article>
+              </template>
             </div>
 
-            <p>{{ lane.description }}</p>
-
-            <ul class="admin-support-gap-list">
-              <li v-for="gap in lane.gaps" :key="gap">{{ gap }}</li>
-            </ul>
-
-            <div class="admin-support-disabled-actions">
-              <el-button plain disabled>无可用队列</el-button>
-              <el-button plain disabled>等待独立范围与 API</el-button>
+            <div class="admin-support__thread admin-support__thread--note">
+              <h3>内部备注</h3>
+              <EmptyState
+                v-if="!internalNotes.length"
+                title="暂无内部备注"
+                description="内部备注仅用于客服交接和审计。"
+              />
+              <template v-else>
+                <article v-for="message in internalNotes" :key="message.id" class="admin-support__message">
+                  <header>
+                    <strong>{{ roleLabel(message) }}</strong>
+                    <span>{{ formatTime(message.createdAt || message.created_at) }}</span>
+                  </header>
+                  <p>{{ message.content }}</p>
+                </article>
+              </template>
             </div>
-          </article>
-        </section>
-      </template>
-    </template>
+          </section>
+
+          <section class="admin-support__composer">
+            <h3>回复或备注</h3>
+            <el-alert
+              v-if="selectedClosed"
+              type="info"
+              show-icon
+              :closable="false"
+              title="该工单已关闭，不能继续回复或备注。"
+            />
+            <template v-else>
+              <el-radio-group v-model="messageForm.messageType">
+                <el-radio-button label="public_reply">公开回复</el-radio-button>
+                <el-radio-button label="internal_note">内部备注</el-radio-button>
+              </el-radio-group>
+              <el-input
+                v-model="messageForm.content"
+                type="textarea"
+                :rows="4"
+                maxlength="1000"
+                show-word-limit
+                placeholder="公开回复会展示给用户；内部备注只用于客服处理记录"
+              />
+              <el-button type="primary" :loading="submittingMessage" @click="submitMessage">
+                {{ messageForm.messageType === 'internal_note' ? '保存内部备注' : '发送公开回复' }}
+              </el-button>
+            </template>
+          </section>
+        </template>
+      </main>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.admin-support-hero,
-.admin-support-grid,
-.admin-support-blocked {
-  display: grid;
-  gap: 18px;
-}
-
-.admin-support-metric small,
-.admin-support-lane p,
-.admin-support-lane__metric small,
-.admin-support-preview__item span,
-.admin-support-overview__item small {
-  color: var(--cm-text-secondary);
-  line-height: 1.65;
-}
-
-.admin-support-overview__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-
-.admin-support-overview__item,
-.admin-support-lane__metric,
-.admin-support-preview__item {
-  display: grid;
-  gap: 6px;
-  padding: 14px;
-  border: 1px solid var(--cm-border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.admin-support-overview__item span,
-.admin-support-lane__metric span,
-.admin-support-lane__owner span {
-  color: var(--cm-text-tertiary);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.admin-support-overview__item strong,
-.admin-support-lane__metric strong {
-  font-size: 24px;
-}
-
-.admin-support-grid,
-.admin-support-blocked {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.admin-support-lane {
-  display: grid;
-  align-content: start;
-  gap: 16px;
-  box-shadow: none;
-}
-
-.admin-support-lane--blocked {
-  border-style: dashed;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.admin-support-lane__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.admin-support-lane__eyebrow {
-  color: var(--cm-text-tertiary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.admin-support-lane h2 {
-  margin: 6px 0 0;
-}
-
-.admin-support-lane__owner {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.admin-support__hero,
+.admin-support__detail-head,
+.admin-support__status,
+.admin-support__context {
   align-items: center;
 }
 
-.admin-support-lane__actions,
-.admin-support-disabled-actions {
+.admin-support__metric {
+  display: grid;
+  min-width: 128px;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  text-align: center;
+}
+
+.admin-support__metric strong {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.admin-support__metric span,
+.admin-support__ticket span,
+.admin-support__detail-head p,
+.admin-support__context span,
+.admin-support__status p,
+.admin-support__message header span {
+  color: var(--cm-text-secondary);
+}
+
+.admin-support__quick,
+.admin-support__filters,
+.admin-support__status-actions,
+.admin-support__context-links {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
 
-.admin-support-link {
+.admin-support__quick-link,
+.admin-support__context-links a {
   display: inline-flex;
-  min-height: 36px;
   align-items: center;
   justify-content: center;
-  padding: 0 14px;
-  border: 1px solid rgba(50, 91, 63, 0.2);
-  border-radius: 999px;
-  color: var(--cm-primary);
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--cm-text);
   font-weight: 700;
-  text-decoration: none;
-  transition: background 160ms ease, border-color 160ms ease;
 }
 
-.admin-support-link:hover,
-.admin-support-link:focus-visible {
-  border-color: rgba(50, 91, 63, 0.42);
-  background: rgba(50, 91, 63, 0.08);
+.admin-support__filters {
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
 }
 
-.admin-support-preview {
+.admin-support__filters :deep(.el-input),
+.admin-support__filters :deep(.el-select) {
+  width: 220px;
+}
+
+.admin-support__switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cm-text-secondary);
+  font-weight: 700;
+}
+
+.admin-support__workspace {
   display: grid;
-  gap: 12px;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
 }
 
-.admin-support-preview h3 {
-  margin: 0;
-  font-size: 16px;
+.admin-support__queue,
+.admin-support__detail,
+.admin-support__content,
+.admin-support__status,
+.admin-support__thread,
+.admin-support__composer {
+  display: grid;
+  gap: 14px;
 }
 
-.admin-support-preview__list,
-.admin-support-gap-list {
+.admin-support__queue,
+.admin-support__detail {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--cm-shadow-soft);
+}
+
+.admin-support__ticket-list {
   display: grid;
   gap: 10px;
 }
 
-.admin-support-preview__item strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.admin-support__ticket {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--cm-text);
+  text-align: left;
+  cursor: pointer;
 }
 
-.admin-support-gap-list {
+.admin-support__ticket.is-active {
+  border-color: rgba(var(--cm-primary-rgb), 0.36);
+  background: rgba(var(--cm-primary-rgb), 0.08);
+}
+
+.admin-support__ticket-top,
+.admin-support__detail-head,
+.admin-support__context,
+.admin-support__status,
+.admin-support__message header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-support__ticket-top strong,
+.admin-support__detail-head h2,
+.admin-support__content p,
+.admin-support__message p,
+.admin-support__context div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-support__detail h2,
+.admin-support__detail h3,
+.admin-support__detail p {
   margin: 0;
-  padding-left: 18px;
-  color: var(--cm-text-secondary);
-  line-height: 1.65;
 }
 
-@media (max-width: 960px) {
-  .admin-support-grid,
-  .admin-support-blocked {
+.admin-support__context,
+.admin-support__content,
+.admin-support__status,
+.admin-support__thread,
+.admin-support__composer {
+  padding: 14px;
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.admin-support__content {
+  background: rgba(var(--cm-primary-rgb), 0.06);
+}
+
+.admin-support__message-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.admin-support__message {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.admin-support__thread--note .admin-support__message {
+  background: rgba(var(--cm-primary-rgb), 0.06);
+}
+
+@media (max-width: 1080px) {
+  .admin-support__workspace,
+  .admin-support__message-panel {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 640px) {
-  .admin-support-lane__header {
+@media (max-width: 720px) {
+  .admin-support__filters :deep(.el-input),
+  .admin-support__filters :deep(.el-select),
+  .admin-support__filters :deep(.el-button),
+  .admin-support__metric {
+    width: 100%;
+  }
+
+  .admin-support__ticket-top,
+  .admin-support__detail-head,
+  .admin-support__context,
+  .admin-support__status,
+  .admin-support__message header {
+    align-items: stretch;
     flex-direction: column;
   }
 }

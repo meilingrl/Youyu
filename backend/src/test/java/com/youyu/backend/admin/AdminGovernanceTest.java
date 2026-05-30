@@ -314,6 +314,52 @@ class AdminGovernanceTest extends BackendTestBase {
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
     }
 
+    @Test
+    void getReviewTaskDetailReturnsProductContext() throws Exception {
+        mockMvc.perform(get("/api/admin/review-tasks/5001")
+                        .header("Authorization", "Bearer " + ADMIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.reviewTask.id").value(5001))
+                .andExpect(jsonPath("$.data.product").isMap())
+                .andExpect(jsonPath("$.data.media").isArray())
+                .andExpect(jsonPath("$.data.digitalAssets").isArray());
+    }
+
+    @Test
+    void batchUpdateUserStatusReturnsSuccessCount() throws Exception {
+        mockMvc.perform(put("/api/admin/users/batch-status")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "ids": [1002],
+                                  "status": "active",
+                                  "restrictionReason": ""
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.successCount").value(1))
+                .andExpect(jsonPath("$.data.ids[0]").value(1002));
+    }
+
+    @Test
+    void batchUpdateUserStatusRejectsEmptySelection() throws Exception {
+        mockMvc.perform(put("/api/admin/users/batch-status")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "ids": [],
+                                  "status": "active"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
     // ══════════════════════════════════════════════
     // Shop management
     // ══════════════════════════════════════════════

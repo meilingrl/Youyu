@@ -101,6 +101,7 @@ Formal API specification documents.
   - `review.md`
   - `search.md`
   - `shop.md`
+  - `support.md`
   - `user.md`
 
 ## Reading Order

@@ -11,8 +11,9 @@
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - audit mapper: `backend/src/main/java/com/youyu/backend/mapper/audit/AdminAuditLogMapper.java`
   - request sample: `docs/06-http/admin.http`
+  - support-ticket spec: `docs/09-api-spec/support.md`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
-- Last updated: 2026-05-29
+- Last updated: 2026-05-30
 
 ## Scope
 
@@ -25,10 +26,12 @@ This document covers governance and operational endpoints under `/api/admin`:
 - review tasks
 - shops
 - reports
+- support-ticket queue under `/api/admin/support/tickets`
 - mediation case escalation and admin mediation APIs
 - marketing coupon/activity review endpoints
 - search governance rules and search logs
 - admin audit logs
+- selected batch operations and product review-task detail
 
 It does not cover admin login under `/api/admin/auth` or admin order operations under `/api/admin/orders`.
 
@@ -37,7 +40,8 @@ and `/api/admin/mediation-cases/**` are documented in `docs/09-api-spec/mediatio
 
 Admin marketing APIs under `/api/admin/marketing/**` are documented in `docs/09-api-spec/marketing.md`.
 
-`/admin/support` is a frontend admin route, not an admin API namespace. The v1 support console scope reuses existing admin/report/order/search endpoints for context and does not introduce `/api/admin/support/**`; see `docs/02-requirements/admin-support-console-scope.md`.
+Customer-service ticket APIs under `/api/admin/support/tickets/**` are documented in
+`docs/09-api-spec/support.md`. `/admin/support` remains the frontend admin route; it now combines the earlier context-dashboard links with the new support-ticket queue/detail workspace.
 
 ## Authentication And Roles
 
@@ -56,6 +60,8 @@ Admin marketing APIs under `/api/admin/marketing/**` are documented in `docs/09-
 | `REVIEWER` | Dashboard, student verification, product context, product review tasks, shop context and shop review/status handling, marketing review |
 | `OPERATOR` | Dashboard, product context, search governance, search logs |
 | `ORDER_ADMIN` | Dashboard, order read/manage, mediation handling except final decisions |
+
+Support-ticket endpoint permissions are defined in `docs/09-api-spec/support.md`. The MVP expects `ADMIN` / `SUPER_ADMIN` and `SUPPORT_AGENT` to have support-ticket access.
 
 ## Response Envelope
 
@@ -575,6 +581,25 @@ This endpoint currently accepts a map-style payload.
 - `403`: current user is not an admin
 - `404`: report does not exist
 
+## Support Ticket Endpoints
+
+The formal support-ticket contract lives in `docs/09-api-spec/support.md`; this section is an admin-module index so `/api/admin/support/tickets/**` is visible from the admin spec.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/admin/support/tickets` | List support tickets by status, category, assignment, keyword, and pagination. |
+| `GET` | `/api/admin/support/tickets/{ticketId}` | Read support-ticket detail, public replies, and internal notes. |
+| `PUT` | `/api/admin/support/tickets/{ticketId}/status` | Change ticket status and optionally assign the ticket to the current admin. |
+| `POST` | `/api/admin/support/tickets/{ticketId}/messages` | Add an admin public reply or internal note. |
+
+Support-ticket admin endpoints do not mutate order, refund, report, product, shop, user, chat, or mediation state. They may reference those records only as context.
+
+See also:
+
+- API contract: `docs/09-api-spec/support.md`
+- HTTP smoke: `docs/06-http/support.http`
+- Admin smoke subset: `docs/06-http/admin.http`
+
 ### `GET /api/admin/search/governance-rules`
 
 #### Purpose
@@ -777,6 +802,52 @@ Current v1 audited actions:
 - `401`: missing token or invalid token
 - `403`: current user is not an admin
 
+## Batch Operations And Review Detail
+
+The admin UI uses batch endpoints for selected high-volume queues. These endpoints keep the same backend status values as the single-record endpoints; Chinese labels are a frontend presentation concern.
+
+### Shared Batch Rules
+
+- Request body includes `ids`, an array of numeric record IDs.
+- `ids` must contain at least one ID and at most 100 IDs.
+- The batch is transactional: invalid action, invalid status, missing record, or missing required reason rejects the whole request.
+- Success response shape:
+
+```json
+{
+  "successCount": 2,
+  "ids": [1001, 1002]
+}
+```
+
+### Batch Endpoint Summary
+
+| Endpoint | Permission | Body fields |
+|---|---|---|
+| `PUT /api/admin/users/batch-status` | `ADMIN_USERS_MANAGE` | `ids`, `status`, optional `restrictionReason` |
+| `PUT /api/admin/verifications/batch-review` | `ADMIN_VERIFICATIONS_REVIEW` | `ids`, `action`, optional `rejectReason`, optional `reviewNote` |
+| `PUT /api/admin/products/batch-status` | `ADMIN_PRODUCTS_REVIEW` | `ids`, `status` |
+| `PUT /api/admin/review-tasks/batch-review` | `ADMIN_PRODUCTS_REVIEW` | `ids`, `action`, optional `rejectReason`, optional `reviewNote` |
+| `PUT /api/admin/shops/batch-status` | `ADMIN_SHOPS_MANAGE` | `ids`, optional `status`, optional `reviewStatus`, optional `rejectReason` |
+| `PUT /api/admin/reports/batch-process` | `ADMIN_REPORTS_HANDLE` | `ids`, `status`, optional `resolution` |
+
+### `GET /api/admin/review-tasks/{reviewTaskId}`
+
+Returns the review task detail used by the admin “查看资料” drawer.
+
+| Field | Type | Notes |
+|---|---|---|
+| `reviewTask` | object | Existing product review task row |
+| `product` | object | Product snapshot for the task |
+| `media` | array | Product media rows |
+| `digitalAssets` | array | Digital asset rows for digital products |
+
+Error cases:
+
+- `401`: missing token or invalid token
+- `403`: current user lacks product review permission
+- `404`: review task or product does not exist
+
 ## Shared Types / Enumerations
 
 - User `status`: `active`, `disabled`, `locked`
@@ -792,9 +863,9 @@ Current v1 audited actions:
 ## HTTP Asset Mapping
 
 - Primary validation file: `docs/06-http/admin.http`
-- Additional related files: `docs/06-http/search.http` for search-governance examples
+- Additional related files: `docs/06-http/search.http` for search-governance examples, `docs/06-http/support.http` for support-ticket user/admin flows
 
 ## Known Drift Or Follow-Up Notes
 
-- No known controller/spec drift is being left unresolved in this module as part of this iteration.
+- Support-ticket API details are intentionally delegated to `docs/09-api-spec/support.md`.
 - Admin order operations live in a separate controller and should be documented separately if the project later expands admin formal coverage beyond governance endpoints.

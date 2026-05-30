@@ -34,6 +34,10 @@ defineProps({
   emptyDescription: {
     type: String,
     default: ''
+  },
+  selectedCount: {
+    type: Number,
+    default: 0
   }
 })
 
@@ -57,6 +61,10 @@ const emit = defineEmits(['retry'])
 
       <div class="list-shell__filters">
         <slot name="filters" />
+      </div>
+
+      <div v-if="$slots.batch" class="list-shell__batch" :class="{ 'is-active': selectedCount > 0 }">
+        <slot name="batch" />
       </div>
 
       <ErrorBlock v-if="error" :message="error" @retry="emit('retry')" />

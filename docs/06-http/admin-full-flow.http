@@ -42,6 +42,10 @@ Authorization: Bearer {{reviewerToken}}
 GET {{baseUrl}}/api/admin/review-tasks?status=pending_review&page=1&pageSize=10
 Authorization: Bearer {{reviewerToken}}
 
+### 3b. Reviewer opens product review task detail.
+GET {{baseUrl}}/api/admin/review-tasks/5001
+Authorization: Bearer {{reviewerToken}}
+
 ### 4. Reviewer checks pending shop admission.
 GET {{baseUrl}}/api/admin/shops?reviewStatus=pending_review&page=1&pageSize=10
 Authorization: Bearer {{reviewerToken}}

@@ -1,3 +1,46 @@
+## [2026-05-30] - Customer Service Ticket MVP
+
+### added
+- Added durable customer-service tickets with user create/list/detail/reply APIs and admin queue/detail/status/reply/internal-note APIs.
+- Added `/app/support` for asynchronous user support tickets and rebuilt `/admin/support` as a ticket queue/detail workspace.
+- Added support-ticket schema, seed examples, backend coverage, API spec, and HTTP smoke coverage.
+
+### verify
+- Backend and frontend verification pending final head-Agent run.
+
+---
+
+## [2026-05-29] - Admin Workbench Polish Follow-up
+
+### changed
+- Tightened the admin sidebar with two-character labels, icons, narrower layout, database-backed account display, and a circular logout button.
+- Reworked admin table action buttons and batch-action spacing, and added drag-follow right-swipe row selection for batch-capable admin tables.
+- Rebuilt the customer-service page as a queue-based customer-service workspace with non-empty queues only and Chinese status labels.
+
+### verify
+- `npm test`
+- `npm run build`
+
+---
+
+## [2026-05-29] - Admin Workbench UX And Batch Improvements
+
+### changed
+- Polished admin navigation, left-sidebar logout placement, dashboard zero-value display, table filters, table spacing, Chinese status labels, mediation copy, and the customer-service workspace framing.
+- Added product review-task detail access so admins can open submitted material before approving or rejecting it.
+
+### added
+- Added batch endpoints and UI actions for users, student verifications, products, product review tasks, shops, and reports.
+- Updated admin API docs and HTTP smoke samples for the new batch and review-detail endpoints.
+
+### verify
+- `npm test`
+- `npm run build`
+- `.\mvnw.cmd test -Dtest=AdminGovernanceTest`
+- `.\mvnw.cmd test`
+
+---
+
 ## [2026-05-29] - Marketing MVP Foundation
 
 ### feat
