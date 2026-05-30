@@ -19,6 +19,9 @@ Dependency reports are uploaded as GitHub Actions artifacts when generated.
 The repository `.gitleaks.toml` extends the default rules and narrowly allows
 two known JWT placeholder examples used by `.env.example` and an archived task
 record. It does not suppress real credentials or broad classes of findings.
+The repository `.gitleaksignore` also records the exact historical fingerprint
+for the committed `.env.example` placeholder so git-history scans remain
+blocking for any new secret-like value.
 OWASP Dependency-Check may take longer on its first run because it downloads
 vulnerability data. Its report step remains non-blocking during this wave so
 network or upstream data-feed issues do not hide the blocking secret scan.
