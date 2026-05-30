@@ -1,3 +1,18 @@
+## [2026-05-30] - Launch Foundation Staging Rehearsal Baseline
+
+### added
+- Added schema-only staging Compose startup, explicit demo seed overlay, backend and frontend images, Nginx same-origin API proxy, and an optional HTTPS template.
+- Defaulted rehearsal host ports to `13306`, `18080`, and `18081` so Compose can coexist with common local MySQL and application ports.
+- Added guarded MySQL backup and restore scripts, minimal Actuator DB health, MDC trace IDs, console logging, dependency and secret scanning CI, and k6 baseline smoke scripts.
+- Added a staging rehearsal runbook with verified integration evidence and explicit production blockers.
+
+### verify
+- Backend tests: 162 passed.
+- Frontend tests: 39 passed; production build completed.
+- Default Compose, demo overlay, backup restore, gitleaks, npm audit, and k6 smoke were exercised locally.
+
+---
+
 ## [2026-05-30] - Customer Service Ticket MVP
 
 ### added

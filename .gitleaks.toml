@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Known JWT placeholder examples"
+regexes = [
+  '''replace-with-generated-jwt-secret-at-least-32-characters''',
+  '''anything-else-32-chars-long-suffix''',
+]

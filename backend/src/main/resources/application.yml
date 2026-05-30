@@ -25,6 +25,7 @@ youyu:
     enabled: true
     ignored-paths:
       - /api/health
+      - /actuator/health
       - /api/auth/login
       - /api/auth/register
       - /api/admin/auth/login
@@ -37,6 +38,21 @@ logging:
   level:
     root: INFO
     com.youyu.backend: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-components: always
+      show-details: never
+  health:
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
 
 app:
   jwt:
