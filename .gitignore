@@ -17,6 +17,9 @@ frontend/playwright-report/
 frontend/coverage/
 frontend/.vite/
 .env.local
+.env
+backups/mysql/
+reports/
 frontend/.env.local
 frontend/.env.*.local
 .idea/
