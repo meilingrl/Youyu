@@ -26,6 +26,13 @@ VALUES
 (1012, 'seedbuyer3', '13800000012', 'seedbuyer3@campus.edu.cn', '$2a$10$hAEXKhS/5z9bHhc.q62tV.bPdScZg84hUJcfmvLkoWi/58/Eqjys2', 'Seed Buyer Three', '', 'active', '2026-05-10 08:10:00', NULL, '2026-05-10 08:10:00', CURRENT_TIMESTAMP),
 (1013, 'seedbuyer4', '13800000013', 'seedbuyer4@campus.edu.cn', '$2a$10$Qvr6K2FMf5wIneefReslV.4.y05Q7yvQECBqSoD9ExdmOTZWGUpcO', 'Seed Buyer Four', '', 'active', '2026-05-10 08:12:00', NULL, '2026-05-10 08:12:00', CURRENT_TIMESTAMP);
 
+-- Platform online customer-service identity. Support conversations always pair the
+-- requester (user_a) with this account (user_b); admins reply on its behalf.
+INSERT INTO users (id, username, phone, email, password_hash, nickname, avatar, status, registered_at, last_login_at, created_at, updated_at)
+VALUES
+(1099, 'platform_cs', '13800001099', 'cs@campus.edu.cn', '$2a$10$jJy4r2olYY7ca7bAvZRuJe9Z77E.JZxzVTugqYw6S8lr4ahKU2hqG', '平台客服', '', 'active', '2026-04-01 09:00:00', NULL, '2026-04-01 09:00:00', CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE username = VALUES(username), nickname = VALUES(nickname), status = VALUES(status);
+
 INSERT INTO user_privilege_profiles (user_id, can_purchase, can_publish, can_review, can_apply_shop, is_restricted, restricted_reason, credit_level, created_at, updated_at)
 VALUES
 (1001, TRUE, TRUE, TRUE, TRUE, FALSE, '', 'L2 stable', '2026-04-01 10:00:00', CURRENT_TIMESTAMP),

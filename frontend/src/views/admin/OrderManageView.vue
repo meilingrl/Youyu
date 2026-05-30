@@ -113,7 +113,7 @@ onBeforeUnmount(() => {
 <template>
   <ListPageShell
     title="订单管理"
-    description="后台只做订单查看和基础流转操作，不扩真实支付，也不伪造线下物流过程。"
+    description="查看订单状态与履约信息，处理发货、线下交付确认和退款完成。"
     :rows="rows"
     :loading="loading"
     :error="error"
@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
     </template>
   </ListPageShell>
 
-  <el-drawer v-model="detailVisible" :size="drawerSize" title="后台订单详情">
+  <el-drawer v-model="detailVisible" :size="drawerSize" title="订单详情">
     <div v-if="detail" class="drawer-stack">
       <section class="drawer-panel">
         <h3>订单总览</h3>
@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
 
       <section v-if="detail.availableActions.includes('offline_seller_confirm')" class="drawer-panel">
         <h3>线下交付确认</h3>
-        <p>这里只记录约定与双方确认结果，不做伪物流过程。</p>
+        <p>记录约定交付信息与双方确认结果，便于后续履约追踪。</p>
         <el-button type="primary" :loading="actionLoading" :disabled="actionLoading" @click="handleOfflineConfirm">记录卖家已交付</el-button>
       </section>
 

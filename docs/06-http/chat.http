@@ -222,3 +222,54 @@ Content-Type: application/json
 ### 30. Delete conversation for current user
 DELETE {{baseUrl}}/api/chat/conversations/1
 Authorization: Bearer {{user1Token}}
+
+### ── Online Customer Service ──
+@adminToken = mock-9001-ADMIN
+@supportAgentToken = mock-9102-SUPPORT_AGENT
+
+### 31. Start (or reuse) a support session
+# @name startSupport
+POST {{baseUrl}}/api/chat/support/session
+Authorization: Bearer {{user1Token}}
+
+### 32. Send a support message (AI bot auto-replies while status = ai)
+POST {{baseUrl}}/api/chat/conversations/{{startSupport.response.body.data.id}}/messages
+Authorization: Bearer {{user1Token}}
+Content-Type: application/json
+
+{
+  "body": "我想申请退款，怎么操作？"
+}
+
+### 33. Escalate the support session to a human
+POST {{baseUrl}}/api/chat/conversations/{{startSupport.response.body.data.id}}/escalate
+Authorization: Bearer {{user1Token}}
+
+### 33b. User ends the support session
+POST {{baseUrl}}/api/chat/conversations/{{startSupport.response.body.data.id}}/close-support
+Authorization: Bearer {{user1Token}}
+
+### 34. Admin: list the pending support queue
+GET {{baseUrl}}/api/admin/support/chat/conversations?filter=pending&page=0&size=20
+Authorization: Bearer {{supportAgentToken}}
+
+### 35. Admin: conversation detail
+GET {{baseUrl}}/api/admin/support/chat/conversations/{{startSupport.response.body.data.id}}
+Authorization: Bearer {{adminToken}}
+
+### 36. Admin: claim / take over the session
+POST {{baseUrl}}/api/admin/support/chat/conversations/{{startSupport.response.body.data.id}}/claim
+Authorization: Bearer {{adminToken}}
+
+### 37. Admin: reply as the platform CS account
+POST {{baseUrl}}/api/admin/support/chat/conversations/{{startSupport.response.body.data.id}}/messages
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "body": "您好，已为您核查订单，请稍候。"
+}
+
+### 38. Admin: close the session
+POST {{baseUrl}}/api/admin/support/chat/conversations/{{startSupport.response.body.data.id}}/close
+Authorization: Bearer {{adminToken}}

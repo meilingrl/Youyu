@@ -139,7 +139,7 @@ onMounted(loadRules)
     :loading="loading"
     :error="error"
     empty-title="暂无治理规则"
-    empty-description="当前没有配置热搜治理规则，可以点击「新增规则」创建。"
+    empty-description="当前没有热搜治理规则。"
     @retry="loadRules"
   >
     <template #summary>

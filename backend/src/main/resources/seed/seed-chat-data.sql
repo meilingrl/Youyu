@@ -182,6 +182,46 @@ ON DUPLICATE KEY UPDATE
     order_id = VALUES(order_id),
     created_at = VALUES(created_at);
 
+-- Online customer-service sample conversation between Zhang San (1001) and the
+-- platform CS account (1099). It is escalated to a human (pending) so the admin
+-- online CS console queue has a ready-to-claim session out of the box.
+INSERT INTO chat_conversations (
+    id, type, product_id, shop_id, user_a_id, user_b_id,
+    unread_count_a, unread_count_b, support_status, assigned_admin_id,
+    last_message_at, created_at
+)
+VALUES
+(13020, 'support', NULL, NULL, 1001, 1099, 0, 2, 'pending', NULL, '2026-05-27 10:32:00', '2026-05-27 10:20:00')
+ON DUPLICATE KEY UPDATE
+    type = VALUES(type),
+    user_a_id = VALUES(user_a_id),
+    user_b_id = VALUES(user_b_id),
+    unread_count_a = VALUES(unread_count_a),
+    unread_count_b = VALUES(unread_count_b),
+    support_status = VALUES(support_status),
+    assigned_admin_id = VALUES(assigned_admin_id),
+    last_message_at = VALUES(last_message_at),
+    created_at = VALUES(created_at);
+
+INSERT INTO chat_messages (
+    id, conversation_id, sender_user_id, body, is_read, read_at, message_type, media_url, product_id, order_id, created_at
+)
+VALUES
+(14050, 13020, 1001, '你好，我申请的退款一直没有到账，能帮忙看一下吗？', FALSE, NULL, 'text', NULL, NULL, NULL, '2026-05-27 10:20:00'),
+(14051, 13020, 1099, '关于退款：申请退款后，卖家或平台一般会在 48 小时内处理，款项原路退回。如果超时，请提供订单号，我们会优先核查。如需人工客服，可点击「转人工」。', TRUE, '2026-05-27 10:20:01', 'text', NULL, NULL, NULL, '2026-05-27 10:20:01'),
+(14052, 13020, 1001, '订单号是 SEED8002，已经超过两天了，我想转人工处理。', FALSE, NULL, 'text', NULL, NULL, NULL, '2026-05-27 10:32:00')
+ON DUPLICATE KEY UPDATE
+    conversation_id = VALUES(conversation_id),
+    sender_user_id = VALUES(sender_user_id),
+    body = VALUES(body),
+    is_read = VALUES(is_read),
+    read_at = VALUES(read_at),
+    message_type = VALUES(message_type),
+    media_url = VALUES(media_url),
+    product_id = VALUES(product_id),
+    order_id = VALUES(order_id),
+    created_at = VALUES(created_at);
+
 -- Zhang San custom quick replies for message-center UI acceptance.
 INSERT INTO quick_replies (id, user_id, content, sort_order, created_at, updated_at)
 VALUES

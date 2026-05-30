@@ -5,7 +5,6 @@ import ListPageShell from '@/components/shell/ListPageShell.vue'
 import { batchUpdateAdminShopStatus, getAdminShopDetail, getAdminShops, updateAdminShopStatus } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
-import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const loading = ref(false)
 const error = ref('')
@@ -23,9 +22,6 @@ const filters = reactive({
   status: '',
   reviewStatus: ''
 })
-
-useAdminRowSwipeSelection(tableRef, rows, selectedRows)
-
 async function loadShops() {
   loading.value = true
   error.value = ''

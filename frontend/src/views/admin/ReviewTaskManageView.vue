@@ -10,7 +10,6 @@ import {
 } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
-import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const loading = ref(false)
 const error = ref('')
@@ -27,9 +26,6 @@ const filters = reactive({
   keyword: '',
   status: ''
 })
-
-useAdminRowSwipeSelection(tableRef, rows, selectedRows)
-
 async function loadTasks() {
   loading.value = true
   error.value = ''
@@ -146,7 +142,7 @@ onMounted(loadTasks)
 <template>
   <ListPageShell
     title="资料商品审核"
-    description="这是后台治理主流程，支持资料类商品审核通过、驳回和驳回原因记录。"
+    description="审核资料类商品内容，记录通过、驳回和上架处理结果。"
     :rows="rows"
     :loading="loading"
     :error="error"

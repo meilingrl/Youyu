@@ -16,4 +16,7 @@ public interface ChatService {
     void recallMessage(Long messageId, Long currentUserId);
     Map<String, Object> getAutoReplySettings(Long currentUserId);
     void updateAutoReplySettings(Long currentUserId, Boolean enabled, String replyContent);
+    Map<String, Object> startSupportSession(Long currentUserId);
+    void escalateSupportConversation(Long conversationId, Long currentUserId);
+    Map<String, Object> closeSupportSession(Long conversationId, Long currentUserId);
 }

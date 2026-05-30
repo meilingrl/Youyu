@@ -142,6 +142,28 @@ public class ChatController {
         return ApiResponse.success(null, traceId(request));
     }
 
+    @PostMapping("/support/session")
+    @LoginRequired
+    public ApiResponse<Map<String, Object>> startSupportSession(HttpServletRequest request) {
+        Long userId = AuthContextHolder.get().getUserId();
+        return ApiResponse.success(chatService.startSupportSession(userId), traceId(request));
+    }
+
+    @PostMapping("/conversations/{id}/escalate")
+    @LoginRequired
+    public ApiResponse<Void> escalateSupport(@PathVariable Long id, HttpServletRequest request) {
+        Long userId = AuthContextHolder.get().getUserId();
+        chatService.escalateSupportConversation(id, userId);
+        return ApiResponse.success(null, traceId(request));
+    }
+
+    @PostMapping("/conversations/{id}/close-support")
+    @LoginRequired
+    public ApiResponse<Map<String, Object>> closeSupport(@PathVariable Long id, HttpServletRequest request) {
+        Long userId = AuthContextHolder.get().getUserId();
+        return ApiResponse.success(chatService.closeSupportSession(id, userId), traceId(request));
+    }
+
     @GetMapping("/auto-reply")
     @LoginRequired
     public ApiResponse<Map<String, Object>> getAutoReply(HttpServletRequest request) {

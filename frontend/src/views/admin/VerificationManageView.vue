@@ -5,7 +5,6 @@ import ListPageShell from '@/components/shell/ListPageShell.vue'
 import { batchReviewAdminVerifications, getAdminVerifications, reviewAdminVerification } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
-import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const loading = ref(false)
 const error = ref('')
@@ -19,9 +18,6 @@ const filters = reactive({
   keyword: '',
   status: ''
 })
-
-useAdminRowSwipeSelection(tableRef, rows, selectedRows)
-
 async function loadVerifications() {
   loading.value = true
   error.value = ''

@@ -1207,47 +1207,15 @@ textarea {
   overflow: hidden;
 }
 
-.admin-select-table .el-table__row {
-  cursor: grab;
-  user-select: none;
-  touch-action: pan-y;
-}
-
 .admin-select-table .el-table__row > .el-table__cell {
   transition:
     background-color var(--cm-transition-micro),
-    box-shadow var(--cm-transition-micro),
-    transform var(--cm-transition-micro);
-}
-
-.admin-select-table .el-table__row.admin-select-table--dragging {
-  cursor: grabbing;
-}
-
-.admin-select-table .el-table__row.admin-select-table--dragging > .el-table__cell {
-  position: relative;
-  z-index: 1;
-  transform: translateX(var(--admin-row-swipe-x, 0));
-  background: rgba(var(--cm-primary-rgb), 0.08);
-  box-shadow: 0 10px 24px rgba(88, 62, 43, 0.12);
+    box-shadow var(--cm-transition-micro);
 }
 
 .admin-select-table .el-table__row.current-row > .el-table__cell,
 .admin-select-table .el-table__row:hover > .el-table__cell {
   background: rgba(var(--cm-primary-rgb), 0.05);
-}
-
-.admin-select-table .el-table__body-wrapper::before {
-  content: '向右滑动行可选中';
-  display: block;
-  width: fit-content;
-  margin: 0 0 8px 4px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(var(--cm-primary-rgb), 0.08);
-  color: var(--cm-text-secondary);
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .el-table th.el-table__cell {
@@ -1362,20 +1330,33 @@ textarea {
 }
 
 .admin-sidebar__nav-icon {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
-  color: #766a60;
-  opacity: 1;
+  color: var(--cm-text-secondary);
+  opacity: 0.92;
+  transition: color var(--cm-transition), opacity var(--cm-transition);
+}
+
+.admin-sidebar__nav-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .admin-sidebar__nav-icon svg,
 .admin-sidebar__nav-icon path {
+  fill: currentColor;
   color: inherit;
 }
 
 .admin-sidebar .el-menu-item:hover {
   transform: translateX(2px);
+}
+
+.admin-sidebar .el-menu-item:hover .admin-sidebar__nav-icon {
+  color: var(--cm-text);
+  opacity: 1;
 }
 
 .admin-sidebar .el-menu-item.is-active {
@@ -1385,7 +1366,8 @@ textarea {
 }
 
 .admin-sidebar .el-menu-item.is-active .admin-sidebar__nav-icon {
-  color: #766a60;
+  color: var(--cm-primary);
+  opacity: 1;
 }
 
 @media (max-width: 1100px) {

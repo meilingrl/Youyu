@@ -122,7 +122,7 @@ export default {
       name: 'admin-support',
       component: () => import('@/views/admin/SupportView.vue'),
       meta: {
-        title: '客服工作台',
+        title: '在线客服控制台',
         navKey: '/admin/support'
       }
     }

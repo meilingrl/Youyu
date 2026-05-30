@@ -225,9 +225,9 @@ onMounted(loadDetail)
       </section>
 
       <section class="shell-card detail-panel">
-        <h2>只读聊天上下文</h2>
+        <h2>订单聊天记录</h2>
         <p class="detail-text">
-          范围：仅展示订单 #{{ detail.chatContext.orderId }} 相关消息。此页不调用聊天发送接口，也不改变用户消息已读状态。
+          展示订单 #{{ detail.chatContext.orderId }} 相关消息，便于核查争议背景。
         </p>
 
         <div v-if="chatItems.length" class="chat-context-list">
@@ -246,7 +246,7 @@ onMounted(loadDetail)
       <section class="mediation-detail__grid">
         <article class="shell-card detail-panel">
           <h2>状态操作</h2>
-          <p class="detail-text">当前版本只允许推进非终态状态，或取消仍在处理中的案件。</p>
+          <p class="detail-text">按案件流程推进状态，或取消仍在处理中的案件。</p>
           <div v-if="nextStatusOptions.length" class="action-stack">
             <el-select v-model="statusForm.status" placeholder="下一状态">
               <el-option v-for="status in nextStatusOptions" :key="status" :label="adminLabel(status)" :value="status" />

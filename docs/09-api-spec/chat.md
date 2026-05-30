@@ -7,7 +7,10 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/chat/ChatController.java`
   - service: `backend/src/main/java/com/youyu/backend/service/chat/impl/ChatServiceImpl.java`
   - request sample: `docs/06-http/chat.http`
-- Last updated: 2026-05-27
+- Last updated: 2026-05-30
+- Admin console:
+  - controller: `backend/src/main/java/com/youyu/backend/controller/chat/AdminSupportChatController.java`
+  - service: `backend/src/main/java/com/youyu/backend/service/chat/impl/SupportConsoleServiceImpl.java`
 
 ## Scope
 
@@ -255,9 +258,48 @@ Side effects:
 - Marks messages sent by the peer as read.
 - Clears the current user's unread count for the conversation.
 
+## Online Customer Service
+
+Support conversations reuse the chat tables with `type = 'support'`. The peer is always the platform CS account (`platform_cs`, seeded on startup if missing). The `support_status` field drives behavior:
+
+**Legacy databases:** `ChatSupportSchemaUpgrader` runs on application startup and additively applies missing chat columns (`support_status`, `assigned_admin_id`, `unread_count_*`, `message_type`, `is_recalled`, etc.) to pre-existing MySQL tables created before this feature. Manual reference: `database/002_support_chat_columns.sql`. `CREATE TABLE IF NOT EXISTS` in `schema.sql` alone does not alter existing tables.
+
+- `ai`: rule-based FAQ bot auto-replies as the platform CS account to user messages.
+- `pending`: escalated to a human; the AI stops; the session enters the admin queue.
+- `human`: an admin has claimed the session and replies as the platform CS account.
+- `closed`: the session is ended.
+
+### `POST /api/chat/support/session`
+
+Starts (or reuses) the current user's support conversation with the platform CS account. Idempotent: an existing conversation is returned; a closed one is reset to `ai`. A first-time session receives an automated greeting.
+
+Response `data` is a conversation object that additionally includes `supportStatus` and `assignedAdminId`.
+
+### `POST /api/chat/conversations/{id}/escalate`
+
+Escalates a support conversation to a human (`ai`/... → `pending`). The current user must be the requester. Inserts a system note from the platform CS account. After escalation the AI no longer auto-replies.
+
+### `POST /api/chat/conversations/{id}/close-support`
+
+Ends the current user's support session (`→ closed`), clears `assigned_admin_id`, and inserts a closing note from the platform CS account. Only the requester (`user_a`) may call this endpoint. While `closed`, the user cannot send messages; `POST /api/chat/support/session` reopens the same conversation (`→ ai`) for a new round of consultation (one durable conversation row per user, by design).
+
+Deleting a support conversation from the message list also ends the session before soft-deleting it for the user.
+
+### Admin online CS console — `/api/admin/support/chat/*`
+
+All endpoints require an admin session with permission `ADMIN_SUPPORT_TICKETS_HANDLE`.
+
+- `GET /api/admin/support/chat/conversations?filter=&page=&size=` — queue list. `filter` ∈ `pending` (待接入), `active` (进行中), `mine` (我处理的), `closed` (已结束). Response `data.content[]` items include `id`, `supportStatus`, `assignedAdminId`, `assignedAdmin`, `requester`, `unreadCount`, `lastMessagePreview`, `lastMessageAt`; `data.counts` carries per-filter totals.
+- `GET /api/admin/support/chat/conversations/{id}` — conversation meta + requester context.
+- `GET /api/admin/support/chat/conversations/{id}/messages?page=&size=` — message page.
+- `POST /api/admin/support/chat/conversations/{id}/claim` — claim/assign to current admin (`→ human`). Rejects if already claimed by another admin.
+- `POST /api/admin/support/chat/conversations/{id}/messages` — reply as the platform CS account. Body `{ "body": "..." }`.
+- `POST /api/admin/support/chat/conversations/{id}/close` — end the session (`→ closed`).
+- `POST /api/admin/support/chat/conversations/{id}/read` — clear the admin-side unread count.
+
 ## Error Cases
 
-- `400`: invalid payload, unsupported message type, empty text body, invalid media URL, invalid quick reply content
+- `400`: invalid payload, unsupported message type, empty text body, invalid media URL, invalid quick reply content, escalating/closing a non-support or closed session
 - `401`: not logged in
-- `403`: current user is not a conversation participant or not the quick reply owner
+- `403`: current user is not a conversation participant or not the quick reply owner; admin lacks `ADMIN_SUPPORT_TICKETS_HANDLE`; support session claimed by another admin
 - `404`: conversation or quick reply not found

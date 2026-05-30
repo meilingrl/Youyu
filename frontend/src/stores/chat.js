@@ -54,6 +54,8 @@ function normalizeConversation(conversation = {}) {
     productId: conversation.productId ?? conversation.product_id,
     shopId: conversation.shopId ?? conversation.shop_id,
     peerUser: conversation.peerUser ?? conversation.peer_user ?? null,
+    supportStatus: conversation.supportStatus ?? conversation.support_status ?? null,
+    assignedAdminId: conversation.assignedAdminId ?? conversation.assigned_admin_id ?? null,
     unreadCount: Number.isFinite(unreadCount) ? unreadCount : 0,
     isPinned: toBoolean(conversation.isPinned ?? conversation.is_pinned),
     isMuted: toBoolean(conversation.isMuted ?? conversation.is_muted),
@@ -155,6 +157,44 @@ export const useChatStore = defineStore('chat', () => {
     } finally {
       loading.value = false
     }
+  }
+
+  async function startSupportSession() {
+    loading.value = true
+    try {
+      const conversation = normalizeConversation(unwrapData(await chatApi.startSupportSession()))
+      const existing = conversations.value.find((item) => String(item.id) === String(conversation.id))
+      if (existing) {
+        Object.assign(existing, conversation)
+      } else {
+        conversations.value.unshift(conversation)
+      }
+      activeConversationId.value = conversation.id
+      await fetchMessages(conversation.id)
+      return conversation
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function escalateSupportConversation(conversationId) {
+    await chatApi.escalateSupportConversation(conversationId)
+    await fetchConversations()
+    const conversation = conversations.value.find((item) => String(item.id) === String(conversationId))
+    if (conversation) {
+      activeConversationId.value = conversation.id
+    }
+    await fetchMessages(conversationId, 0, 50, { silent: true })
+  }
+
+  async function closeSupportConversation(conversationId) {
+    const conversation = normalizeConversation(unwrapData(await chatApi.closeSupportConversation(conversationId)))
+    const existing = conversations.value.find((item) => String(item.id) === String(conversationId))
+    if (existing) {
+      Object.assign(existing, conversation)
+    }
+    await fetchMessages(conversationId, 0, 50, { silent: true })
+    return conversation
   }
 
   async function sendMessage(conversationId, payload) {
@@ -349,6 +389,9 @@ export const useChatStore = defineStore('chat', () => {
     fetchConversations,
     fetchMessages,
     findOrCreateConversation,
+    startSupportSession,
+    escalateSupportConversation,
+    closeSupportConversation,
     sendMessage,
     sendProductCardMessage,
     sendOrderCardMessage,

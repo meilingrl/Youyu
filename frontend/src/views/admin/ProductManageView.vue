@@ -5,7 +5,6 @@ import ListPageShell from '@/components/shell/ListPageShell.vue'
 import { batchUpdateAdminProductStatus, getAdminProducts, updateAdminProductStatus } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
-import { useAdminRowSwipeSelection } from '@/utils/admin-row-swipe-selection'
 
 const loading = ref(false)
 const error = ref('')
@@ -21,9 +20,6 @@ const filters = reactive({
   reviewStatus: '',
   productType: ''
 })
-
-useAdminRowSwipeSelection(tableRef, rows, selectedRows)
-
 async function loadProducts() {
   loading.value = true
   error.value = ''
@@ -109,7 +105,7 @@ onMounted(loadProducts)
 <template>
   <ListPageShell
     title="商品管理"
-    description="聚焦商品列表、审核状态查看和上下架处理，不扩展到前台发布编辑链路。"
+    description="查看商品上架与审核状态，处理需要平台介入的上下架操作。"
     :rows="rows"
     :loading="loading"
     :error="error"
