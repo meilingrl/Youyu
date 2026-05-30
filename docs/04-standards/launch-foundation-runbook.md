@@ -23,7 +23,8 @@ a generated value. The required application and database variables are
 `MYSQL_ROOT_PASSWORD`, and `APP_JWT_SECRET`.
 
 Optional host-port overrides are `HTTP_PORT` and `BACKEND_PORT`. Their defaults
-are `80` and `8080`.
+are `18080` and `18081`. The published MySQL rehearsal port defaults to
+`13306`; containers still communicate with MySQL internally on `3306`.
 
 ## Start And Check
 
@@ -32,8 +33,8 @@ Start the schema-only staging rehearsal:
 ```bash
 docker compose up -d --build
 docker compose ps
-curl http://localhost/api/health
-curl http://localhost:8080/actuator/health
+curl http://localhost:18080/api/health
+curl http://localhost:18081/actuator/health
 ```
 
 The first URL verifies frontend to Nginx to backend routing. The second verifies

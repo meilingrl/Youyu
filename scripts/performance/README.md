@@ -14,7 +14,7 @@ From the repository root, run the image directly. `host.docker.internal` lets th
 
 ```bash
 docker run --rm -i \
-  -e BASE_URL=http://host.docker.internal:8080 \
+  -e BASE_URL=http://host.docker.internal:18080 \
   -v "$PWD/scripts/performance:/scripts" \
   grafana/k6 run /scripts/smoke.js
 ```
@@ -23,7 +23,7 @@ PowerShell:
 
 ```powershell
 docker run --rm -i `
-  -e BASE_URL=http://host.docker.internal:8080 `
+  -e BASE_URL=http://host.docker.internal:18080 `
   -v "${PWD}/scripts/performance:/scripts" `
   grafana/k6 run /scripts/smoke.js
 ```
@@ -45,7 +45,7 @@ Every response must return HTTP `200` with the standard API envelope field `"suc
 
 ## Run With Native k6
 
-If [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/) is installed, the default script URL is `http://localhost:8080`:
+If [k6](https://grafana.com/docs/k6/latest/set-up/install-k6/) is installed, the default script URL is `http://localhost:18080`:
 
 ```bash
 k6 run scripts/performance/smoke.js
@@ -56,13 +56,13 @@ k6 run scripts/performance/smoke.js
 Set `BASE_URL` when the backend is available through another origin, such as the frontend Nginx proxy:
 
 ```bash
-BASE_URL=http://localhost k6 run scripts/performance/smoke.js
+BASE_URL=http://localhost:18080 k6 run scripts/performance/smoke.js
 ```
 
 PowerShell:
 
 ```powershell
-$env:BASE_URL = 'http://localhost'
+$env:BASE_URL = 'http://localhost:18080'
 k6 run scripts/performance/smoke.js
 ```
 
@@ -70,7 +70,7 @@ Optional smoke controls:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `BASE_URL` | `http://localhost:8080` | Backend or Nginx origin without a trailing `/` requirement |
+| `BASE_URL` | `http://localhost:18080` | Backend or Nginx origin without a trailing `/` requirement |
 | `VUS` | `2` | Lightweight smoke virtual users |
 | `DURATION` | `10s` | Lightweight smoke duration |
 | `SLEEP_SECONDS` | `0.2` | Delay between iterations |
@@ -86,7 +86,7 @@ With Docker, mount an output directory and write the summary there:
 ```powershell
 New-Item -ItemType Directory -Force .artifacts/performance | Out-Null
 docker run --rm -i `
-  -e BASE_URL=http://host.docker.internal:8080 `
+  -e BASE_URL=http://host.docker.internal:18080 `
   -v "${PWD}/scripts/performance:/scripts" `
   -v "${PWD}/.artifacts/performance:/results" `
   grafana/k6 run --summary-export /results/performance-smoke-summary.json /scripts/smoke.js

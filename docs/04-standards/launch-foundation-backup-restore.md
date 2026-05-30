@@ -70,9 +70,12 @@ The target database must not already exist. After validation, remove the rehears
 
 ```bash
 MYSQL_PWD='replace-me' \
-mysql --host=localhost --port=3306 --user=root \
+mysql --host=localhost --port=13306 --user=root \
   --execute='DROP DATABASE `youyu_restore_20260530`;'
 ```
+
+The `13306` port is the default Compose rehearsal publication. Containers still
+communicate with MySQL internally on `3306`; override the host port when needed.
 
 ## Verification Commands
 

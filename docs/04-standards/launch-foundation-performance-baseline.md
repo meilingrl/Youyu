@@ -23,12 +23,13 @@ Use Docker as the default execution path so a workstation does not need a native
 
 ```powershell
 docker run --rm -i `
-  -e BASE_URL=http://host.docker.internal:8080 `
+  -e BASE_URL=http://host.docker.internal:18080 `
   -v "${PWD}/scripts/performance:/scripts" `
   grafana/k6 run /scripts/smoke.js
 ```
 
-Use `BASE_URL=http://host.docker.internal` when validating the frontend Nginx same-origin `/api` proxy published on host port `80`. Native k6 remains supported when available.
+Use `BASE_URL=http://host.docker.internal:18080` when validating the frontend
+Nginx same-origin `/api` proxy. Native k6 remains supported when available.
 
 The default smoke load is intentionally lightweight: `2` virtual users for `10s`, with a `0.2s` pause between iterations. `VUS`, `DURATION`, and `SLEEP_SECONDS` may be overridden for a rehearsal run, but overrides do not turn this smoke into capacity acceptance.
 

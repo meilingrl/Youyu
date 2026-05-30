@@ -1,7 +1,7 @@
 import http from 'k6/http'
 import { check, sleep } from 'k6'
 
-const baseUrl = (__ENV.BASE_URL || 'http://localhost:8080').replace(/\/+$/, '')
+const baseUrl = (__ENV.BASE_URL || 'http://localhost:18080').replace(/\/+$/, '')
 const vus = Number.parseInt(__ENV.VUS || '2', 10)
 const duration = __ENV.DURATION || '10s'
 const sleepSeconds = Number.parseFloat(__ENV.SLEEP_SECONDS || '0.2')

@@ -29,7 +29,8 @@ APP_JWT_SECRET=replace-with-a-random-secret-at-least-32-characters
 `DB_HOST` and the internal `DB_PORT` are fixed by Compose as `db` and `3306`.
 The host-side database port can be changed with `DB_PORT`; the frontend HTTP
 port can be changed with `HTTP_PORT`; the host-side backend port can be changed
-with `BACKEND_PORT`. Their defaults remain `3306`, `80`, and `8080`.
+with `BACKEND_PORT`. Their rehearsal defaults are `13306`, `18080`, and
+`18081`, avoiding common local-development ports while remaining configurable.
 
 ## Staging Rehearsal
 
