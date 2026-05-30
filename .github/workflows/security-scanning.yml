@@ -1,0 +1,97 @@
+name: Security Scanning
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-scanning-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  backend-dependency-report:
+    name: Backend Dependency Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Make mvnw executable
+        run: chmod +x backend/mvnw
+
+      - name: Generate OWASP Dependency-Check report
+        continue-on-error: true
+        working-directory: backend
+        run: |
+          mkdir -p ../reports/backend-dependency-check
+          ./mvnw org.owasp:dependency-check-maven:12.2.2:check \
+            -B \
+            -DfailBuildOnCVSS=11 \
+            -Dformat=HTML \
+            -Dodc.outputDirectory=../reports/backend-dependency-check
+
+      - name: Print generated backend reports
+        if: always()
+        run: find reports/backend-dependency-check -maxdepth 2 -type f -print || true
+
+      - name: Upload backend dependency report
+        if: always() && hashFiles('reports/backend-dependency-check/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dependency-check-report
+          path: reports/backend-dependency-check/
+
+  frontend-dependency-report:
+    name: Frontend Dependency Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Generate npm audit report
+        working-directory: frontend
+        run: |
+          mkdir -p ../reports
+          npm audit --package-lock-only --json > ../reports/npm-audit.json || true
+          npm audit --package-lock-only || true
+
+      - name: Upload frontend dependency report
+        if: always() && hashFiles('reports/npm-audit.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-npm-audit-report
+          path: reports/npm-audit.json
