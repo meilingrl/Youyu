@@ -32,6 +32,15 @@ const routes = [
       public: true
     }
   },
+  {
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: () => import('@/views/auth/ForgotPasswordView.vue'),
+    meta: {
+      title: '找回密码',
+      public: true
+    }
+  },
   appRoutes,
   adminRoutes,
   {

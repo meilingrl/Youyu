@@ -3,7 +3,9 @@ package com.youyu.backend.controller.auth;
 import com.youyu.backend.common.api.ApiResponse;
 import com.youyu.backend.common.auth.LoginRequired;
 import com.youyu.backend.common.support.RequestContext;
+import com.youyu.backend.controller.auth.dto.EmailCodeRequest;
 import com.youyu.backend.controller.auth.dto.LoginRequest;
+import com.youyu.backend.controller.auth.dto.PasswordResetRequest;
 import com.youyu.backend.controller.auth.dto.RegisterRequest;
 import com.youyu.backend.service.auth.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,10 +33,39 @@ public class AuthController {
         return ApiResponse.success(authService.register(body), traceId(request));
     }
 
+    @PostMapping("/email-codes")
+    public ApiResponse<Map<String, Object>> sendEmailCode(@Valid @RequestBody EmailCodeRequest body,
+                                                          HttpServletRequest request) {
+        return ApiResponse.success(
+                authService.sendEmailCode(body.getEmail(), body.getPurpose(), requestSource(request)),
+                traceId(request)
+        );
+    }
+
+    @GetMapping("/captcha")
+    public ApiResponse<Map<String, Object>> captcha(HttpServletRequest request) {
+        return ApiResponse.success(authService.createCaptcha(requestSource(request)), traceId(request));
+    }
+
     @PostMapping("/login")
     public ApiResponse<Map<String, Object>> login(@Valid @RequestBody LoginRequest body,
                                                   HttpServletRequest request) {
-        return ApiResponse.success(authService.unifiedLogin(body.getLoginId(), body.getPassword()), traceId(request));
+        return ApiResponse.success(
+                authService.unifiedLogin(
+                        body.getLoginId(),
+                        body.getPassword(),
+                        body.getCaptchaChallengeId(),
+                        body.getCaptchaCode(),
+                        requestSource(request)
+                ),
+                traceId(request)
+        );
+    }
+
+    @PostMapping("/password-reset")
+    public ApiResponse<Map<String, Object>> resetPassword(@Valid @RequestBody PasswordResetRequest body,
+                                                          HttpServletRequest request) {
+        return ApiResponse.success(authService.resetPassword(body), traceId(request));
     }
 
     @PostMapping("/logout")
@@ -55,5 +86,9 @@ public class AuthController {
 
     private String traceId(HttpServletRequest request) {
         return (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE);
+    }
+
+    private String requestSource(HttpServletRequest request) {
+        return request.getRemoteAddr();
     }
 }

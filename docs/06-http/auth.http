@@ -1,20 +1,37 @@
 ### Youyu — Authentication & User
 ### Run this file after every change to auth, user profile, or verification endpoints.
+### Wave 1 email-code variables must come from a local HTTP client environment.
+### Do not commit real recipients, codes, SMTP credentials, or production secrets.
 
 @baseUrl = http://localhost:8080
+@registrationEmail = auth-wave1-register@example.test
+@resetEmail = auth-wave1-reset@example.test
 
 # ─────────────────────────────────────────────
 # AUTH
 # ─────────────────────────────────────────────
 
-### Register new user
+### Send registration email code
+POST {{baseUrl}}/api/auth/email-codes
+Content-Type: application/json
+
+{
+  "email": "{{registrationEmail}}",
+  "purpose": "register"
+}
+
+###
+
+### Register new user after entering the received code
 POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 
 {
   "username": "httptest01",
-  "password": "pass123",
-  "nickname": "HTTP测试用户"
+  "password": "{{registrationPassword}}",
+  "nickname": "HTTP Test User",
+  "email": "{{registrationEmail}}",
+  "emailCode": "{{registrationEmailCode}}"
 }
 
 ###
@@ -31,7 +48,59 @@ Content-Type: application/json
 
 ###
 
-### Login — admin (seed data)
+### Login - wrong password; repeat three times to trigger CAPTCHA escalation
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "zhangsan",
+  "password": "wrongpassword"
+}
+
+###
+
+### Create graphical CAPTCHA challenge
+GET {{baseUrl}}/api/auth/captcha
+
+###
+
+### Login after CAPTCHA escalation
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+
+{
+  "loginId": "zhangsan",
+  "password": "user123",
+  "captchaChallengeId": "{{captchaChallengeId}}",
+  "captchaCode": "{{captchaCode}}"
+}
+
+###
+
+### Send password-reset email code
+POST {{baseUrl}}/api/auth/email-codes
+Content-Type: application/json
+
+{
+  "email": "{{resetEmail}}",
+  "purpose": "reset_password"
+}
+
+###
+
+### Reset password after entering the received code
+POST {{baseUrl}}/api/auth/password-reset
+Content-Type: application/json
+
+{
+  "email": "{{resetEmail}}",
+  "emailCode": "{{resetEmailCode}}",
+  "newPassword": "{{resetNewPassword}}"
+}
+
+###
+
+### Login - admin (seed data)
 # @name adminLogin
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
@@ -39,17 +108,6 @@ Content-Type: application/json
 {
   "loginId": "admin",
   "password": "admin123"
-}
-
-###
-
-### Login — wrong password → expect 401
-POST {{baseUrl}}/api/auth/login
-Content-Type: application/json
-
-{
-  "loginId": "zhangsan",
-  "password": "wrongpassword"
 }
 
 ###
@@ -149,7 +207,7 @@ Content-Type: application/json
   "college": "外国语学院",
   "major": "英语",
   "grade": "2024级",
-  "campusEmail": "lisi@campus.edu.cn"
+  "campusEmail": "lisi@campus.example.test"
 }
 
 ###

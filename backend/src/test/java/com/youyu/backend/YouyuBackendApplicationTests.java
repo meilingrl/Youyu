@@ -12,6 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import com.youyu.backend.service.auth.ChallengeCodeHasher;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -34,6 +35,9 @@ class YouyuBackendApplicationTests {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private ChallengeCodeHasher challengeCodeHasher;
+
     @Test
     void contextLoads() {
         // Ensure the backend scaffold can start a Spring Boot test context.
@@ -44,6 +48,18 @@ class YouyuBackendApplicationTests {
         long suffix = System.currentTimeMillis();
         String username = "chain_user_" + suffix;
         String password = "pass123456";
+        String email = username + "@example.test";
+        jdbcTemplate.update("""
+                INSERT INTO auth_email_verification_challenges
+                (email, purpose, code_hash, request_source, expires_at, cooldown_until)
+                VALUES (?, 'register', ?, 'integration-test', ?, ?)
+                """,
+                email,
+                challengeCodeHasher.hash("482913"),
+                Timestamp.valueOf(LocalDateTime.now().plusMinutes(10)),
+                Timestamp.valueOf(LocalDateTime.now().plusMinutes(1))
+        );
+
         String registerResponse = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -52,19 +68,19 @@ class YouyuBackendApplicationTests {
                                   "password": "%s",
                                   "nickname": "链路用户",
                                   "phone": "139%s",
-                                  "email": "%s@campus.edu.cn"
+                                  "email": "%s",
+                                  "emailCode": "482913"
                                 }
-                                """.formatted(username, password, String.valueOf(suffix).substring(0, 8), username)))
+                                """.formatted(username, password, String.valueOf(suffix).substring(0, 8), email)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.user.loginId").value(username))
-                .andExpect(jsonPath("$.data.privilege.canPurchase").value(true))
+                .andExpect(jsonPath("$.data.token").doesNotExist())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        String token = JsonPath.read(registerResponse, "$.data.token");
 
-        mockMvc.perform(post("/api/auth/login")
+        String loginResponse = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -74,7 +90,11 @@ class YouyuBackendApplicationTests {
                                 """.formatted(username, password)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.user.loginId").value(username));
+                .andExpect(jsonPath("$.data.user.loginId").value(username))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String token = JsonPath.read(loginResponse, "$.data.token");
 
         mockMvc.perform(post("/api/users/verification")
                         .header("Authorization", "Bearer " + token)
@@ -86,10 +106,10 @@ class YouyuBackendApplicationTests {
                                   "college": "计算机学院",
                                   "major": "软件工程",
                                   "grade": "2026级",
-                                  "campusEmail": "%s@campus.edu.cn",
+                                  "campusEmail": "%s",
                                   "verificationMethod": "manual_review"
                                 }
-                                """.formatted(suffix, username)))
+                                """.formatted(suffix, email)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.verificationStatus").value("pending_review"));

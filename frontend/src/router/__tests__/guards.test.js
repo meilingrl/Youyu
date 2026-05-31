@@ -28,6 +28,15 @@ const routes = [
       public: true
     }
   },
+  {
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: { template: '<div />' },
+    meta: {
+      title: 'Forgot password',
+      public: true
+    }
+  },
   appRoutes,
   adminRoutes
 ]
@@ -195,5 +204,13 @@ describe('router guards', () => {
     await navigate(router, '/login')
 
     expect(router.currentRoute.value.name).toBe('login')
+  })
+
+  it('allows anonymous users to visit the forgot-password flow', async () => {
+    const router = createTestRouter()
+
+    await navigate(router, '/forgot-password')
+
+    expect(router.currentRoute.value.name).toBe('forgot-password')
   })
 })

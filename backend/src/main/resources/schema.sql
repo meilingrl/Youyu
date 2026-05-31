@@ -14,6 +14,54 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS auth_email_verification_challenges (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(128) NOT NULL,
+    purpose VARCHAR(32) NOT NULL,
+    code_hash VARCHAR(255) NOT NULL,
+    request_source VARCHAR(128) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    cooldown_until TIMESTAMP NOT NULL,
+    is_consumed BOOLEAN NOT NULL DEFAULT FALSE,
+    consumed_at TIMESTAMP,
+    attempt_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_auth_email_challenge_email_purpose (email, purpose, created_at),
+    INDEX idx_auth_email_challenge_source_created (request_source, created_at),
+    INDEX idx_auth_email_challenge_expiry (expires_at, is_consumed)
+);
+
+CREATE TABLE IF NOT EXISTS auth_captcha_challenges (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    challenge_id VARCHAR(64) NOT NULL,
+    code_hash VARCHAR(255) NOT NULL,
+    request_source VARCHAR(128) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    is_consumed BOOLEAN NOT NULL DEFAULT FALSE,
+    consumed_at TIMESTAMP,
+    attempt_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_auth_captcha_challenge_id UNIQUE (challenge_id),
+    INDEX idx_auth_captcha_source_created (request_source, created_at),
+    INDEX idx_auth_captcha_expiry (expires_at, is_consumed)
+);
+
+CREATE TABLE IF NOT EXISTS auth_login_failure_counters (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    login_identifier VARCHAR(128) NOT NULL,
+    request_source VARCHAR(128) NOT NULL,
+    failure_count INT NOT NULL DEFAULT 0,
+    cooldown_until TIMESTAMP,
+    last_failed_at TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_auth_login_failure_identifier_source UNIQUE (login_identifier, request_source),
+    INDEX idx_auth_login_failure_source_updated (request_source, updated_at),
+    INDEX idx_auth_login_failure_cooldown (cooldown_until)
+);
+
 CREATE TABLE IF NOT EXISTS user_privilege_profiles (
     user_id BIGINT PRIMARY KEY,
     can_purchase BOOLEAN NOT NULL DEFAULT TRUE,

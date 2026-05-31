@@ -85,3 +85,7 @@
 - 已经失去当前指导价值的阶段说明，移入 `../archived/`
 - 具体执行步骤统一下沉到 `../../08-tasks/`
 - 功能任务和上线准备任务分别引用对应路线图，不在本文件展开实施细节
+> 2026-06-01 status note: Authentication Upgrade Wave 1 is complete. Real SMTP
+> registration verification, CAPTCHA-gated login escalation, and forgotten-
+> password recovery are now implemented and manually accepted. Follow-up work
+> remains limited to the already-deferred Wave 2 items.

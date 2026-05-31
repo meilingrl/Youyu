@@ -26,7 +26,10 @@ public class AdminAuthController {
         return ApiResponse.success(
                 authService.unifiedLogin(
                         payload.getOrDefault("loginId", ""),
-                        payload.getOrDefault("password", "")
+                        payload.getOrDefault("password", ""),
+                        payload.getOrDefault("captchaChallengeId", ""),
+                        payload.getOrDefault("captchaCode", ""),
+                        request.getRemoteAddr()
                 ),
                 traceId(request)
         );

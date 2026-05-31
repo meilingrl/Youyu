@@ -18,6 +18,8 @@ public interface UserMapper {
 
     Optional<Map<String, Object>> findByLoginId(String loginId);
 
+    Optional<Map<String, Object>> findByEmail(String email);
+
     Long insert(String username, String phone, String email, String passwordHash, String nickname);
 
     void updateLastLoginAt(Long id);

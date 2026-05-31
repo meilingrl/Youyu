@@ -104,6 +104,17 @@ public class JdbcUserMapper implements UserMapper {
     }
 
     @Override
+    public Optional<Map<String, Object>> findByEmail(String email) {
+        List<Map<String, Object>> users = jdbcTemplate.queryForList(
+                        baseUserSql() + " WHERE LOWER(u.email) = LOWER(?)",
+                        email
+                ).stream()
+                .map(this::normalizeUser)
+                .toList();
+        return users.stream().findFirst();
+    }
+
+    @Override
     public Long insert(String username, String phone, String email, String passwordHash, String nickname) {
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
