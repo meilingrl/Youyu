@@ -63,7 +63,7 @@ class UserProfileTest extends BackendTestBase {
                 "file",
                 "avatar.png",
                 "image/png",
-                new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47}
+                new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
         );
 
         mockMvc.perform(multipart("/api/users/me/avatar")
@@ -82,6 +82,22 @@ class UserProfileTest extends BackendTestBase {
                 "avatar.txt",
                 "text/plain",
                 "not image".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/users/me/avatar")
+                        .file(file)
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void uploadAvatarRejectsContentTypeMismatch() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                "not really png".getBytes()
         );
 
         mockMvc.perform(multipart("/api/users/me/avatar")
@@ -172,7 +188,7 @@ class UserProfileTest extends BackendTestBase {
                                   "addressType": "campus",
                                   "campusArea": "NEU Hunnan Campus Dorm 5",
                                   "detailAddress": "Building 5 Room 101",
-                                  "isDefault": false
+                                  "defaultAddress": false
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -195,7 +211,7 @@ class UserProfileTest extends BackendTestBase {
                                   "addressType": "campus",
                                   "campusArea": "NEU Hunnan Campus Dorm 8",
                                   "detailAddress": "Building 8 Room 202",
-                                  "isDefault": false
+                                  "defaultAddress": false
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -210,6 +226,89 @@ class UserProfileTest extends BackendTestBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.isDefault").value(true));
+    }
+
+    @Test
+    void updateAddressChangesSavedAddress() throws Exception {
+        String createResponse = mockMvc.perform(post("/api/users/addresses")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "receiverName": "Edit Me",
+                                  "receiverPhone": "13900000003",
+                                  "addressType": "campus",
+                                  "campusArea": "Old Campus",
+                                  "detailAddress": "Old Room",
+                                  "defaultAddress": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Number addressId = JsonPath.read(createResponse, "$.data.id");
+
+        mockMvc.perform(put("/api/users/addresses/{addressId}", addressId)
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "receiverName": "Edited User",
+                                  "receiverPhone": "13900000004",
+                                  "addressType": "logistics",
+                                  "province": "辽宁省",
+                                  "city": "沈阳市",
+                                  "district": "浑南区",
+                                  "detailAddress": "Edited Room",
+                                  "defaultAddress": true
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.receiverName").value("Edited User"))
+                .andExpect(jsonPath("$.data.receiverPhone").value("13900000004"))
+                .andExpect(jsonPath("$.data.addressType").value("logistics"))
+                .andExpect(jsonPath("$.data.isDefault").value(true));
+    }
+
+    @Test
+    void deleteAddressRemovesSavedAddress() throws Exception {
+        String createResponse = mockMvc.perform(post("/api/users/addresses")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "receiverName": "Delete Me",
+                                  "receiverPhone": "13900000005",
+                                  "addressType": "campus",
+                                  "campusArea": "Temporary Area",
+                                  "detailAddress": "Temporary Room",
+                                  "defaultAddress": false
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        Number addressId = JsonPath.read(createResponse, "$.data.id");
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/users/addresses/{addressId}", addressId)
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.deleted").value(true));
+
+        String listResponse = mockMvc.perform(get("/api/users/addresses")
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        java.util.List<Object> ids = JsonPath.read(listResponse, "$.data[*].id");
+        Assertions.assertFalse(ids.stream().map(String::valueOf).toList().contains(String.valueOf(addressId)));
     }
 
     @Test

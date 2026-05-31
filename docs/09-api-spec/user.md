@@ -315,6 +315,58 @@ Mark an existing address as the current user's default address.
 - `401`: missing token or invalid token
 - `404`: address does not exist
 
+### `PUT /api/users/addresses/{addressId}`
+
+#### Purpose
+
+Update an existing saved address owned by the current user.
+
+#### Request
+
+Path:
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `addressId` | yes | number | Address ID owned by the current user |
+
+Body uses the same shape and validation rules as `POST /api/users/addresses`.
+
+#### Response
+
+- `data` is the updated address object.
+
+#### Error Cases
+
+- `400`: validation failure
+- `401`: missing token or invalid token
+- `404`: address does not exist
+
+### `DELETE /api/users/addresses/{addressId}`
+
+#### Purpose
+
+Delete an existing saved address owned by the current user. If the deleted address was the default address, the backend assigns another remaining address as default when possible.
+
+#### Request
+
+Path:
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `addressId` | yes | number | Address ID owned by the current user |
+
+#### Response
+
+| Field | Type | Notes |
+|---|---|---|
+| `addressId` | number | Deleted address ID |
+| `deleted` | boolean | `true` when deletion succeeds |
+
+#### Error Cases
+
+- `401`: missing token or invalid token
+- `404`: address does not exist
+
 ### `PATCH /api/users/profile`
 
 #### Purpose
@@ -350,12 +402,14 @@ Upload and persist a real avatar image for the current user.
 - File field: `file`
 - Accepted MIME types: `image/jpeg`, `image/png`, `image/webp`
 - Maximum size: 10 MB
+- The backend validates the image signature for JPEG, PNG, and WebP and rejects files whose content does not match the declared MIME type.
 
 #### Response
 
 - `data` uses the same profile envelope as `GET /api/users/profile`.
 - `data.avatarUrl` contains the public URL.
 - `data.user.avatar` is persisted and served under `/uploads/avatars/**`.
+- When replacing a local avatar, the previous local avatar file is deleted after the new avatar is saved and persisted.
 
 #### Error Cases
 

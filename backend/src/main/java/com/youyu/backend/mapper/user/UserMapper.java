@@ -57,6 +57,20 @@ public interface UserMapper {
 
     void setDefaultAddress(Long userId, Long addressId);
 
+    void updateAddress(Long userId,
+                       Long addressId,
+                       String receiverName,
+                       String receiverPhone,
+                       String addressType,
+                       String province,
+                       String city,
+                       String district,
+                       String detailAddress,
+                       String campusArea,
+                       boolean isDefault);
+
+    void deleteAddress(Long userId, Long addressId);
+
     void updatePasswordHash(Long userId, String newHash);
 
     Optional<Map<String, Object>> findPreferenceByUserId(Long userId);

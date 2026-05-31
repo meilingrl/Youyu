@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -122,6 +123,25 @@ public class UserController {
                                                           HttpServletRequest request) {
         return ApiResponse.success(
                 userService.createAddress(body),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @PutMapping("/addresses/{addressId}")
+    public ApiResponse<Map<String, Object>> updateAddress(@PathVariable Long addressId,
+                                                          @Valid @RequestBody CreateUserAddressRequest body,
+                                                          HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.updateAddress(addressId, body),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @DeleteMapping("/addresses/{addressId}")
+    public ApiResponse<Map<String, Object>> deleteAddress(@PathVariable Long addressId,
+                                                          HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.deleteAddress(addressId),
                 (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
         );
     }

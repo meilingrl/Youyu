@@ -45,6 +45,14 @@ export function createUserAddress(payload) {
   return service.post('/users/addresses', payload)
 }
 
+export function updateUserAddress(addressId, payload) {
+  return service.put(`/users/addresses/${addressId}`, payload)
+}
+
+export function deleteUserAddress(addressId) {
+  return service.delete(`/users/addresses/${addressId}`)
+}
+
 export function setDefaultUserAddress(addressId) {
   return service.put(`/users/addresses/${addressId}/default`)
 }

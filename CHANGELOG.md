@@ -1,3 +1,21 @@
+## [2026-06-01] - Personalization Address And Avatar Hardening
+
+### added
+- Added user address editing and deletion through `PUT /api/users/addresses/{addressId}` and `DELETE /api/users/addresses/{addressId}`.
+- Added frontend address edit, cancel, delete confirmation, and refreshed address list behavior in settings.
+
+### changed
+- Avatar upload now validates image file signatures for JPEG, PNG, and WebP instead of trusting MIME type alone.
+- Successful avatar replacement now removes the previous local avatar file when it belongs to the configured avatar upload directory.
+
+### verify
+- Backend `mvnw.cmd -Dtest=UserProfileTest test` pass, 18 tests.
+- Backend `mvnw.cmd test` pass, 188 tests.
+- Frontend `npm test -- --run` pass, 49 tests.
+- Frontend `npm run build` pass.
+
+---
+
 ## [2026-06-01] - Authentication Upgrade Wave 1 Accepted
 
 ### added

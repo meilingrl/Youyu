@@ -31,4 +31,8 @@ public interface UserService {
     Map<String, Object> createAddress(CreateUserAddressRequest request);
 
     Map<String, Object> setDefaultAddress(Long addressId);
+
+    Map<String, Object> updateAddress(Long addressId, CreateUserAddressRequest request);
+
+    Map<String, Object> deleteAddress(Long addressId);
 }

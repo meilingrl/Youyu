@@ -1,10 +1,15 @@
 <script setup>
-import { onMounted, reactive } from 'vue'
-import { ElMessage } from '@/plugins/element-plus-services'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import PageSection from '@/components/common/PageSection.vue'
 import { useMarketStore } from '@/stores/market'
 
 const marketStore = useMarketStore()
+const editingAddressId = ref(null)
+const formTitle = computed(() => (editingAddressId.value ? '编辑地址' : '新增地址'))
+const formDescription = computed(() =>
+  editingAddressId.value ? '修改后会立即同步到结算地址列表。' : '支持校内自提地址和普通物流地址。'
+)
 const form = reactive({
   receiverName: '',
   receiverPhone: '',
@@ -21,23 +26,72 @@ async function load() {
   await marketStore.loadUserAddresses().catch(() => [])
 }
 
-async function createAddress() {
+function resetForm(defaultAddress = false) {
+  Object.assign(form, {
+    receiverName: '',
+    receiverPhone: '',
+    addressType: 'campus',
+    province: '',
+    city: '',
+    district: '',
+    campusArea: '',
+    detailAddress: '',
+    defaultAddress
+  })
+  editingAddressId.value = null
+}
+
+function editAddress(address) {
+  editingAddressId.value = address.id
+  Object.assign(form, {
+    receiverName: address.contactName || '',
+    receiverPhone: address.phone || '',
+    addressType: address.type || 'campus',
+    province: address.province || '',
+    city: address.city || '',
+    district: address.district || '',
+    campusArea: address.campusArea || '',
+    detailAddress: address.detail || '',
+    defaultAddress: Boolean(address.isDefault)
+  })
+}
+
+async function saveAddress() {
   try {
-    await marketStore.createAddress(form)
-    Object.assign(form, {
-      receiverName: '',
-      receiverPhone: '',
-      addressType: 'campus',
-      province: '',
-      city: '',
-      district: '',
-      campusArea: '',
-      detailAddress: '',
-      defaultAddress: false
-    })
-    ElMessage.success('地址已保存')
+    if (editingAddressId.value) {
+      await marketStore.updateAddress(editingAddressId.value, form)
+      ElMessage.success('地址已更新')
+    } else {
+      await marketStore.createAddress(form)
+      ElMessage.success('地址已保存')
+    }
+    resetForm(false)
   } catch (error) {
     ElMessage.error(error?.response?.data?.message || error?.message || '地址保存失败')
+  }
+}
+
+async function confirmDelete(address) {
+  try {
+    await ElMessageBox.confirm(
+      `确定删除「${address.contactName || '未命名'}」的地址吗？`,
+      '删除地址',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    await marketStore.deleteAddress(address.id)
+    if (editingAddressId.value === address.id) {
+      resetForm(false)
+    }
+    ElMessage.success('地址已删除')
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') {
+      return
+    }
+    ElMessage.error(error?.response?.data?.message || error?.message || '地址删除失败')
   }
 }
 
@@ -74,13 +128,15 @@ onMounted(load)
           </div>
           <div class="address-item__actions">
             <el-tag v-if="address.isDefault" type="success" effect="plain">默认地址</el-tag>
-            <el-button v-else plain @click="setDefault(address.id)">设为默认</el-button>
+            <el-button plain @click="editAddress(address)">编辑</el-button>
+            <el-button v-if="!address.isDefault" plain @click="setDefault(address.id)">设为默认</el-button>
+            <el-button type="danger" plain @click="confirmDelete(address)">删除</el-button>
           </div>
         </article>
       </div>
     </PageSection>
 
-    <PageSection title="新增地址" description="支持校内自提地址和普通物流地址。">
+    <PageSection :title="formTitle" :description="formDescription">
       <el-form label-position="top" class="address-form">
         <el-form-item label="收货人">
           <el-input v-model="form.receiverName" />
@@ -114,7 +170,8 @@ onMounted(load)
         </el-form-item>
       </el-form>
       <template #actions>
-        <el-button type="primary" @click="createAddress">保存地址</el-button>
+        <el-button v-if="editingAddressId" plain @click="resetForm(false)">取消编辑</el-button>
+        <el-button type="primary" @click="saveAddress">保存地址</el-button>
       </template>
     </PageSection>
   </div>

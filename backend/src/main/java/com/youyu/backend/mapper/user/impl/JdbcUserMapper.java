@@ -291,6 +291,45 @@ public class JdbcUserMapper implements UserMapper {
     }
 
     @Override
+    public void updateAddress(Long userId,
+                              Long addressId,
+                              String receiverName,
+                              String receiverPhone,
+                              String addressType,
+                              String province,
+                              String city,
+                              String district,
+                              String detailAddress,
+                              String campusArea,
+                              boolean isDefault) {
+        jdbcTemplate.update(
+                """
+                        UPDATE user_addresses
+                        SET receiver_name = ?, receiver_phone = ?, address_type = ?, province = ?,
+                            city = ?, district = ?, detail_address = ?, campus_area = ?,
+                            is_default = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE user_id = ? AND id = ?
+                        """,
+                receiverName,
+                receiverPhone,
+                isBlank(addressType) ? "campus" : addressType,
+                blankToNull(province),
+                blankToNull(city),
+                blankToNull(district),
+                detailAddress,
+                blankToNull(campusArea),
+                isDefault,
+                userId,
+                addressId
+        );
+    }
+
+    @Override
+    public void deleteAddress(Long userId, Long addressId) {
+        jdbcTemplate.update("DELETE FROM user_addresses WHERE user_id = ? AND id = ?", userId, addressId);
+    }
+
+    @Override
     public Optional<Map<String, Object>> findPreferenceByUserId(Long userId) {
         List<Map<String, Object>> preferences = jdbcTemplate.queryForList(
                         """

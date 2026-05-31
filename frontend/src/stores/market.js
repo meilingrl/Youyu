@@ -11,11 +11,13 @@ import { listFavorites, toggleFavorite as toggleFavoriteApi } from '@/api/module
 import {
   bindUserEmail,
   createUserAddress,
+  deleteUserAddress,
   getUserAddresses,
   getUserInsightSnapshot,
   getUserPreference,
   getUserProfile,
   setDefaultUserAddress,
+  updateUserAddress,
   updateUserProfile as updateUserProfileApi,
   uploadUserAvatar,
   updateUserPreference as updateUserPreferenceApi
@@ -542,6 +544,20 @@ export const useMarketStore = defineStore('market', () => {
     return response.data
   }
 
+  async function updateAddress(addressId, payload) {
+    const response = await updateUserAddress(addressId, payload)
+    ensureSuccessDataResponse(response, '地址更新失败')
+    await loadUserAddresses()
+    return response.data
+  }
+
+  async function deleteAddress(addressId) {
+    const response = await deleteUserAddress(addressId)
+    ensureSuccessDataResponse(response, '地址删除失败')
+    await loadUserAddresses()
+    return response.data
+  }
+
   async function setDefaultAddress(addressId) {
     const response = await setDefaultUserAddress(addressId)
     ensureSuccessDataResponse(response, '默认地址更新失败')
@@ -754,6 +770,8 @@ export const useMarketStore = defineStore('market', () => {
     loadShopDetail,
     loadUserAddresses,
     createAddress,
+    updateAddress,
+    deleteAddress,
     setDefaultAddress,
     loadUserPreference,
     updateUserPreference,

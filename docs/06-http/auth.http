@@ -198,9 +198,6 @@ Authorization: Bearer mock-1001-USER
 Content-Type: application/json
 
 {
-  "themeMode": "dark",
-  "themeColor": "fresh_green",
-  "homeDisplayMode": "compact",
   "defaultFulfillmentType": "offline",
   "defaultPaymentMethod": "mock_payment",
   "defaultSortType": "latest",
@@ -223,8 +220,33 @@ Content-Type: application/json
   "addressType": "campus",
   "campusArea": "北苑",
   "detailAddress": "1号楼101室",
-  "isDefault": true
+  "defaultAddress": true
 }
+
+###
+
+### Update address
+PUT {{baseUrl}}/api/users/addresses/1
+Authorization: Bearer mock-1001-USER
+Content-Type: application/json
+
+{
+  "receiverName": "张三",
+  "receiverPhone": "13800000002",
+  "addressType": "campus",
+  "province": "辽宁省",
+  "city": "沈阳市",
+  "district": "浑南区",
+  "campusArea": "浑南校区",
+  "detailAddress": "5号楼101室",
+  "defaultAddress": true
+}
+
+###
+
+### Delete address
+DELETE {{baseUrl}}/api/users/addresses/1
+Authorization: Bearer mock-1001-USER
 
 # ─────────────────────────────────────────────
 # STUDENT VERIFICATION
