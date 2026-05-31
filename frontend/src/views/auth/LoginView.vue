@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage } from '@/plugins/element-plus-services'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -9,6 +9,9 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const submitting = ref(false)
+const registerCodeSending = ref(false)
+const registerCodeCooldown = ref(0)
+let registerCodeTimer = null
 const tab = computed({
   get: () => {
     if (route.name === 'register' || route.query.mode === 'register') {
@@ -29,12 +32,15 @@ const tab = computed({
 
 const loginForm = reactive({
   account: '',
-  password: ''
+  password: '',
+  captchaCode: ''
 })
 
 const registerForm = reactive({
   nickname: '',
   account: '',
+  email: '',
+  emailCode: '',
   password: '',
   confirmPassword: ''
 })
@@ -67,9 +73,67 @@ watch(
   { immediate: true }
 )
 
+watch(
+  () => loginForm.account,
+  (account, previousAccount) => {
+    if (previousAccount && account !== previousAccount && authStore.captchaRequired) {
+      loginForm.captchaCode = ''
+      authStore.clearCaptcha()
+    }
+  }
+)
+
+onBeforeUnmount(() => {
+  window.clearInterval(registerCodeTimer)
+})
+
+function startRegisterCodeCooldown(seconds) {
+  window.clearInterval(registerCodeTimer)
+  registerCodeCooldown.value = Math.max(1, Number(seconds) || 60)
+  registerCodeTimer = window.setInterval(() => {
+    registerCodeCooldown.value -= 1
+
+    if (registerCodeCooldown.value <= 0) {
+      window.clearInterval(registerCodeTimer)
+    }
+  }, 1000)
+}
+
+async function handleSendRegisterCode() {
+  if (!registerForm.email) {
+    ElMessage.warning('请先输入接收验证码的邮箱')
+    return
+  }
+
+  registerCodeSending.value = true
+
+  try {
+    const result = await authStore.sendEmailCode(registerForm.email, 'register')
+    startRegisterCodeCooldown(result.cooldownSeconds)
+    ElMessage.success('验证码已发送，请检查邮箱')
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error))
+  } finally {
+    registerCodeSending.value = false
+  }
+}
+
+async function handleRefreshCaptcha() {
+  try {
+    await authStore.refreshCaptcha()
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error))
+  }
+}
+
 async function handleLogin() {
   if (!loginForm.account || !loginForm.password) {
     ElMessage.warning('请输入账号和密码')
+    return
+  }
+
+  if (authStore.captchaRequired && !loginForm.captchaCode) {
+    ElMessage.warning('请输入图形验证码')
     return
   }
 
@@ -78,7 +142,8 @@ async function handleLogin() {
   try {
     await authStore.login({
       loginId: loginForm.account,
-      password: loginForm.password
+      password: loginForm.password,
+      captchaCode: loginForm.captchaCode
     })
     ElMessage.success(authStore.isAdmin ? '登录成功，已进入管理后台' : '登录成功')
     router.replace(resolvedPathAfterLogin())
@@ -90,7 +155,13 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
-  if (!registerForm.nickname || !registerForm.account || !registerForm.password) {
+  if (
+    !registerForm.nickname
+    || !registerForm.account
+    || !registerForm.email
+    || !registerForm.emailCode
+    || !registerForm.password
+  ) {
     ElMessage.warning('请先补全注册信息')
     return
   }
@@ -141,8 +212,34 @@ async function handleRegister() {
                 placeholder="输入密码"
               />
             </el-form-item>
+            <el-form-item v-if="authStore.captchaRequired" label="图形验证码">
+              <div class="auth-code-row">
+                <el-input
+                  v-model="loginForm.captchaCode"
+                  placeholder="输入图片中的字符"
+                />
+                <img
+                  v-if="authStore.captcha?.imageDataUrl"
+                  class="auth-captcha-image"
+                  :src="authStore.captcha.imageDataUrl"
+                  alt="图形验证码"
+                  @click="handleRefreshCaptcha"
+                />
+                <el-button
+                  plain
+                  :loading="authStore.captchaLoading"
+                  @click="handleRefreshCaptcha"
+                >
+                  刷新验证码
+                </el-button>
+              </div>
+              <p v-if="authStore.captchaError" class="auth-field-feedback">
+                {{ authStore.captchaError }}
+              </p>
+            </el-form-item>
             <div class="login-page__actions">
               <el-button plain @click="$router.push('/app/home')">先去逛逛</el-button>
+              <el-button plain @click="$router.push('/forgot-password')">忘记密码</el-button>
               <el-button type="primary" :loading="submitting" @click="handleLogin">登录</el-button>
             </div>
           </el-form>
@@ -155,6 +252,22 @@ async function handleRegister() {
             </el-form-item>
             <el-form-item label="账号">
               <el-input v-model="registerForm.account" placeholder="建议使用学号或校园邮箱" />
+            </el-form-item>
+            <el-form-item label="邮箱">
+              <el-input v-model="registerForm.email" placeholder="用于接收注册验证码" />
+            </el-form-item>
+            <el-form-item label="邮箱验证码">
+              <div class="auth-code-row">
+                <el-input v-model="registerForm.emailCode" placeholder="输入邮箱中的验证码" />
+                <el-button
+                  plain
+                  :disabled="registerCodeCooldown > 0"
+                  :loading="registerCodeSending"
+                  @click="handleSendRegisterCode"
+                >
+                  {{ registerCodeCooldown > 0 ? `${registerCodeCooldown} 秒后重发` : '发送验证码' }}
+                </el-button>
+              </div>
             </el-form-item>
             <el-form-item label="密码">
               <el-input
@@ -174,7 +287,7 @@ async function handleRegister() {
             </el-form-item>
             <div class="login-page__actions">
               <el-button plain @click="tab = 'login'">已有账号，去登录</el-button>
-              <el-button type="primary" @click="handleRegister">注册并进入</el-button>
+              <el-button type="primary" :loading="submitting" @click="handleRegister">注册</el-button>
             </div>
           </el-form>
         </el-tab-pane>
@@ -182,3 +295,32 @@ async function handleRegister() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.auth-code-row {
+  width: 100%;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.auth-code-row .el-input {
+  flex: 1 1 220px;
+}
+
+.auth-captcha-image {
+  width: 132px;
+  height: 44px;
+  border: 1px solid var(--cm-border);
+  border-radius: 12px;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.auth-field-feedback {
+  width: 100%;
+  color: #b93d2f;
+  font-size: 13px;
+}
+</style>

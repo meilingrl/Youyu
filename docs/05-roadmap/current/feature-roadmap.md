@@ -176,3 +176,7 @@
 - 本文档负责“用户和管理员能做什么”。
 - `launch-preparation-roadmap.md` 负责“系统如何安全、稳定、可部署、可监控地上线”。
 - 如果一个任务同时改变功能和上线基础设施，应拆成两个任务，并在任务文档中互相引用。
+> 2026-06-01 status note: Authentication Upgrade Wave 1 is complete. Public
+> registration now requires an emailed verification code, password login
+> escalates to CAPTCHA after repeated failures, and forgotten-password recovery
+> is available through real SMTP delivery.

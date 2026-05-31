@@ -119,7 +119,52 @@ spring:
 
 **Best Practice**: Managed database with IAM authentication (no password).
 
-#### 4. CORS Configuration
+#### 4. SMTP Email Delivery
+
+Registration verification and forgotten-password recovery send real email
+through a configured SMTP provider. Provider credentials and recipient
+addresses are deployment inputs, never repository source.
+
+**Required Runtime Variables**:
+
+| Name | Purpose |
+|------|---------|
+| `APP_MAIL_HOST` | SMTP server host |
+| `APP_MAIL_PORT` | SMTP server port |
+| `APP_MAIL_USERNAME` | SMTP login username |
+| `APP_MAIL_PASSWORD` | SMTP login password or provider authorization code |
+| `APP_MAIL_FROM` | Verified sender address |
+| `APP_MAIL_SSL_ENABLED` | Whether SMTP SSL is enabled |
+
+**Operational Rules**:
+- Verify the provider-specific sender address or sender domain before enabling
+  public email-code endpoints.
+- Store credentials in the deployment secret manager and inject them as
+  environment variables.
+- Do not log SMTP passwords, verification codes, recipient addresses, or
+  password-reset payloads.
+- The `test` profile uses a deterministic fake sender and must not access the
+  network.
+- Treat missing configuration, authentication failure, or provider rejection
+  as a failed delivery. Do not report a successful send to the caller.
+
+**Acceptance Check**:
+1. Send a registration code to an approved manual-test recipient and complete
+   registration without receiving a JWT.
+2. Trigger password recovery for that account, consume the received code once,
+   set a new password, and log in with the new password.
+3. Confirm that no secret or verification code appears in application logs.
+
+**Troubleshooting**:
+- Check that all six `APP_MAIL_*` variables are present in the runtime process.
+- Confirm the sender is verified and the provider accepts the configured port
+  and SSL mode.
+- Use a provider authorization code where the provider does not accept the
+  account password.
+- Re-run delivery only after fixing the operational error. Do not add a
+  development log-only sender.
+
+#### 5. CORS Configuration
 
 **Current**: Likely permissive or not configured.
 
@@ -156,7 +201,7 @@ app:
 - [ ] Wildcard origins (`*`) not used in production
 - [ ] Credentials (cookies, Authorization header) work correctly
 
-#### 5. SQL Injection Prevention
+#### 6. SQL Injection Prevention
 
 **Current Status**: ✅ Already implemented via JDBC parameterized queries.
 
@@ -175,7 +220,7 @@ jdbcTemplate.queryForMap(sql, username);
 String sql = "SELECT * FROM users WHERE username = '" + username + "'";
 ```
 
-#### 6. Input Validation
+#### 7. Input Validation
 
 **Add JSR-303 Bean Validation** (`pom.xml`):
 ```xml

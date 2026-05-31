@@ -1,3 +1,33 @@
+## [2026-06-01] - Authentication Upgrade Wave 1 Accepted
+
+### added
+- Added SMTP-backed registration and forgotten-password email verification with
+  environment-only mail configuration and a deterministic network-free test
+  sender.
+- Added hashed email-code and CAPTCHA challenges, login-failure counters,
+  resend cooldowns, attempt limits, source limits, and CAPTCHA escalation after
+  three consecutive password failures.
+- Added public `/forgot-password`, registration email-code controls, CAPTCHA
+  refresh handling, API contract docs, and executable HTTP examples.
+
+### changed
+- Registration now requires a verified email code and returns the new user
+  without issuing a JWT.
+- Password recovery is enumeration-safe and remains separate from student
+  identity verification.
+- Updated SMTP operator guidance and support FAQ wording.
+
+### verify
+- Backend `mvnw.cmd test` - 178 tests passed.
+- Frontend `npm test` - 49 tests passed; `npm run build` succeeds.
+- `git diff --check`, changed-file whitespace audit, and SMTP-address/default
+  scans pass.
+- Manual SMTP acceptance passed for registration email delivery, verified
+  registration without JWT issuance, password-reset email delivery, login with
+  the new password, and CAPTCHA escalation after repeated failures.
+
+---
+
 ## [2026-05-31] - Online Customer Service Console (Chat + UX Polish)
 
 ### added

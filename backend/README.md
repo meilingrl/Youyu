@@ -12,8 +12,19 @@ Spring Boot 3.3 backend for Youyu. Layered by domain: `controller / service / ma
 |------|----------|---------|-------------|
 | `MYSQL_PASSWORD` | local: optional, deploy: yes | `yinkaixin123` | MySQL password for the `youyu` schema |
 | `APP_JWT_SECRET` | local: optional, deploy: **yes** | committed dev secret | JWT signing secret (≥32 chars); falls back to a dev default when running with profile `dev` / `seed` / `test` |
+| `APP_MAIL_HOST` | runtime email delivery: **yes** | none | SMTP server host |
+| `APP_MAIL_PORT` | runtime email delivery: **yes** | none | SMTP server port |
+| `APP_MAIL_USERNAME` | runtime email delivery: **yes** | none | SMTP login username |
+| `APP_MAIL_PASSWORD` | runtime email delivery: **yes** | none | SMTP login password or provider authorization code |
+| `APP_MAIL_FROM` | runtime email delivery: **yes** | none | Verified sender address |
+| `APP_MAIL_SSL_ENABLED` | runtime email delivery: **yes** | none | Set `true` when the provider requires SMTP SSL |
 
 **Production checklist**: `APP_JWT_SECRET` MUST be exported (≥32 chars) before booting any non-dev/seed/test profile. The application fails fast at startup if the committed dev default is detected under any other active profile.
+
+The public registration and password-reset email-code endpoints require SMTP
+delivery. The `test` profile uses a deterministic fake sender and never opens a
+network connection. Do not commit provider credentials, recipient addresses, or
+verification codes.
 
 **First-time setup** (schema + seed data):
 ```bash
@@ -42,7 +53,7 @@ mvnw.cmd test                                          # all tests
 mvnw.cmd test -Dtest=YouyuBackendApplicationTests  # single class
 ```
 
-H2 console (test profile only): `http://localhost:8080/h2-console`  
+H2 console (test profile only): `http://localhost:8080/h2-console`
 JDBC URL: `jdbc:h2:mem:testdb`, user: `sa`, password: (empty)
 
 ## Build
@@ -68,6 +79,11 @@ Demo credentials (seed only):
 ## Auth
 
 **JWT**: `POST /api/auth/login` with `{ "loginId", "password" }` returns `{ token, user, privilege }`.
+
+**Registration**: request an email code with `POST /api/auth/email-codes`, then
+submit `POST /api/auth/register`. Registration returns the new user identity
+without a JWT. Password recovery uses the same email-code endpoint with purpose
+`reset_password`, followed by `POST /api/auth/password-reset`.
 
 **Mock tokens** (dev/test only):
 ```

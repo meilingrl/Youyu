@@ -1,8 +1,26 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { login as loginApi, register as registerApi } from '@/api/modules/auth'
+import {
+  getCaptcha as getCaptchaApi,
+  login as loginApi,
+  register as registerApi,
+  resetPassword as resetPasswordApi,
+  sendEmailCode as sendEmailCodeApi
+} from '@/api/modules/auth'
 import { clearAuthStorage, getAuthStorage, setAuthStorage } from '@/utils/auth'
 import { isAdminRole } from '@/utils/admin-permissions'
+
+function captchaIsRequired(error) {
+  const payload = error?.response?.data
+  const code = String(payload?.code || '').toUpperCase()
+  const message = String(payload?.message || '')
+
+  return payload?.captchaRequired === true
+    || payload?.data?.captchaRequired === true
+    || code === 'CAPTCHA_REQUIRED'
+    || /captcha.*required/i.test(message)
+    || /需要.*验证码|验证码.*必填/.test(message)
+}
 
 function normalizeSession(payload) {
   if (!payload) {
@@ -17,6 +35,10 @@ function normalizeSession(payload) {
 
 export const useAuthStore = defineStore('auth', () => {
   const session = ref(normalizeSession(getAuthStorage()))
+  const captcha = ref(null)
+  const captchaRequired = ref(false)
+  const captchaLoading = ref(false)
+  const captchaError = ref('')
 
   const isLoggedIn = computed(() => Boolean(session.value?.token))
   const currentRole = computed(() => session.value?.role || 'guest')
@@ -36,6 +58,33 @@ export const useAuthStore = defineStore('auth', () => {
     setAuthStorage(normalized)
   }
 
+  function clearCaptcha() {
+    captcha.value = null
+    captchaRequired.value = false
+    captchaError.value = ''
+  }
+
+  async function refreshCaptcha() {
+    if (!captchaRequired.value) {
+      return null
+    }
+
+    captchaLoading.value = true
+    captchaError.value = ''
+
+    try {
+      const response = await getCaptchaApi()
+      captcha.value = response.data
+      return response.data
+    } catch (error) {
+      captcha.value = null
+      captchaError.value = error?.response?.data?.message || error?.message || '验证码加载失败'
+      throw error
+    } finally {
+      captchaLoading.value = false
+    }
+  }
+
   /**
    * 统一登录入口：发送凭证到服务端，根据返回的角色信息写入会话。
    * 服务端根据账号类型（普通用户/管理员）返回对应 role，客户端统一写入会话。
@@ -45,9 +94,30 @@ export const useAuthStore = defineStore('auth', () => {
    * @sideEffects 写入 localStorage session，更新 session 响应式 ref
    */
   async function login(credentials) {
-    const response = await loginApi(credentials)
-    setSession(response.data)
-    return response.data
+    try {
+      const payload = { ...credentials }
+
+      if (captcha.value?.challengeId) {
+        payload.captchaChallengeId = captcha.value.challengeId
+      }
+
+      const response = await loginApi(payload)
+      setSession(response.data)
+      clearCaptcha()
+      return response.data
+    } catch (error) {
+      if (captchaRequired.value || captchaIsRequired(error)) {
+        captchaRequired.value = true
+
+        try {
+          await refreshCaptcha()
+        } catch {
+          // Keep the original login failure visible while exposing the CAPTCHA load error.
+        }
+      }
+
+      throw error
+    }
   }
 
   /**
@@ -61,6 +131,15 @@ export const useAuthStore = defineStore('auth', () => {
     return registerApi(payload)
   }
 
+  async function sendEmailCode(email, purpose) {
+    const response = await sendEmailCodeApi({ email, purpose })
+    return response.data
+  }
+
+  async function resetPassword(payload = {}) {
+    return resetPasswordApi(payload)
+  }
+
   /**
    * 退出登录：清空会话状态并移除 localStorage 中的认证数据。
    *
@@ -69,17 +148,26 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     session.value = null
     clearAuthStorage()
+    clearCaptcha()
   }
 
   return {
     session,
+    captcha,
+    captchaRequired,
+    captchaLoading,
+    captchaError,
     isLoggedIn,
     isAdmin,
     currentRole,
     currentUser,
     setSession,
+    clearCaptcha,
+    refreshCaptcha,
     login,
     registerAsUser,
+    sendEmailCode,
+    resetPassword,
     logout
   }
 })

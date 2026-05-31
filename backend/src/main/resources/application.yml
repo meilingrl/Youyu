@@ -28,6 +28,9 @@ youyu:
       - /actuator/health
       - /api/auth/login
       - /api/auth/register
+      - /api/auth/email-codes
+      - /api/auth/captcha
+      - /api/auth/password-reset
       - /api/admin/auth/login
       - /error
       - /favicon.ico
@@ -58,3 +61,10 @@ app:
   jwt:
     secret: ${APP_JWT_SECRET:youyu-dev-secret-key-replace-in-production-min32}
     expiration-hours: 72
+  mail:
+    host: ${APP_MAIL_HOST:}
+    port: ${APP_MAIL_PORT:465}
+    username: ${APP_MAIL_USERNAME:}
+    password: ${APP_MAIL_PASSWORD:}
+    from: ${APP_MAIL_FROM:}
+    ssl-enabled: ${APP_MAIL_SSL_ENABLED:true}

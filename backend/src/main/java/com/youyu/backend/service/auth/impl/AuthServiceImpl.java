@@ -4,8 +4,10 @@ import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.auth.AuthContextHolder;
 import com.youyu.backend.common.auth.AuthUser;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.controller.auth.dto.PasswordResetRequest;
 import com.youyu.backend.controller.auth.dto.RegisterRequest;
 import com.youyu.backend.mapper.user.UserMapper;
+import com.youyu.backend.service.auth.AuthChallengeService;
 import com.youyu.backend.service.auth.AuthService;
 import com.youyu.backend.service.auth.AuthTokenService;
 import com.youyu.backend.service.auth.PasswordService;
@@ -23,41 +25,54 @@ public class AuthServiceImpl implements AuthService {
     private final AuthTokenService authTokenService;
     private final UserMapper userMapper;
     private final PasswordService passwordService;
+    private final AuthChallengeService authChallengeService;
 
     public AuthServiceImpl(AuthTokenService authTokenService,
                            UserMapper userMapper,
-                           PasswordService passwordService) {
+                           PasswordService passwordService,
+                           AuthChallengeService authChallengeService) {
         this.authTokenService = authTokenService;
         this.userMapper = userMapper;
         this.passwordService = passwordService;
+        this.authChallengeService = authChallengeService;
     }
 
     @Override
-    public Map<String, Object> unifiedLogin(String loginId, String password) {
-        String idTrim = loginId == null ? "" : loginId.trim();
-        if (idTrim.isEmpty() || password == null || password.isBlank()) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "账号和密码不能为空");
+    public Map<String, Object> unifiedLogin(String loginId,
+                                            String password,
+                                            String captchaChallengeId,
+                                            String captchaCode,
+                                            String requestSource) {
+        String idTrim = trim(loginId);
+        if (idTrim.isEmpty() || isBlank(password)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Login ID and password are required");
         }
+        authChallengeService.validateCaptchaIfRequired(
+                idTrim, requestSource, captchaChallengeId, captchaCode
+        );
 
         Optional<Map<String, Object>> userOpt = userMapper.findByLoginId(idTrim);
         if (userOpt.isEmpty()) {
-            throw new BusinessException(ResultCode.UNAUTHORIZED, "账号或密码错误");
+            authChallengeService.recordLoginFailure(idTrim, requestSource);
+            throw invalidCredentials();
         }
 
         Map<String, Object> user = userOpt.get();
         Long uid = toLong(user.get("id"));
         String storedHash = Objects.toString(user.get("passwordHash"), Objects.toString(user.get("password"), ""));
         if (!passwordService.verifyAndMigrate(password, storedHash, uid, userMapper)) {
-            throw new BusinessException(ResultCode.UNAUTHORIZED, "账号或密码错误");
+            authChallengeService.recordLoginFailure(idTrim, requestSource);
+            throw invalidCredentials();
         }
+        authChallengeService.clearLoginFailures(idTrim, requestSource);
         if ("disabled".equalsIgnoreCase(String.valueOf(user.get("status")))) {
-            throw new BusinessException(ResultCode.FORBIDDEN, "账号已禁用，请联系管理员");
+            throw new BusinessException(ResultCode.FORBIDDEN, "Account is disabled. Contact support.");
         }
         userMapper.updateLastLoginAt(uid);
         Map<String, Object> userBrief = new LinkedHashMap<>();
         userBrief.put("id", String.valueOf(uid));
         userBrief.put("loginId", Objects.toString(user.get("username"), idTrim));
-        userBrief.put("nickname", Objects.toString(user.get("nickname"), "用户"));
+        userBrief.put("nickname", Objects.toString(user.get("nickname"), "User"));
         userBrief.put("verificationStatus", Objects.toString(user.get("verificationStatus"), "unverified"));
         userBrief.put("privilege", userMapper.findPrivilegeProfile(uid).orElseGet(Map::of));
 
@@ -77,34 +92,58 @@ public class AuthServiceImpl implements AuthService {
         String phone = trim(request.getPhone());
         String nickname = trim(request.getNickname());
         String password = request.getPassword();
-        if (isBlank(username) || isBlank(password) || isBlank(nickname)) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "用户名、密码和昵称不能为空");
+        if (isBlank(username) || isBlank(password) || isBlank(nickname) || isBlank(email)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Username, password, nickname, and email are required");
         }
-        if (userMapper.findByLoginId(username).isPresent() || (!isBlank(email) && userMapper.findByLoginId(email).isPresent())) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "用户名或邮箱已被使用");
+        if (userMapper.findByLoginId(username).isPresent() || userMapper.findByEmail(email).isPresent()) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Username or email is already in use");
         }
+        authChallengeService.verifyAndConsumeEmailCode(
+                email, AuthChallengeService.PURPOSE_REGISTER, request.getEmailCode()
+        );
 
         try {
             Long userId = userMapper.insert(username, phone, email, passwordService.encode(password), nickname);
             userMapper.insertDefaultPrivilegeProfile(userId);
             Map<String, Object> user = userMapper.findById(userId)
-                    .orElseThrow(() -> new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "注册后读取用户失败"));
-            return linkedMap(
-                    "token", authTokenService.generate(userId, "USER"),
-                    "role", "user",
-                    "user", publicUserBrief(user),
-                    "privilege", userMapper.findPrivilegeProfile(userId).orElseGet(Map::of)
-            );
+                    .orElseThrow(() -> new BusinessException(
+                            ResultCode.INTERNAL_SERVER_ERROR,
+                            "Unable to read registered user"
+                    ));
+            return linkedMap("user", publicUserBrief(user));
         } catch (DuplicateKeyException exception) {
-            throw new BusinessException(ResultCode.BAD_REQUEST, "用户名或邮箱已被使用");
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Username or email is already in use");
         }
     }
 
-    private static Long toLong(Object raw) {
-        if (raw instanceof Number number) {
-            return number.longValue();
+    @Override
+    public Map<String, Object> sendEmailCode(String email, String purpose, String requestSource) {
+        return authChallengeService.sendEmailCode(email, purpose, requestSource);
+    }
+
+    @Override
+    public Map<String, Object> createCaptcha(String requestSource) {
+        return authChallengeService.createCaptcha(requestSource);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> resetPassword(PasswordResetRequest request) {
+        String email = trim(request.getEmail());
+        String newPassword = request.getNewPassword();
+        if (isBlank(email) || isBlank(newPassword)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Email and new password are required");
         }
-        return Long.parseLong(String.valueOf(raw));
+        authChallengeService.verifyAndConsumeEmailCode(
+                email, AuthChallengeService.PURPOSE_RESET_PASSWORD, request.getEmailCode()
+        );
+        Map<String, Object> user = userMapper.findByEmail(email)
+                .orElseThrow(() -> new BusinessException(
+                        ResultCode.BAD_REQUEST,
+                        "Email verification code is invalid or expired"
+                ));
+        userMapper.updatePasswordHash(toLong(user.get("id")), passwordService.encode(newPassword));
+        return Map.of("reset", true);
     }
 
     @Override
@@ -133,11 +172,22 @@ public class AuthServiceImpl implements AuthService {
         return map;
     }
 
+    private Long toLong(Object raw) {
+        if (raw instanceof Number number) {
+            return number.longValue();
+        }
+        return Long.parseLong(String.valueOf(raw));
+    }
+
     private String trim(String value) {
         return value == null ? "" : value.trim();
     }
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private BusinessException invalidCredentials() {
+        return new BusinessException(ResultCode.UNAUTHORIZED, "Login ID, password, or CAPTCHA is invalid");
     }
 }
