@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from '@/plugins/element-plus-services'
 import PageSection from '@/components/common/PageSection.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -11,6 +11,20 @@ const marketStore = useMarketStore()
 const profile = computed(() => marketStore.profile)
 const myProducts = computed(() => marketStore.getMyProducts())
 const userInsight = computed(() => marketStore.userInsightSnapshot)
+const avatarInitial = computed(() => (profile.value.nickname || '友').slice(0, 1))
+const avatarInputRef = ref(null)
+const maxAvatarSize = 10 * 1024 * 1024
+const editForm = reactive({
+  nickname: ''
+})
+
+watch(
+  () => profile.value.nickname,
+  (nickname) => {
+    editForm.nickname = nickname || ''
+  },
+  { immediate: true }
+)
 
 function formatMoney(value) {
   if (value === null || value === undefined || value === '') return '--'
@@ -35,13 +49,57 @@ async function loadProfileData() {
   }
 }
 
+async function saveProfile() {
+  try {
+    const updated = await marketStore.updateProfile({ nickname: editForm.nickname })
+    authStore.updateCurrentUser({
+      nickname: updated.nickname,
+      avatar: updated.avatar,
+      email: updated.email
+    })
+    ElMessage.success('个人资料已保存')
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || error?.message || '个人资料保存失败')
+  }
+}
+
+function pickAvatar() {
+  avatarInputRef.value?.click()
+}
+
+async function handleAvatarFile(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    ElMessage.error('头像仅支持 JPG、PNG 或 WebP 图片')
+    return
+  }
+  if (file.size > maxAvatarSize) {
+    ElMessage.error('头像文件不能超过 10MB')
+    return
+  }
+  try {
+    const updated = await marketStore.uploadAvatar(file)
+    authStore.updateCurrentUser({
+      nickname: updated.nickname,
+      avatar: updated.avatar,
+      email: updated.email
+    })
+    ElMessage.success('头像已更新')
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || error?.message || '头像上传失败')
+  }
+}
+
 onMounted(loadProfileData)
 </script>
 
 <template>
   <div class="shell-container page-stack">
     <section class="shell-card profile-hero">
-      <img :src="profile.avatar" :alt="profile.nickname" class="profile-avatar" />
+      <img v-if="profile.avatar" :src="profile.avatar" :alt="profile.nickname" class="profile-avatar" />
+      <div v-else class="profile-avatar profile-avatar--fallback">{{ avatarInitial }}</div>
       <div class="profile-hero__content">
         <span class="eyebrow">{{ profile.school || 'Youyu' }}</span>
         <h1>{{ profile.nickname }}</h1>
@@ -53,10 +111,37 @@ onMounted(loadProfileData)
         </div>
       </div>
       <div class="profile-hero__actions">
+        <input
+          ref="avatarInputRef"
+          class="profile-avatar-input"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          @change="handleAvatarFile"
+        />
+        <el-button plain :loading="marketStore.uploadingAvatar" @click="pickAvatar">更换头像</el-button>
         <el-button plain @click="$router.push('/app/settings')">设置</el-button>
         <el-button type="primary" @click="$router.push('/app/verification')">学生认证</el-button>
       </div>
     </section>
+
+    <PageSection title="基本资料" description="昵称会展示给其他用户，登录账号不会被修改。">
+      <el-form label-position="top" class="profile-edit-form">
+        <el-form-item label="昵称">
+          <el-input v-model="editForm.nickname" maxlength="64" show-word-limit />
+        </el-form-item>
+        <el-form-item label="登录账号">
+          <el-input :model-value="profile.loginId" disabled />
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input :model-value="profile.email || '未绑定'" disabled />
+        </el-form-item>
+      </el-form>
+      <template #actions>
+        <el-button type="primary" :loading="marketStore.savingProfile" @click="saveProfile">
+          保存资料
+        </el-button>
+      </template>
+    </PageSection>
 
     <el-alert
       v-if="marketStore.profileError"
@@ -187,6 +272,27 @@ onMounted(loadProfileData)
   display: flex;
   gap: 12px;
   align-self: start;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.profile-avatar-input {
+  display: none;
+}
+
+.profile-avatar--fallback {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #f2f7ff, #fff4ec);
+  color: var(--cm-primary);
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.profile-edit-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 @media (max-width: 860px) {
@@ -198,6 +304,10 @@ onMounted(loadProfileData)
 
   .profile-hero__actions {
     justify-content: center;
+  }
+
+  .profile-edit-form {
+    grid-template-columns: 1fr;
   }
 }
 </style>

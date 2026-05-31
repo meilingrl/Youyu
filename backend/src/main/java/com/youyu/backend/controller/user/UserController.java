@@ -10,13 +10,17 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
@@ -33,6 +37,33 @@ public class UserController {
     public ApiResponse<Map<String, Object>> profile(HttpServletRequest request) {
         return ApiResponse.success(
                 userService.profile(),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @PatchMapping("/profile")
+    public ApiResponse<Map<String, Object>> updateProfile(@RequestBody Map<String, Object> body,
+                                                          HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.updateProfile(body),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @PostMapping("/me/avatar")
+    public ApiResponse<Map<String, Object>> uploadAvatar(@RequestParam("file") MultipartFile file,
+                                                         HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.uploadAvatar(file),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @PutMapping("/me/email")
+    public ApiResponse<Map<String, Object>> bindEmail(@RequestBody Map<String, Object> body,
+                                                      HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.bindEmail(body),
                 (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
         );
     }
@@ -92,6 +123,25 @@ public class UserController {
                                                           HttpServletRequest request) {
         return ApiResponse.success(
                 userService.createAddress(body),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @PutMapping("/addresses/{addressId}")
+    public ApiResponse<Map<String, Object>> updateAddress(@PathVariable Long addressId,
+                                                          @Valid @RequestBody CreateUserAddressRequest body,
+                                                          HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.updateAddress(addressId, body),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @DeleteMapping("/addresses/{addressId}")
+    public ApiResponse<Map<String, Object>> deleteAddress(@PathVariable Long addressId,
+                                                          HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.deleteAddress(addressId),
                 (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
         );
     }

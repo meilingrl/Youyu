@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -41,6 +42,13 @@ public class GlobalExceptionHandler {
                                                               HttpServletRequest request) {
         return ResponseEntity.badRequest()
                 .body(ApiResponse.failure(ResultCode.BAD_REQUEST, exception.getMessage(), traceId(request)));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSize(MaxUploadSizeExceededException exception,
+                                                                 HttpServletRequest request) {
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.failure(ResultCode.BAD_REQUEST, "头像文件不能超过 10MB", traceId(request)));
     }
 
     @ExceptionHandler(Exception.class)

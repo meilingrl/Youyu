@@ -9,10 +9,17 @@ import {
 } from '@/api/modules/product'
 import { listFavorites, toggleFavorite as toggleFavoriteApi } from '@/api/modules/favorite'
 import {
+  bindUserEmail,
+  createUserAddress,
+  deleteUserAddress,
   getUserAddresses,
   getUserInsightSnapshot,
   getUserPreference,
   getUserProfile,
+  setDefaultUserAddress,
+  updateUserAddress,
+  updateUserProfile as updateUserProfileApi,
+  uploadUserAvatar,
   updateUserPreference as updateUserPreferenceApi
 } from '@/api/modules/user'
 import { getMyShop, getShopDetail, getShopInsightSnapshot } from '@/api/modules/shop'
@@ -33,14 +40,14 @@ const DEFAULT_CATEGORIES = [
   { id: 4, name: '数字配件' }
 ]
 
-const reservedUserInsightSnapshot = {
+const emptyUserInsightSnapshot = {
   userId: '',
   totalSpendAmount: null,
   totalPurchasedItemCount: null,
   recentBrowses: [],
   favoritePreferenceSummary: [],
   lastCalculatedAt: null,
-  metricSource: 'reserved_query'
+  metricSource: 'empty'
 }
 
 const verificationTemplate = {
@@ -89,16 +96,19 @@ export const useMarketStore = defineStore('market', () => {
   const loadingProducts = ref(false)
   const productError = ref('')
   const loadingProfile = ref(false)
+  const savingProfile = ref(false)
+  const uploadingAvatar = ref(false)
+  const bindingEmail = ref(false)
   const profileError = ref('')
   const loadingPreference = ref(false)
   const savingPreference = ref(false)
   const preferenceError = ref('')
-  const preferenceSource = ref('local_fallback')
+  const preferenceSource = ref('local')
   const userPreference = ref(getStorage(USER_PREFERENCE_KEY, { ...defaultUserPreference }))
-  const userInsightSnapshot = ref({ ...reservedUserInsightSnapshot })
+  const userInsightSnapshot = ref({ ...emptyUserInsightSnapshot })
   const loadingUserInsight = ref(false)
   const userInsightError = ref('')
-  const userInsightStatus = ref('reserved')
+  const userInsightStatus = ref('empty')
   const shopInsightById = ref({})
   const loadingShopInsight = ref(false)
   const shopInsightError = ref('')
@@ -456,6 +466,61 @@ export const useMarketStore = defineStore('market', () => {
     }
   }
 
+  async function updateProfile(payload) {
+    savingProfile.value = true
+    profileError.value = ''
+    try {
+      const response = await updateUserProfileApi(payload)
+      ensureSuccessDataResponse(response, '个人资料保存失败')
+      const normalized = normalizeProfile(response.data, profile.value)
+      profile.value = {
+        ...normalized,
+        addresses: normalized.addresses.length ? normalized.addresses : profile.value.addresses
+      }
+      return profile.value
+    } catch (error) {
+      profileError.value = error?.response?.data?.message || error?.message || '个人资料保存失败'
+      throw error
+    } finally {
+      savingProfile.value = false
+    }
+  }
+
+  async function uploadAvatar(file) {
+    uploadingAvatar.value = true
+    profileError.value = ''
+    try {
+      const response = await uploadUserAvatar(file)
+      ensureSuccessDataResponse(response, '头像上传失败')
+      const normalized = normalizeProfile(response.data, profile.value)
+      profile.value = {
+        ...normalized,
+        addresses: normalized.addresses.length ? normalized.addresses : profile.value.addresses
+      }
+      return profile.value
+    } catch (error) {
+      profileError.value = error?.response?.data?.message || error?.message || '头像上传失败'
+      throw error
+    } finally {
+      uploadingAvatar.value = false
+    }
+  }
+
+  async function bindEmail(payload) {
+    bindingEmail.value = true
+    profileError.value = ''
+    try {
+      const response = await bindUserEmail(payload)
+      ensureSuccessDataResponse(response, '邮箱提交失败')
+      return response.data
+    } catch (error) {
+      profileError.value = error?.response?.data?.message || error?.message || '邮箱提交失败'
+      throw error
+    } finally {
+      bindingEmail.value = false
+    }
+  }
+
   /**
    * 从服务端加载用户地址列表，合并到当前 profile 中。
    *
@@ -472,11 +537,39 @@ export const useMarketStore = defineStore('market', () => {
     return profile.value.addresses
   }
 
+  async function createAddress(payload) {
+    const response = await createUserAddress(payload)
+    ensureSuccessDataResponse(response, '地址保存失败')
+    await loadUserAddresses()
+    return response.data
+  }
+
+  async function updateAddress(addressId, payload) {
+    const response = await updateUserAddress(addressId, payload)
+    ensureSuccessDataResponse(response, '地址更新失败')
+    await loadUserAddresses()
+    return response.data
+  }
+
+  async function deleteAddress(addressId) {
+    const response = await deleteUserAddress(addressId)
+    ensureSuccessDataResponse(response, '地址删除失败')
+    await loadUserAddresses()
+    return response.data
+  }
+
+  async function setDefaultAddress(addressId) {
+    const response = await setDefaultUserAddress(addressId)
+    ensureSuccessDataResponse(response, '默认地址更新失败')
+    await loadUserAddresses()
+    return response.data
+  }
+
   /**
    * 在本地应用用户偏好设置（同步写入 localStorage）。
    *
    * @param {object} payload - 要应用的偏好字段
-   * @param {string} [source] - 来源标签（如 'api'、'local_fallback'）
+   * @param {string} [source] - 来源标签（如 'api'、'local'）
    * @returns {void}
    * @sideEffects 写入 localStorage，更新 userPreference ref 和 preferenceSource ref
    */
@@ -510,7 +603,7 @@ export const useMarketStore = defineStore('market', () => {
       return userPreference.value
     } catch (error) {
       preferenceError.value = error?.response?.data?.message || error?.message || '偏好设置加载失败'
-      preferenceSource.value = 'local_fallback'
+      preferenceSource.value = 'local'
       throw error
     } finally {
       loadingPreference.value = false
@@ -553,14 +646,14 @@ export const useMarketStore = defineStore('market', () => {
       const response = await getUserInsightSnapshot()
       ensureSuccessDataResponse(response, '用户统计快照加载失败')
       userInsightSnapshot.value = {
-        ...reservedUserInsightSnapshot,
+        ...emptyUserInsightSnapshot,
         ...response.data
       }
       userInsightStatus.value =
-        response.data.metricSource === 'reserved_query' ? 'reserved' : 'connected'
+        response.data.metricSource === 'reserved_query' ? 'empty' : 'connected'
       return userInsightSnapshot.value
     } catch (error) {
-      userInsightSnapshot.value = { ...reservedUserInsightSnapshot }
+      userInsightSnapshot.value = { ...emptyUserInsightSnapshot }
       userInsightStatus.value = 'failed'
       userInsightError.value = error?.response?.data?.message || error?.message || '用户统计快照加载失败'
       throw error
@@ -641,6 +734,9 @@ export const useMarketStore = defineStore('market', () => {
     loadingProducts,
     productError,
     loadingProfile,
+    savingProfile,
+    uploadingAvatar,
+    bindingEmail,
     profileError,
     loadingPreference,
     savingPreference,
@@ -665,11 +761,18 @@ export const useMarketStore = defineStore('market', () => {
     loadMyProducts,
     publishProduct,
     loadProfile,
+    updateProfile,
+    uploadAvatar,
+    bindEmail,
     loadFavorites,
     toggleFavoriteRemote,
     loadMyShop,
     loadShopDetail,
     loadUserAddresses,
+    createAddress,
+    updateAddress,
+    deleteAddress,
+    setDefaultAddress,
     loadUserPreference,
     updateUserPreference,
     loadUserInsightSnapshot,

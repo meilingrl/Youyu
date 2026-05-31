@@ -1,3 +1,21 @@
+## [2026-06-01] - Personalization Address And Avatar Hardening
+
+### added
+- Added user address editing and deletion through `PUT /api/users/addresses/{addressId}` and `DELETE /api/users/addresses/{addressId}`.
+- Added frontend address edit, cancel, delete confirmation, and refreshed address list behavior in settings.
+
+### changed
+- Avatar upload now validates image file signatures for JPEG, PNG, and WebP instead of trusting MIME type alone.
+- Successful avatar replacement now removes the previous local avatar file when it belongs to the configured avatar upload directory.
+
+### verify
+- Backend `mvnw.cmd -Dtest=UserProfileTest test` pass, 18 tests.
+- Backend `mvnw.cmd test` pass, 188 tests.
+- Frontend `npm test -- --run` pass, 49 tests.
+- Frontend `npm run build` pass.
+
+---
+
 ## [2026-06-01] - Authentication Upgrade Wave 1 Accepted
 
 ### added
@@ -25,6 +43,25 @@
 - Manual SMTP acceptance passed for registration email delivery, verified
   registration without JWT issuance, password-reset email delivery, login with
   the new password, and CAPTCHA escalation after repeated failures.
+
+## [2026-05-31] - Personalization Settings Profile And Defaults
+
+### added
+- Added authenticated nickname editing via `PATCH /api/users/profile`; login ID / `username` remains immutable.
+- Added real avatar upload via `POST /api/users/me/avatar` with multipart field `file`, 10 MB limit, JPEG/PNG/WebP validation, persisted public avatar URL, and `/uploads/avatars/**` serving.
+- Added `PUT /api/users/me/email` as an email-binding entry that validates format and uniqueness while email-code verification and email login remain future work.
+- Added settings entries for profile/avatar, email binding, address management, and default preference controls.
+
+### changed
+- Fixed browser avatar upload by letting the client generate the multipart boundary and by proxying `/uploads/**` during local frontend development.
+- Default sort now affects product-list ordering on the frontend; default address/fulfillment/payment preferences are applied or displayed in checkout/payment flows.
+- Preference UI no longer exposes theme controls in this release.
+- Localized personalization settings UI copy so users do not see delivery-phase wording.
+
+### verify
+- Backend `mvnw.cmd test` pass, 175 tests.
+- Frontend `npm test -- --run` pass, 39 tests.
+- Frontend `npm run build` pass.
 
 ---
 

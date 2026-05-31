@@ -11,6 +11,10 @@ spring:
       mode: always
       continue-on-error: true
       schema-locations: classpath:schema.sql
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 server:
   port: 8080
@@ -36,6 +40,15 @@ youyu:
       - /favicon.ico
   payment:
     default-gateway: MOCK
+  upload:
+    avatar:
+      root-path: data/uploads/avatars
+      public-path: /uploads/avatars/
+      max-size-bytes: 10485760
+      allowed-content-types:
+        - image/jpeg
+        - image/png
+        - image/webp
 
 logging:
   level:

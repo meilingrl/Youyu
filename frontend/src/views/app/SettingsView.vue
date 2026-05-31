@@ -14,20 +14,36 @@ const ownedShop = computed(() => marketStore.ownedShop.shop)
 
 const settingsSections = computed(() => [
   {
+    title: '个人资料与头像',
+    path: '/app/me',
+    badge: '可修改',
+    badgeType: 'success',
+    description: '修改对外展示的昵称，上传头像图片。',
+    detail: `当前昵称：${profile.value.nickname || '未设置'}`
+  },
+  {
+    title: '邮箱绑定',
+    path: '/app/settings/security',
+    badge: profile.value.email ? '待验证' : '未绑定',
+    badgeType: profile.value.email ? 'warning' : 'info',
+    description: '填写常用邮箱，用于后续账号验证和消息通知。',
+    detail: `当前邮箱：${profile.value.email || '未绑定'}`
+  },
+  {
+    title: '地址管理',
+    path: '/app/settings/addresses',
+    badge: profile.value.addresses.length ? `${profile.value.addresses.length} 个地址` : '未添加',
+    badgeType: profile.value.addresses.length ? 'success' : 'info',
+    description: '管理收货地址，并设置结算时优先使用的默认地址。',
+    detail: profile.value.addresses.find((item) => item.isDefault)?.detail || '暂无默认地址'
+  },
+  {
     title: '偏好设置',
     path: '/app/settings/preferences',
     badge: '可修改',
     badgeType: 'success',
-    description: '主题外观、默认排序方式、交易偏好和提醒开关。',
-    detail: `当前主题：${marketStore.userPreference.themeMode} · 默认排序：${marketStore.userPreference.defaultSortType}`
-  },
-  {
-    title: '地址管理',
-    badge: profile.value.addresses.length ? `${profile.value.addresses.length} 个地址` : '未添加',
-    badgeType: profile.value.addresses.length ? 'success' : 'info',
-    description: '管理你的收货地址，在结算时可以快速选择。',
-    detail:
-      profile.value.addresses[0]?.detail || '还没有添加收货地址'
+    description: '设置商品默认排序、默认交付方式、默认支付方式和提醒开关。',
+    detail: `默认排序：${marketStore.userPreference.defaultSortType}`
   },
   {
     title: '账号安全',
@@ -43,13 +59,6 @@ const settingsSections = computed(() => [
     badgeType: 'success',
     description: '控制订单提醒、评价提醒等通知的开关。',
     detail: `订单提醒：${marketStore.userPreference.notificationPreference.orderReminder ? '开启' : '关闭'} · 评价提醒：${marketStore.userPreference.notificationPreference.reviewReminder ? '开启' : '关闭'}`
-  },
-  {
-    title: '隐私设置',
-    badge: '即将开放',
-    badgeType: 'info',
-    description: '控制你的个人资料和交易记录对其他人的可见范围。',
-    detail: '更多隐私选项即将上线'
   }
 ])
 
@@ -78,7 +87,7 @@ onMounted(loadSettingsData)
   <div class="shell-container page-stack" v-loading="marketStore.loadingProfile || marketStore.loadingPreference">
     <section class="shell-card settings-hero">
       <div>
-        <span class="eyebrow">Settings Center</span>
+        <span class="eyebrow">设置中心</span>
         <h1>设置中心</h1>
         <p>
           管理你的偏好、地址、账号安全和通知设置。
@@ -145,7 +154,7 @@ onMounted(loadSettingsData)
           {{
             profile.addresses[0]
               ? `${profile.addresses[0].contactName || '未命名'} · ${profile.addresses[0].phone || '暂无电话'}`
-              : '地址编辑流后续可以继续挂到设置中心。'
+              : '添加地址后，结算时会自动带入默认地址。'
           }}
         </span>
       </article>

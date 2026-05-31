@@ -151,6 +151,21 @@ export const useAuthStore = defineStore('auth', () => {
     clearCaptcha()
   }
 
+  function updateCurrentUser(payload = {}) {
+    if (!session.value?.user) {
+      return null
+    }
+    const nextSession = {
+      ...session.value,
+      user: {
+        ...session.value.user,
+        ...payload
+      }
+    }
+    setSession(nextSession)
+    return nextSession.user
+  }
+
   return {
     session,
     captcha,
@@ -164,6 +179,7 @@ export const useAuthStore = defineStore('auth', () => {
     setSession,
     clearCaptcha,
     refreshCaptcha,
+    updateCurrentUser,
     login,
     registerAsUser,
     sendEmailCode,
