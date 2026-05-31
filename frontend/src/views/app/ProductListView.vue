@@ -172,6 +172,21 @@ function dedupeProducts(list) {
   })
 }
 
+function sortProductsByPreference(list) {
+  const sortType = marketStore.userPreference.defaultSortType
+  const items = [...list]
+  if (sortType === 'latest') {
+    return items.sort((left, right) => String(right.publishedAt || '').localeCompare(String(left.publishedAt || '')))
+  }
+  if (sortType === 'price') {
+    return items.sort((left, right) => Number(left.salePrice || 0) - Number(right.salePrice || 0))
+  }
+  if (sortType === 'favorite') {
+    return items.sort((left, right) => Number(right.favoriteCount || 0) - Number(left.favoriteCount || 0))
+  }
+  return items
+}
+
 async function fetchProductsPage(page, { append = false } = {}) {
   if (append) {
     loadingMore.value = true
@@ -190,7 +205,7 @@ async function fetchProductsPage(page, { append = false } = {}) {
       pageSize: pageSize.value
     })
 
-    const normalizedItems = Array.isArray(items) ? [...items] : []
+    const normalizedItems = sortProductsByPreference(Array.isArray(items) ? items : [])
     total.value = Number(marketStore.searchTotal || normalizedItems.length || 0)
     currentPage.value = page
     cards.value = append
@@ -245,6 +260,7 @@ async function loadProductsByRoute() {
 
 async function loadSupportingData() {
   await Promise.allSettled([
+    marketStore.loadUserPreference(),
     searchStore.loadHotKeywords(),
     recommendStore.loadHomeRecommend(8)
   ])

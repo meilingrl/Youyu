@@ -21,12 +21,12 @@ export const preferenceOptions = {
   ],
   defaultFulfillmentType: [
     { label: '不限', value: 'any' },
-    { label: '线下交付', value: 'offline_face_to_face' },
+    { label: '线下交付', value: 'offline' },
     { label: '快递物流', value: 'logistics' },
-    { label: '电子交付', value: 'digital_delivery' }
+    { label: '电子交付', value: 'digital' }
   ],
   defaultPaymentMethod: [
-    { label: '模拟支付', value: 'mock_payment' },
+    { label: '平台支付', value: 'mock_payment' },
     { label: '后续选择', value: 'choose_later' }
   ]
 }

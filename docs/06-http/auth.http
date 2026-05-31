@@ -131,6 +131,42 @@ GET {{baseUrl}}/api/auth/me
 GET {{baseUrl}}/api/users/profile
 Authorization: Bearer mock-1001-USER
 
+### Update own public profile nickname
+PATCH {{baseUrl}}/api/users/profile
+Authorization: Bearer mock-1001-USER
+Content-Type: application/json
+
+{
+  "nickname": "Profile HTTP Test"
+}
+
+###
+
+### Upload avatar image
+POST {{baseUrl}}/api/users/me/avatar
+Authorization: Bearer mock-1001-USER
+Content-Type: multipart/form-data; boundary=avatar-boundary
+
+--avatar-boundary
+Content-Disposition: form-data; name="file"; filename="avatar.png"
+Content-Type: image/png
+
+< ./fixtures/avatar.png
+--avatar-boundary--
+
+###
+
+### Submit email binding
+PUT {{baseUrl}}/api/users/me/email
+Authorization: Bearer mock-1001-USER
+Content-Type: application/json
+
+{
+  "email": "profile-http-test@campus.edu.cn"
+}
+
+###
+
 ###
 
 ### Get own profile — no token → expect 401

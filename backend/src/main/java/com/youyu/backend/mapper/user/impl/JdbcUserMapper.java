@@ -146,6 +146,27 @@ public class JdbcUserMapper implements UserMapper {
     }
 
     @Override
+    public void updateNickname(Long id, String nickname) {
+        jdbcTemplate.update("UPDATE users SET nickname = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", nickname, id);
+    }
+
+    @Override
+    public void updateAvatar(Long id, String avatarUrl) {
+        jdbcTemplate.update("UPDATE users SET avatar = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", avatarUrl, id);
+    }
+
+    @Override
+    public boolean existsEmailForOtherUser(String email, Long userId) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE LOWER(email) = LOWER(?) AND id <> ?",
+                Long.class,
+                email,
+                userId
+        );
+        return count != null && count > 0;
+    }
+
+    @Override
     public Optional<Map<String, Object>> findPrivilegeProfile(Long userId) {
         List<Map<String, Object>> profiles = jdbcTemplate.queryForList(
                 """

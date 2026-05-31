@@ -2,9 +2,14 @@ package com.youyu.backend.user;
 
 import com.youyu.backend.BackendTestBase;
 import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -31,6 +36,109 @@ class UserProfileTest extends BackendTestBase {
     }
 
     @Test
+    void updateProfileChangesNicknameOnly() throws Exception {
+        mockMvc.perform(patch("/api/users/profile")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("{\"nickname\":\"Nickname From Test\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.user.nickname").value("Nickname From Test"))
+                .andExpect(jsonPath("$.data.user.username").value("zhangsan"));
+    }
+
+    @Test
+    void updateProfileRejectsLoginIdChange() throws Exception {
+        mockMvc.perform(patch("/api/users/profile")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("{\"nickname\":\"Still Test\",\"username\":\"new-login\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void uploadAvatarSuccess() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47}
+        );
+
+        mockMvc.perform(multipart("/api/users/me/avatar")
+                        .file(file)
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.user.avatar").value(org.hamcrest.Matchers.startsWith("/uploads/avatars/user-1001-")))
+                .andExpect(jsonPath("$.data.avatarUrl").value(org.hamcrest.Matchers.startsWith("/uploads/avatars/user-1001-")));
+    }
+
+    @Test
+    void uploadAvatarRejectsUnsupportedType() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.txt",
+                "text/plain",
+                "not image".getBytes()
+        );
+
+        mockMvc.perform(multipart("/api/users/me/avatar")
+                        .file(file)
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void uploadAvatarRejectsOversizedFile() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.jpg",
+                "image/jpeg",
+                new byte[(10 * 1024 * 1024) + 1]
+        );
+
+        mockMvc.perform(multipart("/api/users/me/avatar")
+                        .file(file)
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void bindEmailPlaceholderValidatesFormatAndUniqueness() throws Exception {
+        mockMvc.perform(put("/api/users/me/email")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("{\"email\":\"not-an-email\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        mockMvc.perform(put("/api/users/me/email")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("{\"email\":\"lisi@campus.edu.cn\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
+    void bindEmailPlaceholderReturnsPendingStatus() throws Exception {
+        mockMvc.perform(put("/api/users/me/email")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("{\"email\":\"nickname-test@campus.edu.cn\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.email").value("nickname-test@campus.edu.cn"))
+                .andExpect(jsonPath("$.data.bindingStatus").value("pending_verification"))
+                .andExpect(jsonPath("$.data.verificationEnabled").value(false))
+                .andExpect(jsonPath("$.data.emailLoginEnabled").value(false));
+    }
+
+    @Test
     void getVerificationStatus() throws Exception {
         mockMvc.perform(get("/api/users/verification")
                         .header("Authorization", "Bearer " + USER))
@@ -49,7 +157,7 @@ class UserProfileTest extends BackendTestBase {
                 .getResponse()
                 .getContentAsString();
         java.util.List<Object> addresses = JsonPath.read(response, "$.data");
-        org.junit.jupiter.api.Assertions.assertFalse(addresses.isEmpty());
+        Assertions.assertFalse(addresses.isEmpty());
     }
 
     @Test

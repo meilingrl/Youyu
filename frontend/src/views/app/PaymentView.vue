@@ -4,6 +4,7 @@ import { ElMessage } from '@/plugins/element-plus-services'
 import { useRoute, useRouter } from 'vue-router'
 import { getOrderDetail } from '@/api/modules/order'
 import { completeMockPayment, getPaymentGateway, initiatePayment } from '@/api/modules/payment'
+import { useMarketStore } from '@/stores/market'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
 import TradeMobileActionBar from '@/components/trade/TradeMobileActionBar.vue'
@@ -19,6 +20,7 @@ import {
 
 const route = useRoute()
 const router = useRouter()
+const marketStore = useMarketStore()
 const loading = ref(false)
 const loadError = ref('')
 const initiating = ref(false)
@@ -32,7 +34,7 @@ const paymentStatusMeta = computed(() => getPaymentStatusMeta(order.value?.payme
 const fulfillmentMeta = computed(() => getFulfillmentTypeMeta(order.value?.fulfillmentType))
 const isPaid = computed(() => order.value?.paymentStatus === 'paid')
 const canPay = computed(() => order.value?.orderStatus === 'pending_payment')
-const mobileActionLabel = computed(() => (canPay.value ? '模拟支付成功' : '返回订单'))
+const mobileActionLabel = computed(() => (canPay.value ? 'Confirm payment success' : 'Back to orders'))
 const mobileActionHelper = computed(() =>
   canPay.value ? `支付状态：${paymentStatusMeta.value.label}` : `当前状态：${orderStatusMeta.value.label}`
 )
@@ -55,6 +57,9 @@ const metrics = computed(() => [
     helper: '支付成功后订单会流转到已支付 / 待履约。'
   }
 ])
+const preferredPaymentLabel = computed(() =>
+  marketStore.userPreference.defaultPaymentMethod === 'choose_later' ? 'Choose at payment' : 'Platform payment'
+)
 
 async function loadOrder() {
   loading.value = true
@@ -99,7 +104,7 @@ async function handleSuccess() {
       payment.value = response.data.payment
     }
     await completeMockPayment(payment.value.paymentNo)
-    ElMessage.success('模拟支付成功')
+    ElMessage.success('Payment confirmed')
     router.replace('/app/orders')
   } catch (error) {
     ElMessage.error(error?.response?.data?.message || '支付失败')
@@ -117,7 +122,10 @@ function handleMobilePrimary() {
   router.push('/app/orders')
 }
 
-onMounted(loadOrder)
+onMounted(async () => {
+  await marketStore.loadUserPreference().catch(() => null)
+  await loadOrder()
+})
 </script>
 
 <template>
@@ -136,7 +144,7 @@ onMounted(loadOrder)
           :disabled="!canPay || initiating || confirming"
           @click="handleSuccess"
         >
-          模拟支付成功
+          Confirm payment success
         </el-button>
       </template>
 
@@ -200,7 +208,7 @@ onMounted(loadOrder)
             <div class="payment-detail-list">
               <div class="payment-detail-list__row">
                 <span>默认网关</span>
-                <strong>{{ gateway?.defaultGateway || 'mock' }}</strong>
+                <strong>{{ preferredPaymentLabel }}</strong>
               </div>
               <div class="payment-detail-list__row">
                 <span>支付单号</span>
@@ -223,7 +231,7 @@ onMounted(loadOrder)
                 :disabled="!canPay || initiating || confirming"
                 @click="handleSuccess"
               >
-                模拟支付成功
+                Confirm payment success
               </el-button>
             </div>
 

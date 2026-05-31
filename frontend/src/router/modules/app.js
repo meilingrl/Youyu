@@ -315,6 +315,28 @@ export default {
       }
     },
     {
+      path: 'settings/security',
+      name: 'app-settings-security',
+      component: () => import('@/views/app/SettingsSecurityView.vue'),
+      meta: {
+        title: 'Account Security',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/settings'
+      }
+    },
+    {
+      path: 'settings/addresses',
+      name: 'app-settings-addresses',
+      component: () => import('@/views/app/SettingsAddressView.vue'),
+      meta: {
+        title: 'Address Management',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/settings'
+      }
+    },
+    {
       path: 'settings/auto-reply',
       name: 'app-settings-auto-reply',
       component: () => import('@/views/app/SettingsAutoReplyView.vue'),

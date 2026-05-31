@@ -26,6 +26,25 @@
   registration without JWT issuance, password-reset email delivery, login with
   the new password, and CAPTCHA escalation after repeated failures.
 
+## [2026-05-31] - Personalization Settings Profile And Defaults
+
+### added
+- Added authenticated nickname editing via `PATCH /api/users/profile`; login ID / `username` remains immutable.
+- Added real avatar upload via `POST /api/users/me/avatar` with multipart field `file`, 10 MB limit, JPEG/PNG/WebP validation, persisted public avatar URL, and `/uploads/avatars/**` serving.
+- Added `PUT /api/users/me/email` as an email-binding entry that validates format and uniqueness while email-code verification and email login remain future work.
+- Added settings entries for profile/avatar, email binding, address management, and default preference controls.
+
+### changed
+- Fixed browser avatar upload by letting the client generate the multipart boundary and by proxying `/uploads/**` during local frontend development.
+- Default sort now affects product-list ordering on the frontend; default address/fulfillment/payment preferences are applied or displayed in checkout/payment flows.
+- Preference UI no longer exposes theme controls in this release.
+- Localized personalization settings UI copy so users do not see delivery-phase wording.
+
+### verify
+- Backend `mvnw.cmd test` pass, 175 tests.
+- Frontend `npm test -- --run` pass, 39 tests.
+- Frontend `npm run build` pass.
+
 ---
 
 ## [2026-05-31] - Online Customer Service Console (Chat + UX Polish)

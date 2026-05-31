@@ -26,6 +26,12 @@ public interface UserMapper {
 
     void updateStatus(Long id, String status);
 
+    void updateNickname(Long id, String nickname);
+
+    void updateAvatar(Long id, String avatarUrl);
+
+    boolean existsEmailForOtherUser(String email, Long userId);
+
     Optional<Map<String, Object>> findPrivilegeProfile(Long userId);
 
     void insertDefaultPrivilegeProfile(Long userId);

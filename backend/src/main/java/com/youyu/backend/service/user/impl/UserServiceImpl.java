@@ -4,31 +4,47 @@ import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.auth.AuthContextHolder;
 import com.youyu.backend.common.auth.AuthUser;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.config.AvatarUploadProperties;
 import com.youyu.backend.controller.user.dto.CreateUserAddressRequest;
 import com.youyu.backend.controller.user.dto.SubmitStudentVerificationRequest;
 import com.youyu.backend.mapper.user.StudentVerificationMapper;
 import com.youyu.backend.mapper.user.UserMapper;
 import com.youyu.backend.service.user.UserService;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
 
     private final UserMapper userMapper;
     private final StudentVerificationMapper studentVerificationMapper;
+    private final AvatarUploadProperties avatarUploadProperties;
 
-    public UserServiceImpl(UserMapper userMapper, StudentVerificationMapper studentVerificationMapper) {
+    public UserServiceImpl(UserMapper userMapper,
+                           StudentVerificationMapper studentVerificationMapper,
+                           AvatarUploadProperties avatarUploadProperties) {
         this.userMapper = userMapper;
         this.studentVerificationMapper = studentVerificationMapper;
+        this.avatarUploadProperties = avatarUploadProperties;
     }
 
     @Override
@@ -40,6 +56,98 @@ public class UserServiceImpl implements UserService {
                 "user", publicUser(user),
                 "privilege", userMapper.findPrivilegeProfile(userId).orElseGet(Map::of),
                 "verification", verificationStatus()
+        );
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> updateProfile(Map<String, Object> request) {
+        Long userId = currentUserId();
+        if (request == null || !request.containsKey("nickname")) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "请填写昵称");
+        }
+        if (request.containsKey("username") || request.containsKey("loginId")) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "登录账号不能修改");
+        }
+
+        String nickname = trim(String.valueOf(request.get("nickname")));
+        if (nickname.isBlank()) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "昵称不能为空");
+        }
+        if (nickname.length() > 64) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "昵称不能超过 64 个字符");
+        }
+        userMapper.updateNickname(userId, nickname);
+        return profile();
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> uploadAvatar(MultipartFile file) {
+        Long userId = currentUserId();
+        if (file == null || file.isEmpty() || file.getSize() <= 0) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "请选择头像图片");
+        }
+        if (file.getSize() > avatarUploadProperties.getMaxSizeBytes()) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "头像文件不能超过 10MB");
+        }
+
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+        Set<String> allowedContentTypes = new HashSet<>(avatarUploadProperties.getAllowedContentTypes());
+        if (!allowedContentTypes.contains(contentType)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "头像仅支持 JPG、PNG 或 WebP 图片");
+        }
+
+        Path avatarRoot = Paths.get(avatarUploadProperties.getRootPath()).toAbsolutePath().normalize();
+        String fileName = "user-" + userId + "-" + UUID.randomUUID() + extensionFor(contentType);
+        Path target = avatarRoot.resolve(fileName).normalize();
+        if (!target.startsWith(avatarRoot)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "头像文件名不合法");
+        }
+
+        try {
+            Files.createDirectories(avatarRoot);
+            file.transferTo(target);
+        } catch (IOException exception) {
+            throw new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "头像上传失败，请稍后重试");
+        }
+
+        String publicPath = avatarUploadProperties.getPublicPath();
+        if (!publicPath.endsWith("/")) {
+            publicPath = publicPath + "/";
+        }
+        String avatarUrl = publicPath + fileName;
+        userMapper.updateAvatar(userId, avatarUrl);
+        Map<String, Object> profile = profile();
+        profile.put("avatarUrl", avatarUrl);
+        return profile;
+    }
+
+    @Override
+    public Map<String, Object> bindEmail(Map<String, Object> request) {
+        Long userId = currentUserId();
+        String email = request == null ? "" : trim(String.valueOf(request.getOrDefault("email", ""))).toLowerCase(Locale.ROOT);
+        if (email.isBlank()) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "请填写邮箱地址");
+        }
+        if (email.length() > 128 || !EMAIL_PATTERN.matcher(email).matches()) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "邮箱格式不正确");
+        }
+        if (userMapper.existsEmailForOtherUser(email, userId)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "该邮箱已被其他账号使用");
+        }
+
+        Map<String, Object> currentUser = userMapper.findById(userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "用户不存在"));
+        String currentEmail = String.valueOf(currentUser.getOrDefault("email", ""));
+        String status = email.equalsIgnoreCase(currentEmail) ? "already_bound_unverified" : "pending_verification";
+        return linkedMap(
+                "email", email,
+                "currentEmail", currentEmail,
+                "bindingStatus", status,
+                "verificationEnabled", false,
+                "emailLoginEnabled", false,
+                "message", "邮箱已记录，验证码登录功能上线后即可继续完成验证"
         );
     }
 
@@ -250,6 +358,15 @@ public class UserServiceImpl implements UserService {
             return "****";
         }
         return studentNo.substring(0, 2) + "****" + studentNo.substring(studentNo.length() - 2);
+    }
+
+    private String extensionFor(String contentType) {
+        return switch (contentType) {
+            case "image/jpeg" -> ".jpg";
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            default -> "";
+        };
     }
 
     private Long currentUserId() {

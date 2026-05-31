@@ -16,9 +16,15 @@ vi.mock('@/api/modules/favorite', () => ({
 }))
 
 vi.mock('@/api/modules/user', () => ({
+  bindUserEmail: vi.fn(),
+  createUserAddress: vi.fn(),
+  getUserAddresses: vi.fn(),
   getUserInsightSnapshot: vi.fn(),
   getUserPreference: vi.fn(),
   getUserProfile: vi.fn(),
+  setDefaultUserAddress: vi.fn(),
+  updateUserProfile: vi.fn(),
+  uploadUserAvatar: vi.fn(),
   updateUserPreference: vi.fn()
 }))
 

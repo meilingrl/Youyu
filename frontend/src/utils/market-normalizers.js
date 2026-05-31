@@ -118,6 +118,22 @@ function verificationStatusLabel(status) {
   }
 }
 
+function normalizeAssetUrl(url) {
+  if (!url || /^(https?:|data:|blob:)/i.test(url)) {
+    return url || ''
+  }
+  const apiBase = import.meta.env.VITE_API_BASE_URL || ''
+  if (!apiBase || !apiBase.startsWith('http')) {
+    return url
+  }
+
+  try {
+    return `${new URL(apiBase).origin}${url.startsWith('/') ? url : `/${url}`}`
+  } catch {
+    return url
+  }
+}
+
 /**
  * 将 API 原始用户数据规范化为带嵌套 verification / privilege / addresses 的 profile 对象。
  *
@@ -136,7 +152,8 @@ export function normalizeProfile(raw = {}, currentUser = null) {
     id: user.id || currentUser?.id || '',
     loginId: user.loginId || user.username || currentUser?.loginId || '',
     nickname: user.nickname || currentUser?.nickname || '用户',
-    avatar: user.avatar || '',
+    avatar: normalizeAssetUrl(user.avatar || ''),
+    email: user.email || currentUser?.email || '',
     school: user.school || raw.school || '',
     campus: user.campus || raw.campus || '',
     major: user.major || verification.major || raw.major || '',

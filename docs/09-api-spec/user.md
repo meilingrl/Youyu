@@ -11,7 +11,7 @@
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - request sample: `docs/06-http/auth.http`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
-- Last updated: 2026-05-16
+- Last updated: 2026-05-31
 
 ## Scope
 
@@ -110,6 +110,8 @@ No query parameters, path parameters, or body.
 | `defaultPaymentMethod` | string | Preferred payment method |
 | `defaultSortType` | string | Preferred list sorting |
 | `notificationPreference` | object | Nested reminder / notification switches |
+
+Theme fields may still appear in the legacy preference payload, but theme personalization is not exposed as an active settings control in this release.
 
 #### Error Cases
 
@@ -312,6 +314,83 @@ Mark an existing address as the current user's default address.
 
 - `401`: missing token or invalid token
 - `404`: address does not exist
+
+### `PATCH /api/users/profile`
+
+#### Purpose
+
+Update the current user's public profile nickname. This endpoint does not update `username`, `loginId`, phone, role, or authentication identity.
+
+#### Request
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `nickname` | yes | string | Trimmed, non-empty, max 64 characters |
+
+If `username` or `loginId` is present, the backend rejects the request.
+
+#### Response
+
+- `data` uses the same profile envelope as `GET /api/users/profile`.
+
+#### Error Cases
+
+- `400`: nickname missing/blank/too long, or login ID fields are present
+- `401`: missing token or invalid token
+
+### `POST /api/users/me/avatar`
+
+#### Purpose
+
+Upload and persist a real avatar image for the current user.
+
+#### Request
+
+- Content type: `multipart/form-data`
+- File field: `file`
+- Accepted MIME types: `image/jpeg`, `image/png`, `image/webp`
+- Maximum size: 10 MB
+
+#### Response
+
+- `data` uses the same profile envelope as `GET /api/users/profile`.
+- `data.avatarUrl` contains the public URL.
+- `data.user.avatar` is persisted and served under `/uploads/avatars/**`.
+
+#### Error Cases
+
+- `400`: empty file, unsupported type, or file larger than 10 MB
+- `401`: missing token or invalid token
+
+### `PUT /api/users/me/email`
+
+#### Purpose
+
+Record an email-binding request while email-code verification and email login remain future work.
+
+#### Request
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `email` | yes | string | Valid email format, max 128 chars, unique among other users |
+
+#### Response
+
+| Field | Type | Notes |
+|---|---|---|
+| `email` | string | Requested email |
+| `currentEmail` | string | Existing account email, when present |
+| `bindingStatus` | string | `pending_verification` or `already_bound_unverified` |
+| `verificationEnabled` | boolean | Currently `false` |
+| `emailLoginEnabled` | boolean | Currently `false` |
+| `message` | string | User-facing status explanation |
+
+This endpoint does not send verification codes, does not configure SMTP, and does not claim email login is complete.
+
+#### Error Cases
+
+- `400`: missing/invalid email or duplicate email owned by another user
+- `401`: missing token or invalid token
 
 ## Shared Types / Enumerations
 

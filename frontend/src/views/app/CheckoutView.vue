@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from '@/plugins/element-plus-services'
 import { useRoute, useRouter } from 'vue-router'
 import { createOrder, previewOrder } from '@/api/modules/order'
+import { useMarketStore } from '@/stores/market'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
 import TradeMobileActionBar from '@/components/trade/TradeMobileActionBar.vue'
@@ -13,6 +14,7 @@ import { formatCurrency, getFulfillmentTypeMeta } from '@/components/trade/trade
 
 const route = useRoute()
 const router = useRouter()
+const marketStore = useMarketStore()
 const loading = ref(false)
 const submitting = ref(false)
 const loadError = ref('')
@@ -90,18 +92,36 @@ async function loadPreview(fulfillmentType = '', userCouponId = form.userCouponI
   loading.value = true
   loadError.value = ''
   try {
-    const response = await previewOrder({
-      cartItemIds: selectedIds.value,
-      fulfillmentType,
-      userCouponId: userCouponId || null
-    })
+    const preferredFulfillment =
+      fulfillmentType ||
+      (marketStore.userPreference.defaultFulfillmentType !== 'any'
+        ? marketStore.userPreference.defaultFulfillmentType
+        : '')
+    const requestPreview = (targetFulfillmentType) =>
+      previewOrder({
+        cartItemIds: selectedIds.value,
+        fulfillmentType: targetFulfillmentType,
+        userCouponId: userCouponId || null
+      })
+    let response
+    try {
+      response = await requestPreview(preferredFulfillment)
+    } catch (error) {
+      if (!preferredFulfillment || fulfillmentType) {
+        throw error
+      }
+      response = await requestPreview('')
+    }
     preview.value = response.data
     if (!form.fulfillmentType) {
       form.fulfillmentType = preview.value.selectedFulfillmentType
     }
     if (preview.value.addressOptions?.length && !form.addressId) {
+      const preferredAddress = preview.value.addressOptions.find(
+        (item) => String(item.id) === String(marketStore.userPreference.defaultAddressId || '')
+      )
       const defaultAddress = preview.value.addressOptions.find((item) => item.isDefault)
-      form.addressId = defaultAddress?.id || preview.value.addressOptions[0]?.id || null
+      form.addressId = preferredAddress?.id || defaultAddress?.id || preview.value.addressOptions[0]?.id || null
     }
   } catch (error) {
     loadError.value = error?.response?.data?.message || error?.message || '结算预览加载失败'
@@ -169,7 +189,10 @@ function couponOptionLabel(coupon) {
   return `${title} · ${prefix}`
 }
 
-onMounted(() => loadPreview())
+onMounted(async () => {
+  await marketStore.loadUserPreference().catch(() => null)
+  await loadPreview()
+})
 </script>
 
 <template>
