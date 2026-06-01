@@ -274,6 +274,20 @@ CREATE TABLE IF NOT EXISTS product_review_tasks (
 CREATE INDEX idx_product_review_tasks_product ON product_review_tasks(product_id);
 CREATE INDEX idx_product_review_tasks_status ON product_review_tasks(review_status);
 
+CREATE TABLE IF NOT EXISTS product_favorites (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_product_favorites_user_product UNIQUE (user_id, product_id),
+    CONSTRAINT fk_product_favorites_user FOREIGN KEY (user_id) REFERENCES users(id),
+    CONSTRAINT fk_product_favorites_product FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
+CREATE INDEX idx_product_favorites_user_created ON product_favorites(user_id, created_at, id);
+CREATE INDEX idx_product_favorites_product ON product_favorites(product_id);
+
 CREATE TABLE IF NOT EXISTS cart_items (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,

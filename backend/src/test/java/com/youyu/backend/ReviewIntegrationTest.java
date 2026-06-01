@@ -117,7 +117,18 @@ class ReviewIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.avgScore").value(greaterThan(0.0)))
-                .andExpect(jsonPath("$.data.reviewCount").value(greaterThan(0)));
+                .andExpect(jsonPath("$.data.reviewCount").value(greaterThan(0)))
+                .andExpect(jsonPath("$.data.distribution.length()").value(5))
+                .andExpect(jsonPath("$.data.distribution[0].score").value(1))
+                .andExpect(jsonPath("$.data.distribution[0].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[1].score").value(2))
+                .andExpect(jsonPath("$.data.distribution[1].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[2].score").value(3))
+                .andExpect(jsonPath("$.data.distribution[2].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[3].score").value(4))
+                .andExpect(jsonPath("$.data.distribution[3].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[4].score").value(5))
+                .andExpect(jsonPath("$.data.distribution[4].count").value(1));
     }
 
     @Test
@@ -258,6 +269,17 @@ class ReviewIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.score").value(5));
+
+        mockMvc.perform(get("/api/shops/%s/review-summary".formatted(shopId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.reviewCount").value(greaterThan(0)))
+                .andExpect(jsonPath("$.data.distribution.length()").value(5))
+                .andExpect(jsonPath("$.data.distribution[0].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[1].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[2].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[3].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[4].count").value(1));
     }
 
     @Test
@@ -318,7 +340,20 @@ class ReviewIntegrationTest {
         mockMvc.perform(get("/api/products/3003/review-summary"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.avgScore").exists());
+                .andExpect(jsonPath("$.data.avgScore").exists())
+                .andExpect(jsonPath("$.data.distribution.length()").value(5));
+
+        mockMvc.perform(get("/api/products/3001/review-summary"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.avgScore").value(0.0))
+                .andExpect(jsonPath("$.data.reviewCount").value(0))
+                .andExpect(jsonPath("$.data.distribution.length()").value(5))
+                .andExpect(jsonPath("$.data.distribution[0].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[1].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[2].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[3].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[4].count").value(0));
     }
 
     @Test
@@ -332,7 +367,13 @@ class ReviewIntegrationTest {
         mockMvc.perform(get("/api/shops/4001/review-summary"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.avgScore").exists());
+                .andExpect(jsonPath("$.data.avgScore").exists())
+                .andExpect(jsonPath("$.data.distribution.length()").value(5))
+                .andExpect(jsonPath("$.data.distribution[0].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[1].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[2].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[3].count").value(0))
+                .andExpect(jsonPath("$.data.distribution[4].count").value(0));
     }
 
     @Test

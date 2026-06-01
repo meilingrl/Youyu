@@ -5,8 +5,9 @@
 - Status: active
 - Source of truth:
   - controller: `backend/src/main/java/com/youyu/backend/controller/product/ProductController.java`
+  - controller: `backend/src/main/java/com/youyu/backend/controller/product/FavoriteController.java`
   - request sample: `docs/06-http/product.http`
-- Last updated: 2026-05-16
+- Last updated: 2026-06-01
 
 ## Scope
 
@@ -14,10 +15,11 @@ This document covers:
 
 - public product listing and detail
 - seller-owned product listing
+- current-user favorites add/remove/list
 - product publish, update, status change, and delete
 - product review list and review summary under product detail
 
-It does not cover favorites, shops, categories, or recommendation endpoints.
+It does not cover shops, categories, or recommendation endpoints.
 
 ## Authentication
 
@@ -27,6 +29,9 @@ It does not cover favorites, shops, categories, or recommendation endpoints.
   - `GET /api/products/{id}/reviews`
   - `GET /api/products/{id}/review-summary`
 - Logged-in user only:
+  - `GET /api/favorites`
+  - `POST /api/favorites`
+  - `DELETE /api/favorites/{productId}`
   - `GET /api/products/mine`
   - `POST /api/products`
   - `PUT /api/products/{productId}`
@@ -105,6 +110,82 @@ List products owned by the current seller user.
 
 - `401`: not logged in
 - `403`: role is not allowed
+
+### `GET /api/favorites`
+
+#### Purpose
+
+List the current user's favorite products using the same product-card field family as the public product list.
+
+#### Request
+
+- Header:
+  - `Authorization: Bearer <token>`
+
+#### Response
+
+- `data`: array of favorite product objects ordered by most-recent favorite first
+
+#### Error Cases
+
+- `401`: not logged in
+- `403`: role is not allowed
+
+### `POST /api/favorites`
+
+#### Purpose
+
+Add one public product to the current user's favorites.
+
+#### Request
+
+- Header:
+  - `Authorization: Bearer <token>`
+- Body:
+  - `productId`: required
+
+#### Response
+
+- `data.productId`: the target product ID
+- `data.favorite`: always `true`
+
+#### Error Cases
+
+- `400`: missing `productId` or invalid non-integer `productId`
+- `401`: not logged in
+- `403`: role is not allowed
+- `404`: product does not exist or is not currently favoriteable
+
+#### Notes
+
+- The endpoint is idempotent: repeating the same request does not create duplicate favorite rows or increment `favoriteCount` more than once.
+
+### `DELETE /api/favorites/{productId}`
+
+#### Purpose
+
+Remove one product from the current user's favorites.
+
+#### Request
+
+- Header:
+  - `Authorization: Bearer <token>`
+- Path:
+  - `productId`: required
+
+#### Response
+
+- `data.productId`: the target product ID
+- `data.favorite`: always `false`
+
+#### Error Cases
+
+- `401`: not logged in
+- `403`: role is not allowed
+
+#### Notes
+
+- The endpoint is idempotent: deleting a non-favorited product still succeeds and keeps `favoriteCount` unchanged.
 
 ### `POST /api/products`
 

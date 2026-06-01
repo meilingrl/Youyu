@@ -11,6 +11,12 @@ public interface ProductService {
 
     List<Map<String, Object>> listMyProducts(Long sellerUserId);
 
+    List<Map<String, Object>> listFavorites(Long userId);
+
+    Map<String, Object> addFavorite(Long userId, Long productId);
+
+    Map<String, Object> removeFavorite(Long userId, Long productId);
+
     Map<String, Object> publishProduct(Long sellerUserId, Map<String, Object> command);
 
     Map<String, Object> updateProduct(Long sellerUserId, Long productId, Map<String, Object> command);

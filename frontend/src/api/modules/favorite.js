@@ -4,6 +4,10 @@ export function listFavorites() {
   return service.get('/favorites')
 }
 
-export function toggleFavorite(productId) {
-  return service.post(`/favorites/${productId}/toggle`)
+export function addFavorite(productId) {
+  return service.post('/favorites', { productId })
+}
+
+export function removeFavorite(productId) {
+  return service.delete(`/favorites/${productId}`)
 }

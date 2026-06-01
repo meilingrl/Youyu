@@ -1,3 +1,23 @@
+## [2026-06-01] - Wave 0 Favorites And Review Summary Closeout
+
+### added
+- Added real favorites closure with `GET /api/favorites`, `POST /api/favorites`, and `DELETE /api/favorites/{productId}` plus backend persistence through `product_favorites`.
+
+### changed
+- Frontend favorites store and API module now use the frozen REST contract instead of a toggle-only endpoint.
+- Product and shop review summaries now return real aggregated score distributions while preserving `avgScore`, `reviewCount`, and `distribution`.
+- Favorites and review summary HTTP/API docs now match the accepted Wave 0 implementation, including invalid favorites payload handling and always-present 1-5 review buckets.
+
+### verify
+- Backend `mvnw.cmd test -Dtest=FavoritesIntegrationTest` pass, 3 tests.
+- Backend `mvnw.cmd test -Dtest=ReviewIntegrationTest` pass, 14 tests.
+- Backend `mvnw.cmd test` pass, 191 tests.
+- Frontend `npx vitest run src/stores/__tests__/market.test.js` pass, 4 tests.
+- Frontend `npm run build` pass.
+- `git diff --check` pass.
+
+---
+
 ## [2026-06-01] - Personalization Address And Avatar Hardening
 
 ### added

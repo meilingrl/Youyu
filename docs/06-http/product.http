@@ -111,6 +111,17 @@ Content-Type: application/json
 
 ###
 
+### Add product to favorites - expect 400 for invalid productId
+POST {{baseUrl}}/api/favorites
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "productId": "oops"
+}
+
+###
+
 ### Remove from favorites
 DELETE {{baseUrl}}/api/favorites/3001
 Authorization: Bearer {{userToken}}

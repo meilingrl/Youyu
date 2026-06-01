@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Component;
@@ -200,10 +201,37 @@ public class JdbcProductMapper implements ProductMapper {
     }
 
     @Override
+    public List<Map<String, Object>> findFavoritesByUserId(Long userId) {
+        return jdbcTemplate.queryForList("""
+                SELECT p.*, c.name AS category_name, s.name AS shop_name, u.nickname AS seller_name
+                FROM product_favorites pf
+                INNER JOIN products p ON p.id = pf.product_id
+                LEFT JOIN categories c ON c.id = p.category_id
+                LEFT JOIN shops s ON s.id = p.shop_id
+                LEFT JOIN users u ON u.id = p.seller_user_id
+                WHERE pf.user_id = ?
+                  AND p.is_deleted = FALSE
+                  AND p.status = 'on_sale'
+                  AND (p.review_status = 'not_required' OR p.review_status = 'approved')
+                ORDER BY pf.created_at DESC, pf.id DESC
+                """, userId).stream().map(this::toApiMap).toList();
+    }
+
+    @Override
     public Optional<Map<String, Object>> findById(Long id) {
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(baseSql()
                 + " WHERE p.is_deleted = FALSE AND p.id = ?", id);
         return rows.stream().findFirst().map(this::toApiMap);
+    }
+
+    @Override
+    public boolean isFavorite(Long userId, Long productId) {
+        Integer count = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM product_favorites
+                WHERE user_id = ? AND product_id = ?
+                """, Integer.class, userId, productId);
+        return count != null && count > 0;
     }
 
     @Override
@@ -249,6 +277,30 @@ public class JdbcProductMapper implements ProductMapper {
             item.put("createdAt", first(row, "CREATED_AT"));
             return item;
         }).toList();
+    }
+
+    @Override
+    public void addFavorite(Long userId, Long productId) {
+        try {
+            jdbcTemplate.update("""
+                    INSERT INTO product_favorites (user_id, product_id, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                    """, userId, productId);
+        } catch (DuplicateKeyException ignored) {
+            jdbcTemplate.update("""
+                    UPDATE product_favorites
+                    SET updated_at = CURRENT_TIMESTAMP
+                    WHERE user_id = ? AND product_id = ?
+                    """, userId, productId);
+        }
+    }
+
+    @Override
+    public boolean removeFavorite(Long userId, Long productId) {
+        return jdbcTemplate.update("""
+                DELETE FROM product_favorites
+                WHERE user_id = ? AND product_id = ?
+                """, userId, productId) > 0;
     }
 
     @Override
@@ -337,6 +389,19 @@ public class JdbcProductMapper implements ProductMapper {
     public void updateStatus(Long productId, String status) {
         jdbcTemplate.update("UPDATE products SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_deleted = FALSE",
                 status, productId);
+    }
+
+    @Override
+    public void updateFavoriteCount(Long productId, int delta) {
+        jdbcTemplate.update("""
+                UPDATE products
+                SET favorite_count = CASE
+                    WHEN favorite_count + ? < 0 THEN 0
+                    ELSE favorite_count + ?
+                END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND is_deleted = FALSE
+                """, delta, delta, productId);
     }
 
     @Override
