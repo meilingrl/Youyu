@@ -240,10 +240,12 @@ public class JdbcSupportTicketMapper implements SupportTicketMapper {
                         LOWER(st.ticket_no) LIKE ?
                         OR LOWER(st.subject) LIKE ?
                         OR LOWER(st.content) LIKE ?
+                        OR LOWER(COALESCE(CAST(st.related_id AS VARCHAR), '')) LIKE ?
                         OR LOWER(COALESCE(requester.username, '')) LIKE ?
                         OR LOWER(COALESCE(requester.nickname, '')) LIKE ?
                      )
                     """);
+            args.add(like);
             args.add(like);
             args.add(like);
             args.add(like);
@@ -258,6 +260,7 @@ public class JdbcSupportTicketMapper implements SupportTicketMapper {
                 "id", row.get("id"),
                 "ticketNo", defaultString(row.get("ticket_no")),
                 "requesterUserId", toLong(row.get("requester_user_id")),
+                "requesterName", displayName(row.get("requester_nickname"), row.get("requester_username")),
                 "category", defaultString(row.get("category")),
                 "subject", defaultString(row.get("subject")),
                 "content", defaultString(row.get("content")),
@@ -266,6 +269,7 @@ public class JdbcSupportTicketMapper implements SupportTicketMapper {
                 "relatedType", nullableString(row.get("related_type")),
                 "relatedId", nullableLong(row.get("related_id")),
                 "assignedAdminUserId", nullableLong(row.get("assigned_admin_user_id")),
+                "assignedAdminName", displayName(row.get("assignee_nickname"), row.get("assignee_username")),
                 "lastRepliedBy", nullableString(row.get("last_replied_by")),
                 "lastRepliedAt", row.get("last_replied_at"),
                 "resolvedAt", row.get("resolved_at"),
@@ -334,6 +338,14 @@ public class JdbcSupportTicketMapper implements SupportTicketMapper {
 
     private String defaultString(Object value) {
         return value == null ? "" : String.valueOf(value);
+    }
+
+    private String displayName(Object nickname, Object username) {
+        String display = defaultString(nickname);
+        if (!display.isBlank()) {
+            return display;
+        }
+        return defaultString(username);
     }
 
     private record QueryParts(StringBuilder sql, List<Object> args) {

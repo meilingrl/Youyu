@@ -10,7 +10,7 @@
   - request sample: `docs/06-http/support.http`
   - admin request sample: `docs/06-http/admin.http`
   - related task: `docs/08-tasks/active/customer-service-ticket-mvp.md`
-- Last updated: 2026-05-30
+- Last updated: 2026-06-01
 
 ## Scope
 
@@ -28,7 +28,10 @@ Support tickets are separate from buyer/seller chat, reports, order/refund handl
 - Admin endpoints require an admin staff role with support-ticket access. Current MVP examples use `ADMIN`, `SUPER_ADMIN`, and `SUPPORT_AGENT`.
 - Users may only list, view, and reply to their own tickets.
 - Admins may list and view all support tickets, change ticket status, add public replies, and add internal notes.
-- Admin support-ticket UI and backend flows must not call `/api/chat/**`.
+- `/admin/support` remains the single admin route, but it now hosts two explicit workspaces:
+  - support-ticket handling backed by `/api/admin/support/tickets/**`
+  - online customer-service chat backed by `/api/admin/support/chat/**`
+- The support-ticket workspace must not call `/api/chat/**` as its owner API. The online-CS workspace is documented separately in `docs/09-api-spec/chat.md`.
 
 ## Response Envelope
 
@@ -125,11 +128,11 @@ Ticket detail returns the ticket fields plus messages:
 | `id` | number | Message ID. |
 | `ticketId` | number | Parent ticket ID. |
 | `senderUserId` | number or null | Sender user/admin ID when available. |
-| `senderName` | string or null | Optional display field. |
 | `senderRole` | string | Expected values include `user`, `admin`, or support staff role labels. |
 | `messageType` | string | `public_reply` or `internal_note`. |
 | `content` | string | Message content. |
 | `createdAt` | string | Creation timestamp. |
+| `sender` | object | Optional nested sender object with `id`, `username`, and `nickname`. UI display names should be derived from `sender.nickname`, `sender.username`, or `senderRole`. |
 
 Users can see only `public_reply` messages. Admin detail includes both `public_reply` and `internal_note`.
 
@@ -250,7 +253,7 @@ List support tickets for the admin queue.
 | `status` | no | string | Optional status filter. |
 | `category` | no | string | Optional category filter. |
 | `assignedToMe` | no | boolean | When true, returns tickets assigned to the current admin. |
-| `keyword` | no | string | Search ticket number, subject, content, or requester display fields when supported. |
+| `keyword` | no | string | Search ticket number, subject, content, requester display fields, or `relatedId` when supported. |
 | `page` | no | number | Default `1`. |
 | `pageSize` | no | number | Default `10`, max should stay bounded. |
 

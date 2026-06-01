@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
 import {
@@ -12,6 +13,7 @@ import {
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
 
+const router = useRouter()
 const loading = ref(false)
 const actionLoading = ref(false)
 const error = ref('')
@@ -99,6 +101,38 @@ async function handleCompleteRefund(refundId) {
   } finally {
     actionLoading.value = false
   }
+}
+
+function openSupportLane() {
+  if (!detail.value?.id) return
+  router.push({
+    path: '/admin/support',
+    query: {
+      lane: 'tickets',
+      category: 'order',
+      keyword: String(detail.value.id)
+    }
+  })
+}
+
+function openReportsLane() {
+  if (!detail.value?.orderNo && !detail.value?.id) return
+  router.push({
+    path: '/admin/reports',
+    query: {
+      keyword: String(detail.value.orderNo || detail.value.id)
+    }
+  })
+}
+
+function openMediationLane() {
+  if (!detail.value?.id) return
+  router.push({
+    path: '/admin/mediation',
+    query: {
+      orderId: String(detail.value.id)
+    }
+  })
 }
 
 onMounted(() => {
@@ -215,9 +249,14 @@ onBeforeUnmount(() => {
       <section class="drawer-panel">
         <h3>退款记录</h3>
         <article v-for="refund in detail.refunds" :key="refund.id" class="line-item">
-          <strong>{{ refund.refundNo }}</strong>
-          <span>{{ adminLabel(refund.refundStatus) }}</span>
-          <span>￥{{ Number(refund.refundAmount).toFixed(2) }}</span>
+          <div class="line-item__copy">
+            <strong>{{ refund.refundNo }}</strong>
+            <span>{{ adminLabel(refund.refundStatus) }} / ￥{{ Number(refund.refundAmount).toFixed(2) }}</span>
+            <span>退款原因：{{ refund.refundReason || '未填写' }}</span>
+            <span>申请时间：{{ refund.appliedAt || '未记录' }}</span>
+            <span v-if="refund.processedAt">处理时间：{{ refund.processedAt }}</span>
+            <span v-if="refund.completedAt">完成时间：{{ refund.completedAt }}</span>
+          </div>
           <el-button
             v-if="detail.availableActions.includes('complete_refund') && refund.refundStatus !== 'completed'"
             type="warning"
@@ -230,6 +269,20 @@ onBeforeUnmount(() => {
           </el-button>
         </article>
         <p v-if="!detail.refunds.length">暂无退款记录</p>
+      </section>
+
+      <section class="drawer-panel">
+        <h3>售后协同</h3>
+        <p v-if="detail.afterSalesSummary">{{ detail.afterSalesSummary.userGuidance }}</p>
+        <p v-if="detail.mediationSummary">
+          调解案件：{{ detail.mediationSummary.caseNo }} / {{ detail.mediationSummary.status }}
+        </p>
+        <p v-if="detail.relatedReports?.length">关联举报：{{ detail.relatedReports.length }} 条</p>
+        <div class="refund-box">
+          <el-button plain @click="openSupportLane">打开支持工单</el-button>
+          <el-button plain @click="openReportsLane">查看举报记录</el-button>
+          <el-button plain @click="openMediationLane">查看调解案件</el-button>
+        </div>
       </section>
     </div>
   </el-drawer>
@@ -249,6 +302,11 @@ onBeforeUnmount(() => {
 .line-item {
   justify-content: space-between;
   gap: 16px;
+}
+
+.line-item__copy {
+  display: grid;
+  gap: 4px;
 }
 
 .admin-order-card__amount {

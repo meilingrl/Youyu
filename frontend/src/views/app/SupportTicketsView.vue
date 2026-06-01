@@ -64,6 +64,7 @@ const replyForm = reactive({
 
 const selectedTicketClosed = computed(() => selectedTicket.value?.status === 'closed')
 const selectedTicketNumber = computed(() => selectedTicket.value?.ticketNo || selectedTicket.value?.ticket_no || selectedTicket.value?.id || '')
+const routeTicketId = computed(() => normalizeRelatedId(route.query.ticketId))
 
 function normalizeCategory(value) {
   const candidate = Array.isArray(value) ? value[0] : value
@@ -154,7 +155,9 @@ async function loadTickets() {
     const page = normalizePage(response.data)
     tickets.value = page.items
     total.value = page.total
-    if (!selectedTicketId.value && tickets.value.length) {
+    if (routeTicketId.value) {
+      selectedTicketId.value = Number(routeTicketId.value)
+    } else if (!selectedTicketId.value && tickets.value.length) {
       selectedTicketId.value = tickets.value[0].id
     }
   } catch (err) {
@@ -188,6 +191,12 @@ async function loadDetail(ticketId) {
 
 function selectTicket(ticket) {
   selectedTicketId.value = ticket.id
+  router.replace({
+    query: {
+      ...route.query,
+      ticketId: String(ticket.id)
+    }
+  })
 }
 
 async function submitTicket() {
@@ -256,6 +265,17 @@ function clearRelatedContext() {
 watch(selectedTicketId, (ticketId) => {
   loadDetail(ticketId)
 })
+
+watch(
+  () => route.query.ticketId,
+  (ticketId) => {
+    const normalized = normalizeRelatedId(ticketId)
+    if (!normalized) return
+    if (String(selectedTicketId.value || '') !== normalized) {
+      selectedTicketId.value = Number(normalized)
+    }
+  }
+)
 
 onMounted(loadTickets)
 </script>

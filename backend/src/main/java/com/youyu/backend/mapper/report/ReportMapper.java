@@ -16,6 +16,8 @@ public interface ReportMapper {
 
     Optional<Map<String, Object>> findById(Long id);
 
+    List<Map<String, Object>> findByTarget(String targetType, Long targetId);
+
     Long insert(Long reporterUserId,
                 String reporterName,
                 String targetType,

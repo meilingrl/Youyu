@@ -4,6 +4,7 @@ import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.exception.BusinessException;
 import com.youyu.backend.common.exception.ForbiddenException;
 import com.youyu.backend.mapper.support.SupportTicketMapper;
+import com.youyu.backend.service.notification.NotificationService;
 import com.youyu.backend.service.support.SupportTicketService;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -26,9 +27,12 @@ public class SupportTicketServiceImpl implements SupportTicketService {
     private static final List<String> MESSAGE_TYPES = List.of("public_reply", "internal_note");
 
     private final SupportTicketMapper supportTicketMapper;
+    private final NotificationService notificationService;
 
-    public SupportTicketServiceImpl(SupportTicketMapper supportTicketMapper) {
+    public SupportTicketServiceImpl(SupportTicketMapper supportTicketMapper,
+                                    NotificationService notificationService) {
         this.supportTicketMapper = supportTicketMapper;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -138,7 +142,16 @@ public class SupportTicketServiceImpl implements SupportTicketService {
         }
         boolean assignToMe = toBoolean(command.get("assignToMe"));
         supportTicketMapper.updateStatus(ticketId, nextStatus, adminUserId, assignToMe);
-        return linkedMap("ticket", findTicket(ticketId));
+        Map<String, Object> updatedTicket = findTicket(ticketId);
+        if (!currentStatus.equals(nextStatus)) {
+            notificationService.createSupportTicketNotification(
+                    toLong(updatedTicket.get("requesterUserId")),
+                    updatedTicket,
+                    "Support ticket status updated",
+                    "Ticket " + ticketLabel(updatedTicket) + " moved to " + nextStatus + "."
+            );
+        }
+        return linkedMap("ticket", updatedTicket);
     }
 
     @Override
@@ -150,7 +163,16 @@ public class SupportTicketServiceImpl implements SupportTicketService {
         String content = requireText(asString(command.get("content")), "content is required", 5000);
         supportTicketMapper.insertMessage(ticketId, adminUserId, "admin", messageType, content);
         supportTicketMapper.updateTicketAfterMessage(ticketId, "admin");
-        return linkedMap("ticket", findTicket(ticketId), "messages", supportTicketMapper.findMessages(ticketId, true));
+        Map<String, Object> updatedTicket = findTicket(ticketId);
+        if ("public_reply".equals(messageType)) {
+            notificationService.createSupportTicketNotification(
+                    toLong(updatedTicket.get("requesterUserId")),
+                    updatedTicket,
+                    "Platform support replied",
+                    "Ticket " + ticketLabel(updatedTicket) + " has a new public reply from platform support."
+            );
+        }
+        return linkedMap("ticket", updatedTicket, "messages", supportTicketMapper.findMessages(ticketId, true));
     }
 
     private Map<String, Object> findTicket(Long ticketId) {
@@ -259,6 +281,14 @@ public class SupportTicketServiceImpl implements SupportTicketService {
             return null;
         }
         return toLong(value);
+    }
+
+    private String ticketLabel(Map<String, Object> ticket) {
+        Object ticketNo = ticket.get("ticketNo");
+        if (ticketNo != null && !String.valueOf(ticketNo).isBlank()) {
+            return String.valueOf(ticketNo);
+        }
+        return "#" + ticket.get("id");
     }
 
     private Map<String, Object> linkedMap(Object... values) {

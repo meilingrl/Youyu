@@ -90,6 +90,17 @@ public class JdbcReportMapper implements ReportMapper {
     }
 
     @Override
+    public List<Map<String, Object>> findByTarget(String targetType, Long targetId) {
+        return jdbcTemplate.queryForList(
+                        "SELECT * FROM reports WHERE target_type = ? AND target_id = ? ORDER BY submitted_at DESC, id DESC",
+                        targetType,
+                        targetId
+                ).stream()
+                .map(this::normalizeReport)
+                .toList();
+    }
+
+    @Override
     public Long insert(Long reporterUserId,
                        String reporterName,
                        String targetType,

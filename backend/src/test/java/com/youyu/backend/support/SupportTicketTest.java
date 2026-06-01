@@ -27,6 +27,7 @@ class SupportTicketTest extends BackendTestBase {
     void resetSupportFixtures() {
         jdbcTemplate.update("DELETE FROM support_ticket_messages WHERE ticket_id IN (SELECT id FROM support_tickets WHERE ticket_no LIKE 'TST-%' OR ticket_no LIKE 'SUP-%')");
         jdbcTemplate.update("DELETE FROM support_tickets WHERE ticket_no LIKE 'TST-%' OR ticket_no LIKE 'SUP-%'");
+        jdbcTemplate.update("DELETE FROM notifications WHERE user_id IN (1001, 1002)");
     }
 
     @Test
@@ -89,6 +90,12 @@ class SupportTicketTest extends BackendTestBase {
                         .content("{\"messageType\":\"public_reply\",\"content\":\"We are checking the payment record.\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.ticket.lastRepliedBy").value("admin"));
+
+        mockMvc.perform(get("/api/notifications")
+                        .header("Authorization", "Bearer " + USER_ONE))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content[0].type").value("support_ticket"))
+                .andExpect(jsonPath("$.data.content[0].actionUrl").value("/app/support?ticketId=" + ticketId));
 
         mockMvc.perform(post("/api/admin/support/tickets/{ticketId}/messages", ticketId)
                         .header("Authorization", "Bearer " + ADMIN)
@@ -177,6 +184,30 @@ class SupportTicketTest extends BackendTestBase {
                         .content("{\"messageType\":\"public_reply\",\"content\":\"cannot reply\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
+    @Test
+    void adminKeywordSearchCanMatchRelatedRecordId() throws Exception {
+        mockMvc.perform(post("/api/support/tickets")
+                        .header("Authorization", "Bearer " + USER_ONE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "category": "order",
+                                  "subject": "Need order help",
+                                  "content": "Please review this order.",
+                                  "relatedType": "order",
+                                  "relatedId": 8001
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.ticket.relatedId").value(8001));
+
+        mockMvc.perform(get("/api/admin/support/tickets")
+                        .header("Authorization", "Bearer " + SUPPORT_AGENT)
+                        .param("keyword", "8001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].relatedId").value(8001));
     }
 
     private Number createTicket(String token, String category, String subject) throws Exception {

@@ -1,3 +1,23 @@
+## [2026-06-01] - Wave 1A Support And After-Sales Continuity
+
+### added
+- Added explicit dual-workspace admin support handling on `/admin/support`, separating online CS chat from support-ticket queue/detail handling while keeping one admin entry route.
+- Added order after-sales visibility fields across buyer and admin order detail responses: `relatedReports`, `mediationSummary`, and `afterSalesSummary`.
+- Added backend coverage for admin support-ticket keyword search by `relatedId` and order-detail after-sales context visibility.
+
+### changed
+- Admin support now gives user-created tickets a first-class handling lane alongside the existing online CS console instead of leaving ticket handling implicit.
+- Buyer and admin order detail pages now show refund timeline details, report-backed mediation context, and guidance text without pretending Wave 1 already upgraded the payment gateway.
+- Order detail guidance now keeps user-side after-sales visibility and admin-side handling continuity aligned through support, reports, and mediation entry points.
+- Existing in-app notifications now cover support-ticket public replies/status changes and mediation escalation/status/decision updates, with action links landing on real support or order pages.
+
+### verify
+- Backend `mvnw.cmd test "-Dtest=SupportTicketTest,OrderAfterSalesDetailTest,AdminMediationTest,SupportChatTest"` pass, 19 tests.
+- Backend `mvnw.cmd test` pass, 193 tests.
+- Frontend `npm run build` pass.
+
+---
+
 ## [2026-06-01] - Wave 0 Favorites And Review Summary Closeout
 
 ### added

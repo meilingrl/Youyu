@@ -116,6 +116,12 @@ Authorization: Bearer {{adminToken}}
 
 ###
 
+### Admin search tickets by related order id
+GET {{baseUrl}}/api/admin/support/tickets?keyword=8001&page=1&pageSize=10
+Authorization: Bearer {{supportToken}}
+
+###
+
 ### Admin ticket detail
 ### Expected: public_reply and internal_note messages are visible to admin.
 GET {{baseUrl}}/api/admin/support/tickets/{{ticketId}}
