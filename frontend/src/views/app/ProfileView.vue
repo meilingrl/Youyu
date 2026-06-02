@@ -2,6 +2,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from '@/plugins/element-plus-services'
 import PageSection from '@/components/common/PageSection.vue'
+import InsightBarList from '@/components/common/InsightBarList.vue'
+import SpendChart from '@/components/common/SpendChart.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useMarketStore } from '@/stores/market'
 
@@ -11,11 +13,59 @@ const marketStore = useMarketStore()
 const profile = computed(() => marketStore.profile)
 const myProducts = computed(() => marketStore.getMyProducts())
 const userInsight = computed(() => marketStore.userInsightSnapshot)
+const spendAgg = computed(() => marketStore.spendAggregation)
 const avatarInitial = computed(() => (profile.value.nickname || '友').slice(0, 1))
 const avatarInputRef = ref(null)
 const maxAvatarSize = 10 * 1024 * 1024
+const spendTab = ref('monthly')
 const editForm = reactive({
   nickname: ''
+})
+
+const monthlyChartData = computed(() => spendAgg.value.monthly || [])
+const yearlyChartData = computed(() => spendAgg.value.yearly || {})
+const categoryChartData = computed(() => {
+  const items = Array.isArray(userInsight.value.favoritePreferenceSummary)
+    ? userInsight.value.favoritePreferenceSummary
+    : []
+  return items
+    .filter((item) => Number(item.spendAmount || 0) > 0)
+    .map((item) => ({
+      label: item.categoryName || '未分类',
+      amount: Number(item.spendAmount || 0)
+    }))
+})
+const spendDataSource = computed(() => {
+  if (spendAgg.value.source === 'orders') return '基于近期订单统计'
+  return '月度明细待后端口径完善'
+})
+
+const categoryPreferenceBars = computed(() => {
+  const items = Array.isArray(userInsight.value.favoritePreferenceSummary)
+    ? userInsight.value.favoritePreferenceSummary
+    : []
+
+  return items.map((item) => ({
+    id: `category-${item.categoryId || item.categoryName}`,
+    label: item.categoryName || '未分类',
+    value: Number(item.spendAmount || 0),
+    displayValue: formatMoney(item.spendAmount),
+    helper: `已购 ${Number(item.count || 0)} 件`,
+    tone: 'primary'
+  }))
+})
+
+const recentPurchaseBars = computed(() => {
+  const items = Array.isArray(userInsight.value.recentBrowses) ? userInsight.value.recentBrowses : []
+
+  return items.map((item, index) => ({
+    id: `purchase-${item.productId || index}`,
+    label: item.title || '订单记录',
+    value: Number(item.subtotalAmount || 0),
+    displayValue: formatMoney(item.subtotalAmount),
+    helper: `${item.categoryName || '未分类'} · ${item.quantity || 0} 件 · ${item.purchasedAt || item.viewedAt || '时间暂缺'}`,
+    tone: index === 0 ? 'warning' : 'info'
+  }))
 })
 
 watch(
@@ -41,7 +91,8 @@ async function loadProfileData() {
     marketStore.loadProfile(authStore.currentUser),
     marketStore.loadMyProducts(),
     marketStore.loadUserPreference(),
-    marketStore.loadUserInsightSnapshot()
+    marketStore.loadUserInsightSnapshot(),
+    marketStore.loadSpendAggregation()
   ])
 
   if (results.some((item) => item.status === 'rejected')) {
@@ -79,6 +130,7 @@ async function handleAvatarFile(event) {
     ElMessage.error('头像文件不能超过 10MB')
     return
   }
+
   try {
     const updated = await marketStore.uploadAvatar(file)
     authStore.updateCurrentUser({
@@ -137,9 +189,7 @@ onMounted(loadProfileData)
         </el-form-item>
       </el-form>
       <template #actions>
-        <el-button type="primary" :loading="marketStore.savingProfile" @click="saveProfile">
-          保存资料
-        </el-button>
+        <el-button type="primary" :loading="marketStore.savingProfile" @click="saveProfile">保存资料</el-button>
       </template>
     </PageSection>
 
@@ -176,11 +226,11 @@ onMounted(loadProfileData)
       </template>
     </PageSection>
 
-    <PageSection title="交易概览" description="消费与在售数据来自订单统计">
+    <PageSection title="交易概览" description="支出与在售数据来自真实订单统计">
       <div class="metric-grid">
         <div class="metric-card">
           <strong>{{ formatMoney(userInsight.totalSpendAmount) }}</strong>
-          <span>累计消费</span>
+          <span>累计支出</span>
         </div>
         <div class="metric-card">
           <strong>{{ formatCount(userInsight.totalPurchasedItemCount, ' 件') }}</strong>
@@ -194,6 +244,66 @@ onMounted(loadProfileData)
       <template #actions>
         <el-button plain @click="$router.push('/app/trade')">查看交易中心</el-button>
       </template>
+    </PageSection>
+
+    <PageSection title="支出统计" description="按已完成且已支付订单统计支出结构。">
+      <template #actions>
+        <span class="spend-source-note">{{ spendDataSource }}</span>
+      </template>
+
+      <div class="spend-tabs">
+        <button
+          class="spend-tab"
+          :class="{ 'spend-tab--active': spendTab === 'monthly' }"
+          @click="spendTab = 'monthly'"
+        >月度</button>
+        <button
+          class="spend-tab"
+          :class="{ 'spend-tab--active': spendTab === 'yearly' }"
+          @click="spendTab = 'yearly'"
+        >年度</button>
+        <button
+          class="spend-tab"
+          :class="{ 'spend-tab--active': spendTab === 'category' }"
+          @click="spendTab = 'category'"
+        >分类</button>
+      </div>
+
+      <SpendChart
+        v-if="spendTab === 'monthly'"
+        mode="monthly"
+        :monthly-data="monthlyChartData"
+        :loading="marketStore.loadingSpendAggregation"
+      />
+      <SpendChart
+        v-else-if="spendTab === 'yearly'"
+        mode="yearly"
+        :yearly-data="yearlyChartData"
+        :loading="marketStore.loadingSpendAggregation"
+      />
+      <SpendChart
+        v-else-if="spendTab === 'category'"
+        mode="category"
+        :category-data="categoryChartData"
+        :loading="marketStore.loadingSpendAggregation"
+      />
+
+      <div class="profile-insight-grid">
+        <article class="shell-card profile-insight-panel">
+          <div class="profile-insight-panel__header">
+            <h3>分类支出</h3>
+            <span>按商品分类汇总</span>
+          </div>
+          <InsightBarList :items="categoryPreferenceBars" empty-text="暂无分类支出记录" />
+        </article>
+        <article class="shell-card profile-insight-panel">
+          <div class="profile-insight-panel__header">
+            <h3>近期支出</h3>
+            <span>按最近完成时间排序</span>
+          </div>
+          <InsightBarList :items="recentPurchaseBars" empty-text="暂无近期支出记录" />
+        </article>
+      </div>
     </PageSection>
 
     <PageSection title="常用入口" description="收藏、店铺、偏好与订单的快捷入口">
@@ -295,6 +405,71 @@ onMounted(loadProfileData)
   gap: 16px;
 }
 
+.profile-insight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.profile-insight-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.profile-insight-panel__header {
+  display: grid;
+  gap: 4px;
+}
+
+.profile-insight-panel__header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.profile-insight-panel__header span {
+  color: var(--cm-text-secondary);
+  font-size: 13px;
+}
+
+.spend-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 3px;
+  background: var(--cm-surface-muted);
+  border-radius: var(--cm-radius-pill);
+  width: fit-content;
+}
+
+.spend-tab {
+  padding: 6px 18px;
+  border: none;
+  border-radius: var(--cm-radius-pill);
+  background: transparent;
+  color: var(--cm-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--cm-transition-micro);
+}
+
+.spend-tab--active {
+  background: var(--cm-surface-strong);
+  color: var(--cm-primary);
+  box-shadow: 0 1px 4px rgba(88, 62, 43, 0.1);
+}
+
+.spend-tab:hover:not(.spend-tab--active) {
+  color: var(--cm-text);
+}
+
+.spend-source-note {
+  font-size: 12px;
+  color: var(--cm-text-tertiary);
+  font-style: italic;
+}
+
 @media (max-width: 860px) {
   .profile-hero {
     grid-template-columns: 1fr;
@@ -306,7 +481,8 @@ onMounted(loadProfileData)
     justify-content: center;
   }
 
-  .profile-edit-form {
+  .profile-edit-form,
+  .profile-insight-grid {
     grid-template-columns: 1fr;
   }
 }

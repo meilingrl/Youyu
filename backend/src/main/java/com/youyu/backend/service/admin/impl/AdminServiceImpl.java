@@ -286,6 +286,10 @@ public class AdminServiceImpl implements AdminService {
                 "queueMetrics", queueMetrics,
                 "governanceSignals", governanceSignals,
                 "statusBreakdowns", statusBreakdowns,
+                "salesAnalytics", linkedMap(
+                        "categorySales", shopMapper.summarizeCompletedSalesByCategory(8),
+                        "shopRankings", shopMapper.rankShopsByCompletedSales(8)
+                ),
                 "unavailableMetrics", unavailableMetrics,
                 "todo", linkedMap(
                         "pendingVerificationCount", (int) pendingVerificationCount,

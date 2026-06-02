@@ -3,6 +3,8 @@
 ### Variables
 @baseUrl = http://localhost:8080
 @userToken = mock-1001-USER
+@adminToken = mock-9001-ADMIN
+@supportToken = mock-9102-SUPPORT_AGENT
 
 ### 1. Get notification list
 GET {{baseUrl}}/api/notifications?page=0&size=20
@@ -24,3 +26,24 @@ Authorization: Bearer {{userToken}}
 ### 4. Mark all notifications read
 POST {{baseUrl}}/api/notifications/read-all
 Authorization: Bearer {{userToken}}
+
+### 5. Admin publishes one system notification to all active ordinary users
+POST {{baseUrl}}/api/admin/notifications
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "title": "平台维护提醒",
+  "body": "今晚 23:00 至 23:30 将进行短时维护。",
+  "actionUrl": "/app/home"
+}
+
+### 6. Specialist admin cannot publish system notifications - expect 403 FORBIDDEN
+POST {{baseUrl}}/api/admin/notifications
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "title": "不应发布",
+  "body": "权限校验示例。"
+}

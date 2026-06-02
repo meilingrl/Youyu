@@ -1,3 +1,45 @@
+## [2026-06-02] - Admin Notification Publishing And Support Recovery
+
+### added
+- Added an admin-only `/admin/notifications` publishing page and `POST /api/admin/notifications` broadcast endpoint for in-app system notifications.
+- Added audit logging for system-notification broadcasts and backend coverage for publish permissions, persistence, and validation.
+
+### changed
+- Fixed the `/admin/support` blank-page regression caused by using ticket filter constants before initialization.
+- Completed the user message-center notification type labels for support tickets and mediation updates.
+- Repaired the remaining corrupted message-center empty-state icons and clarified the notification empty state.
+
+### verify
+- Backend `.\\mvnw.cmd test "-Dtest=AdminNotificationPublishTest,SupportTicketTest,SupportChatTest"` pass, 15 tests.
+- Backend `.\\mvnw.cmd test` pass, 196 tests.
+- Frontend `npm test -- --run` pass, 53 tests.
+- Frontend `npm run build` pass.
+- `git diff --check` pass.
+- Browser smoke pass for `/admin/support`, `/admin/notifications`, and `/app/messages?category=notifications`.
+
+---
+
+## [2026-06-02] - Analytics Visualization Wave
+
+### added
+- Added `frontend/src/components/common/InsightBarList.vue` as a reusable lightweight analytics bar-list component for real metric snapshots.
+
+### changed
+- Reworked `ProfileView.vue` to visualize real user spending with category subtotals and recent completed paid-order summaries.
+- Extended `ShopView.vue` to surface monthly shop income, completed paid-order volume, repeat buyers, and hot-product income.
+- Added admin completed-paid sales analytics for product-category share and shop rankings, then surfaced both on `DashboardView.vue` while keeping the operational workbench intact.
+- Corrected shop insight semantics so `monthlyOrderCount` counts completed paid orders and `repeatBuyerCount` counts distinct repeat buyers.
+- Parked the theme-capability-gap task and archived the analytics visualization execution/task records after implementation closeout.
+
+### verify
+- Backend `.\\mvnw.cmd test` pass, 193 tests.
+- Backend `.\\mvnw.cmd test "-Dtest=AdminGovernanceTest,YouyuBackendApplicationTests"` pass after the final hot-product query correction, 55 tests.
+- Frontend `npm test -- --run` pass, 51 tests.
+- Frontend `npm run build` pass.
+- `git diff --check` pass.
+
+---
+
 ## [2026-06-02] - Support Entry Routing And Copy Follow-Up
 
 ### changed

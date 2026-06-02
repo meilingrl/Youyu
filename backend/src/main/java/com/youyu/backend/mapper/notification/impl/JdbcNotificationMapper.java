@@ -49,6 +49,19 @@ public class JdbcNotificationMapper implements NotificationMapper {
     }
 
     @Override
+    public int insertForActiveUsers(String type, String title, String body, String actionUrl) {
+        return jdbcTemplate.update(
+                """
+                        INSERT INTO notifications (user_id, type, title, body, action_url, is_read, created_at)
+                        SELECT id, ?, ?, ?, ?, FALSE, CURRENT_TIMESTAMP
+                        FROM users
+                        WHERE status = 'active' AND role = 'USER'
+                        """,
+                type, title, body, actionUrl
+        );
+    }
+
+    @Override
     public List<Map<String, Object>> findByUserId(Long userId, int offset, int limit) {
         return jdbcTemplate.queryForList(
                 """

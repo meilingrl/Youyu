@@ -23,7 +23,7 @@
   --cm-muted-rose: #b87972;
   --cm-price: #5f3a21;
   --cm-price-secondary: #8a6953;
-  --cm-gradient-primary: linear-gradient(135deg, #a95031 0%, #d78045 100%);
+  --cm-gradient-primary: linear-gradient(180deg, #c26b44 0%, #d78b55 100%);
   --cm-gradient-hero: radial-gradient(circle at top center, rgba(182, 95, 59, 0.14), transparent 28%),
     radial-gradient(circle at 80% 20%, rgba(196, 122, 44, 0.1), transparent 24%),
     linear-gradient(180deg, #fffaf3 0%, #f7efe5 40%, #efe2d3 100%);

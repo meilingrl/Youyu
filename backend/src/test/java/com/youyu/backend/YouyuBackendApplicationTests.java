@@ -729,7 +729,8 @@ class YouyuBackendApplicationTests {
                 .andExpect(jsonPath("$.data.totalSpendAmount", greaterThan(0.0)))
                 .andExpect(jsonPath("$.data.totalPurchasedItemCount", greaterThan(0)))
                 .andExpect(jsonPath("$.data.recentBrowses.length()", greaterThan(0)))
-                .andExpect(jsonPath("$.data.favoritePreferenceSummary.length()", greaterThan(0)));
+                .andExpect(jsonPath("$.data.favoritePreferenceSummary.length()", greaterThan(0)))
+                .andExpect(jsonPath("$.data.favoritePreferenceSummary[0].spendAmount", greaterThan(0.0)));
 
         mockMvc.perform(get("/api/shops/4002/insight-snapshot"))
                 .andExpect(status().isOk())
@@ -737,7 +738,8 @@ class YouyuBackendApplicationTests {
                 .andExpect(jsonPath("$.data.metricSource").value("real_query"))
                 .andExpect(jsonPath("$.data.monthlySalesAmount", greaterThan(0.0)))
                 .andExpect(jsonPath("$.data.monthlyOrderCount", greaterThan(0)))
-                .andExpect(jsonPath("$.data.hotProducts.length()", greaterThan(0)));
+                .andExpect(jsonPath("$.data.hotProducts.length()", greaterThan(0)))
+                .andExpect(jsonPath("$.data.hotProducts[0].salesAmount", greaterThan(0.0)));
     }
 
     @Test

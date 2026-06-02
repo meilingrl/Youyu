@@ -8,6 +8,8 @@ public interface NotificationMapper {
 
     Long insert(Map<String, Object> notification);
 
+    int insertForActiveUsers(String type, String title, String body, String actionUrl);
+
     List<Map<String, Object>> findByUserId(Long userId, int offset, int limit);
 
     long countByUserId(Long userId);

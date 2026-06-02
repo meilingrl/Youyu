@@ -113,7 +113,7 @@ function isNavigable(route) {
   padding: 16px;
   border-radius: 20px;
   border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.4);
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.82), rgba(255, 247, 239, 0.64));
   transition:
     transform var(--cm-transition),
     border-color var(--cm-transition),
@@ -130,8 +130,8 @@ function isNavigable(route) {
 .trade-route-nav__item.is-active {
   border-color: rgba(var(--cm-primary-rgb), 0.22);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 246, 238, 0.88)),
-    rgba(var(--cm-primary-rgb), 0.06);
+    linear-gradient(180deg, rgba(255, 253, 249, 0.95), rgba(255, 246, 238, 0.9)),
+    rgba(var(--cm-primary-rgb), 0.05);
   box-shadow: var(--cm-shadow-soft);
 }
 

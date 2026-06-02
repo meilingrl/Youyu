@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import InsightBarList from '@/components/common/InsightBarList.vue'
 import { ElMessage } from '@/plugins/element-plus-services'
 import { getAdminDashboard } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
@@ -10,6 +11,7 @@ const summary = ref({})
 const queueMetrics = ref([])
 const governanceSignals = ref([])
 const statusBreakdowns = ref({ orders: [], mediation: [] })
+const salesAnalytics = ref({ categorySales: [], shopRankings: [] })
 const unavailableMetrics = ref([])
 
 const heroStats = computed(() => [
@@ -31,6 +33,37 @@ const visibleOrderBreakdowns = computed(() =>
 const visibleMediationBreakdowns = computed(() =>
   (statusBreakdowns.value.mediation || []).filter((item) => Number(item.value || 0) > 0)
 )
+const categorySalesBars = computed(() => {
+  const items = salesAnalytics.value.categorySales || []
+  const total = items.reduce((sum, item) => sum + Number(item.salesAmount || 0), 0)
+
+  return items.map((item) => {
+    const salesAmount = Number(item.salesAmount || 0)
+    const percentage = total > 0 ? ((salesAmount / total) * 100).toFixed(1) : '0.0'
+    return {
+      id: `category-${item.categoryId || item.categoryName}`,
+      label: item.categoryName || '未分类',
+      value: salesAmount,
+      displayValue: `${percentage}%`,
+      helper: `成交额 ¥${formatMoney(salesAmount)} · 已售 ${Number(item.soldCount || 0)} 件 · ${Number(item.orderCount || 0)} 笔订单`,
+      tone: 'primary'
+    }
+  })
+})
+const shopRankingBars = computed(() =>
+  (salesAnalytics.value.shopRankings || []).map((item, index) => ({
+    id: `shop-${item.shopId || index}`,
+    label: `${index + 1}. ${item.shopName || '未命名店铺'}`,
+    value: Number(item.salesAmount || 0),
+    displayValue: `¥${formatMoney(item.salesAmount)}`,
+    helper: `已售 ${Number(item.soldCount || 0)} 件 · ${Number(item.orderCount || 0)} 笔订单`,
+    tone: index === 0 ? 'warning' : 'success'
+  }))
+)
+
+function formatMoney(value) {
+  return Number(value || 0).toFixed(2)
+}
 
 function metricTarget(metric) {
   if (!metric?.target?.path) {
@@ -67,6 +100,7 @@ async function loadDashboard() {
     queueMetrics.value = data.queueMetrics || []
     governanceSignals.value = data.governanceSignals || []
     statusBreakdowns.value = data.statusBreakdowns || { orders: [], mediation: [] }
+    salesAnalytics.value = data.salesAnalytics || { categorySales: [], shopRankings: [] }
     unavailableMetrics.value = data.unavailableMetrics || []
   } catch (err) {
     ElMessage.error(resolveErrorMessage(err))
@@ -149,6 +183,26 @@ onMounted(loadDashboard)
       <div v-else class="admin-empty-line">当前没有需要额外关注的治理信号。</div>
     </section>
 
+    <section class="dashboard-section">
+      <div class="dashboard-section__header">
+        <div>
+          <h2>交易数据概览</h2>
+          <p>基于已完成且已支付订单，查看商品类别成交占比和店铺成交排行。</p>
+        </div>
+      </div>
+
+      <div class="dashboard-heatmap-grid">
+        <article class="breakdown-panel">
+          <h3>商品类别成交额占比</h3>
+          <InsightBarList :items="categorySalesBars" empty-text="暂无商品类别成交数据" />
+        </article>
+        <article class="breakdown-panel">
+          <h3>店铺成交额排行</h3>
+          <InsightBarList :items="shopRankingBars" empty-text="暂无店铺成交数据" />
+        </article>
+      </div>
+    </section>
+
     <section class="dashboard-section dashboard-section--split">
       <div class="breakdown-panel">
         <div class="dashboard-section__header">
@@ -223,6 +277,10 @@ onMounted(loadDashboard)
 
 .dashboard-hero {
   align-items: center;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 249, 0.96), rgba(255, 248, 240, 0.92)),
+    linear-gradient(180deg, rgba(var(--cm-primary-rgb), 0.025), transparent 68%);
+  box-shadow: 0 20px 48px rgba(88, 62, 43, 0.08);
 }
 
 .dashboard-hero__stats {
@@ -236,7 +294,7 @@ onMounted(loadDashboard)
 .breakdown-panel,
 .unavailable-row {
   border: 1px solid var(--cm-border);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 252, 247, 0.84);
 }
 
 .dashboard-hero__stat {
@@ -247,7 +305,7 @@ onMounted(loadDashboard)
   justify-items: start;
   padding: 16px;
   border-radius: 16px;
-  box-shadow: var(--cm-shadow-soft);
+  box-shadow: 0 10px 24px rgba(88, 62, 43, 0.05);
 }
 
 .dashboard-hero__stat strong {
@@ -367,6 +425,12 @@ onMounted(loadDashboard)
   gap: 10px;
 }
 
+.dashboard-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .signal-row,
 .breakdown-row {
   min-height: 64px;
@@ -423,6 +487,7 @@ onMounted(loadDashboard)
     width: 100%;
   }
 
+  .dashboard-heatmap-grid,
   .dashboard-section--split {
     grid-template-columns: 1fr;
   }

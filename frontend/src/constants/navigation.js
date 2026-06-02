@@ -26,5 +26,6 @@ export const adminNavigation = [
   { label: '营销', path: '/admin/marketing' },
   { label: '调解', path: '/admin/mediation' },
   { label: '热搜', path: '/admin/hot-search' },
+  { label: '通知', path: '/admin/notifications' },
   { label: '客服', path: '/admin/support' }
 ]

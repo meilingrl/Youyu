@@ -125,6 +125,15 @@ export default {
         title: '在线客服控制台',
         navKey: '/admin/support'
       }
+    },
+    {
+      path: 'notifications',
+      name: 'admin-notifications',
+      component: () => import('@/views/admin/NotificationPublishView.vue'),
+      meta: {
+        title: '发布通知',
+        navKey: '/admin/notifications'
+      }
     }
   ]
 }

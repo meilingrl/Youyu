@@ -5,6 +5,7 @@ import { ElMessage } from '@/plugins/element-plus-services'
 import PageSection from '@/components/common/PageSection.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
+import InsightBarList from '@/components/common/InsightBarList.vue'
 import ReservedMetricCard from '@/components/common/ReservedMetricCard.vue'
 import ReservedPanel from '@/components/common/ReservedPanel.vue'
 import RatingSummary from '@/components/common/RatingSummary.vue'
@@ -41,6 +42,53 @@ const shopActivities = computed(() => marketingStore.getShopActivitiesByShop(pro
 const availableCoupons = computed(() => marketingStore.getAvailableCouponsByShop(props.id))
 const shopInsightReserved = computed(() => shopInsight.value?.metricSource !== 'real_query')
 const shopInsightFailed = computed(() => shopInsight.value?.metricSource === 'unavailable')
+const shopIncomeBars = computed(() => {
+  if (shopInsightReserved.value) {
+    return []
+  }
+
+  return [
+    {
+      id: 'views',
+      label: '本月收入',
+      value: Number(shopInsight.value?.monthlySalesAmount || 0),
+      displayValue: `¥${formatMoney(shopInsight.value?.monthlySalesAmount)}`,
+      helper: '按本月已完成且已支付订单汇总',
+      tone: 'primary'
+    },
+    {
+      id: 'orders',
+      label: '本月成交订单',
+      value: Number(shopInsight.value?.monthlyOrderCount || 0),
+      displayValue: formatMetric(shopInsight.value?.monthlyOrderCount, ' 单'),
+      helper: '按本月已完成且已支付订单汇总',
+      tone: 'info'
+    },
+    {
+      id: 'repeat-buyers',
+      label: '复购买家',
+      value: Number(shopInsight.value?.repeatBuyerCount || 0),
+      displayValue: formatMetric(shopInsight.value?.repeatBuyerCount, ' 人'),
+      helper: '存在多笔已完成且已支付订单的买家',
+      tone: 'success'
+    }
+  ]
+})
+const hotProductBars = computed(() => {
+  if (shopInsightReserved.value) {
+    return []
+  }
+
+  const items = Array.isArray(shopInsight.value?.hotProducts) ? shopInsight.value.hotProducts : []
+  return items.map((item, index) => ({
+    id: `hot-${item.productId || index}`,
+    label: item.title || '商品',
+    value: Number(item.salesAmount || 0),
+    displayValue: `¥${formatMoney(item.salesAmount)}`,
+    helper: `已售 ${Number(item.soldCount || 0)} 件 · 收藏 ${Number(item.favoriteCount || 0)} · 浏览 ${Number(item.viewCount || 0)}`,
+    tone: index === 0 ? 'warning' : 'primary'
+  }))
+})
 
 const shopMetricDefMap = computed(() => {
   const map = {}
@@ -423,25 +471,25 @@ onMounted(loadShop)
         <div class="shop-metric-grid">
           <ReservedMetricCard
             v-if="shopInsightReserved"
-            label="本月销售额"
+            label="本月收入"
             :scope="shopMetricDef('monthlySalesAmount').scope"
             :data-source="shopMetricDef('monthlySalesAmount').dataSource"
             unit="元"
           />
           <article v-else class="shop-metric-card shell-card">
-            <span>本月销售额</span>
+            <span>本月收入</span>
             <strong>¥{{ formatMoney(shopInsight?.monthlySalesAmount) }}</strong>
           </article>
 
           <ReservedMetricCard
             v-if="shopInsightReserved"
-            label="本月订单数"
+            label="本月成交订单"
             :scope="shopMetricDef('monthlyOrderCount').scope"
             :data-source="shopMetricDef('monthlyOrderCount').dataSource"
             unit="单"
           />
           <article v-else class="shop-metric-card shell-card">
-            <span>本月订单数</span>
+            <span>本月成交订单</span>
             <strong>{{ formatMetric(shopInsight?.monthlyOrderCount, ' 单') }}</strong>
           </article>
 
@@ -471,6 +519,11 @@ onMounted(loadShop)
         <div class="shop-grid shop-grid--analytics">
           <article class="shop-panel shell-card">
             <h3>回购与热销</h3>
+            <InsightBarList
+              v-if="!shopInsightReserved"
+              :items="hotProductBars"
+              empty-text="暂无热销商品收入记录"
+            />
             <div v-if="!shopInsightReserved && shopInsight?.hotProducts?.length" class="shop-hot-list">
               <div v-for="item in shopInsight.hotProducts" :key="item.productId" class="shop-hot-list__item">
                 <div>
@@ -494,6 +547,11 @@ onMounted(loadShop)
 
           <article class="shop-panel shell-card">
             <h3>社群与经营入口</h3>
+            <InsightBarList
+              v-if="!shopInsightReserved"
+              :items="shopIncomeBars"
+              empty-text="暂无店铺收入记录"
+            />
             <div class="shop-reserved-actions">
               <el-button plain disabled>关注店铺</el-button>
               <el-button plain disabled>粉丝群</el-button>

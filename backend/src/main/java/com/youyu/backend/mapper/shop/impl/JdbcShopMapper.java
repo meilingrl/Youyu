@@ -177,14 +177,14 @@ public class JdbcShopMapper implements ShopMapper {
                                      AND o.payment_status = 'paid'
                                      AND o.completed_at >= ?
                                      AND o.completed_at < ?) AS monthly_sales_amount,
-                                  (SELECT COUNT(DISTINCT o.buyer_user_id)
+                                  (SELECT COUNT(*)
                                    FROM orders o
                                    WHERE o.shop_id = s.id
                                      AND o.order_status = 'completed'
                                      AND o.payment_status = 'paid'
                                      AND o.completed_at >= ?
                                      AND o.completed_at < ?) AS monthly_order_count,
-                                  (SELECT COUNT(*)
+                                  (SELECT COUNT(DISTINCT o.buyer_user_id)
                                    FROM orders o
                                    WHERE o.shop_id = s.id
                                      AND o.order_status = 'completed'
@@ -236,7 +236,8 @@ public class JdbcShopMapper implements ShopMapper {
         return jdbcTemplate.queryForList(
                         """
                                 SELECT p.id AS product_id, p.title,
-                                       COALESCE(SUM(oi.quantity), 0) AS sold_count,
+                                       COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.quantity ELSE 0 END), 0) AS sold_count,
+                                       COALESCE(SUM(CASE WHEN o.id IS NOT NULL THEN oi.subtotal_amount ELSE 0 END), 0) AS sales_amount,
                                        p.favorite_count, p.view_count
                                 FROM products p
                                 LEFT JOIN order_items oi ON oi.product_id = p.id
@@ -261,8 +262,79 @@ public class JdbcShopMapper implements ShopMapper {
                     result.put("productId", first(row, "PRODUCT_ID"));
                     result.put("title", first(row, "TITLE"));
                     result.put("soldCount", first(row, "SOLD_COUNT"));
+                    result.put("salesAmount", first(row, "SALES_AMOUNT"));
                     result.put("favoriteCount", first(row, "FAVORITE_COUNT"));
                     result.put("viewCount", first(row, "VIEW_COUNT"));
+                    return result;
+                })
+                .toList();
+    }
+
+    @Override
+    public List<Map<String, Object>> summarizeCompletedSalesByCategory(int limit) {
+        return jdbcTemplate.queryForList(
+                        """
+                                SELECT p.category_id, COALESCE(c.name, '未分类') AS category_name,
+                                       COALESCE(SUM(oi.subtotal_amount), 0) AS sales_amount,
+                                       COALESCE(SUM(oi.quantity), 0) AS sold_count,
+                                       COUNT(DISTINCT o.id) AS order_count
+                                FROM orders o
+                                JOIN order_items oi ON oi.order_id = o.id
+                                LEFT JOIN products p ON p.id = oi.product_id
+                                LEFT JOIN categories c ON c.id = p.category_id
+                                WHERE o.order_status = 'completed'
+                                  AND o.payment_status = 'paid'
+                                GROUP BY p.category_id, c.name
+                                ORDER BY sales_amount DESC, sold_count DESC, category_name
+                                LIMIT ?
+                                """,
+                        limit
+                ).stream()
+                .map(row -> {
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("categoryId", first(row, "CATEGORY_ID"));
+                    result.put("categoryName", first(row, "CATEGORY_NAME"));
+                    result.put("salesAmount", first(row, "SALES_AMOUNT"));
+                    result.put("soldCount", first(row, "SOLD_COUNT"));
+                    result.put("orderCount", first(row, "ORDER_COUNT"));
+                    return result;
+                })
+                .toList();
+    }
+
+    @Override
+    public List<Map<String, Object>> rankShopsByCompletedSales(int limit) {
+        return jdbcTemplate.queryForList(
+                        """
+                                SELECT s.id AS shop_id, s.name AS shop_name,
+                                       COALESCE(SUM(o.pay_amount), 0) AS sales_amount,
+                                       COALESCE((
+                                         SELECT SUM(oi.quantity)
+                                         FROM orders sold_orders
+                                         JOIN order_items oi ON oi.order_id = sold_orders.id
+                                         WHERE sold_orders.shop_id = s.id
+                                           AND sold_orders.order_status = 'completed'
+                                           AND sold_orders.payment_status = 'paid'
+                                       ), 0) AS sold_count,
+                                       COUNT(DISTINCT o.id) AS order_count
+                                FROM shops s
+                                JOIN orders o ON o.shop_id = s.id
+                                WHERE s.is_deleted = FALSE
+                                  AND o.order_status = 'completed'
+                                  AND o.payment_status = 'paid'
+                                GROUP BY s.id, s.name
+                                ORDER BY sales_amount DESC, sold_count DESC, s.id
+                                LIMIT ?
+                                """,
+                        limit
+                ).stream()
+                .map(row -> {
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("shopId", first(row, "SHOP_ID"));
+                    result.put("shopName", first(row, "SHOP_NAME"));
+                    result.put("salesAmount", first(row, "SALES_AMOUNT"));
+                    result.put("soldCount", first(row, "SOLD_COUNT"));
+                    result.put("orderCount", first(row, "ORDER_COUNT"));
                     return result;
                 })
                 .toList();

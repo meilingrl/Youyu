@@ -42,6 +42,8 @@ class AdminGovernanceTest extends BackendTestBase {
                 .andExpect(jsonPath("$.data.governanceSignals").isArray())
                 .andExpect(jsonPath("$.data.statusBreakdowns.orders").isArray())
                 .andExpect(jsonPath("$.data.statusBreakdowns.mediation").isArray())
+                .andExpect(jsonPath("$.data.salesAnalytics.categorySales").isArray())
+                .andExpect(jsonPath("$.data.salesAnalytics.shopRankings").isArray())
                 .andExpect(jsonPath("$.data.unavailableMetrics[0].available").value(false));
     }
 

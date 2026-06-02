@@ -166,7 +166,22 @@ No query parameters, path parameters, or body.
 
 | Field | Type | Notes |
 |---|---|---|
-| `data` | object | Caller should expect summary metrics and recent insight fields rather than full raw history |
+| `data.totalSpendAmount` | number | Sum of `pay_amount` for completed paid orders owned by the current buyer |
+| `data.totalPurchasedItemCount` | number | Sum of purchased item quantities for completed paid orders |
+| `data.recentBrowses` | array | Compatibility field containing recent completed paid purchase records |
+| `data.favoritePreferenceSummary` | array | Compatibility field containing completed paid purchase summaries grouped by category |
+| `data.lastCalculatedAt` | string | Local timestamp formatted as `yyyy-MM-dd HH:mm` |
+| `data.metricSource` | string | Current value: `real_query` |
+
+`favoritePreferenceSummary` items include:
+
+| Field | Type | Notes |
+|---|---|---|
+| `categoryId` | number or null | Product category ID |
+| `categoryName` | string | Product category name, or `未分类` |
+| `count` | number | Purchased item quantity |
+| `spendAmount` | number | Sum of item subtotals in completed paid orders |
+| `metricSource` | string | Current value: `purchased_category` |
 
 #### Error Cases
 

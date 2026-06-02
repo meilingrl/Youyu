@@ -118,6 +118,8 @@ No query parameters, path parameters, or body.
 | `data.governanceSignals` | array | Stable non-primary queue signals with the same metric item shape as `queueMetrics` |
 | `data.statusBreakdowns.orders` | array | Real order counts by selected `orders.order_status` values |
 | `data.statusBreakdowns.mediation` | array | Real mediation counts by selected `mediation_cases.status` values |
+| `data.salesAnalytics.categorySales` | array | Completed paid sales grouped by product category, with `categoryId`, `categoryName`, `salesAmount`, `soldCount`, and `orderCount` |
+| `data.salesAnalytics.shopRankings` | array | Completed paid sales ranked by shop, with `shopId`, `shopName`, `salesAmount`, `soldCount`, and `orderCount` |
 | `data.unavailableMetrics` | array | Metrics intentionally not shown as live data because no reliable source exists yet |
 | `data.cards` | array | Legacy dashboard card shape retained for compatibility |
 | `data.shortcuts` | array | Admin route shortcuts |

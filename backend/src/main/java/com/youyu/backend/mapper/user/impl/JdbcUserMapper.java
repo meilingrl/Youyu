@@ -443,7 +443,8 @@ public class JdbcUserMapper implements UserMapper {
         return jdbcTemplate.queryForList(
                         """
                                 SELECT p.category_id, COALESCE(c.name, '未分类') AS category_name,
-                                       COALESCE(SUM(oi.quantity), 0) AS item_count
+                                       COALESCE(SUM(oi.quantity), 0) AS item_count,
+                                       COALESCE(SUM(oi.subtotal_amount), 0) AS spend_amount
                                 FROM orders o
                                 JOIN order_items oi ON oi.order_id = o.id
                                 LEFT JOIN products p ON p.id = oi.product_id
@@ -463,6 +464,7 @@ public class JdbcUserMapper implements UserMapper {
                     result.put("categoryId", row.get("category_id"));
                     result.put("categoryName", defaultString(row.get("category_name"), "未分类"));
                     result.put("count", row.get("item_count"));
+                    result.put("spendAmount", row.get("spend_amount"));
                     result.put("metricSource", "purchased_category");
                     return result;
                 })

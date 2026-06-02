@@ -28,4 +28,8 @@ public interface ShopMapper {
     Map<String, Object> summarizeMonthlyInsight(Long shopId, LocalDateTime startInclusive, LocalDateTime endExclusive);
 
     List<Map<String, Object>> findHotProducts(Long shopId, LocalDateTime startInclusive, LocalDateTime endExclusive, int limit);
+
+    List<Map<String, Object>> summarizeCompletedSalesByCategory(int limit);
+
+    List<Map<String, Object>> rankShopsByCompletedSales(int limit);
 }

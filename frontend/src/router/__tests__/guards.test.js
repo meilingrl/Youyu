@@ -133,6 +133,24 @@ describe('router guards', () => {
     expect(router.currentRoute.value.meta.navKey).toBe('/admin/mediation')
   })
 
+  it('allows platform admins to visit notification publishing', async () => {
+    setSession('admin')
+    const router = createTestRouter()
+
+    await navigate(router, '/admin/notifications')
+
+    expect(router.currentRoute.value.name).toBe('admin-notifications')
+  })
+
+  it('redirects specialist admin roles away from notification publishing', async () => {
+    setSession('support_agent')
+    const router = createTestRouter()
+
+    await navigate(router, '/admin/notifications')
+
+    expect(router.currentRoute.value.path).toBe('/admin/dashboard')
+  })
+
   it('routes an admin default entry to the admin dashboard', async () => {
     setSession('admin')
     const router = createTestRouter()

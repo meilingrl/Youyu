@@ -10,6 +10,8 @@ public interface NotificationService {
 
     Map<String, Object> createNotification(Long userId, String type, String title, String body, String actionUrl);
 
+    Map<String, Object> publishSystemNotification(Long adminUserId, String title, String body, String actionUrl);
+
     void createOrderStatusNotification(Map<String, Object> order, String statusText, boolean notifySeller);
 
     void createSupportTicketNotification(Long userId, Map<String, Object> ticket, String title, String body);

@@ -4,6 +4,10 @@ export function getAdminDashboard() {
   return service.get('/admin/dashboard')
 }
 
+export function publishAdminNotification(payload) {
+  return service.post('/admin/notifications', payload)
+}
+
 export function getAdminUsers(params) {
   return service.get('/admin/users', { params })
 }

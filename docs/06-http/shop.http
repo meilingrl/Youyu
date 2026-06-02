@@ -24,6 +24,8 @@ GET {{baseUrl}}/api/shops/99999
 ###
 
 ### Shop insight snapshot
+### Includes monthly shop income, completed paid-order count, repeat buyers,
+### and hotProducts[] with soldCount and salesAmount.
 GET {{baseUrl}}/api/shops/4001/insight-snapshot
 
 ###

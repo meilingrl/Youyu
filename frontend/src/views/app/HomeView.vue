@@ -542,9 +542,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border-top: 1px solid rgba(88, 62, 43, 0.08);
   border-bottom: 1px solid rgba(88, 62, 43, 0.05);
-  background:
-    linear-gradient(90deg, rgba(88, 62, 43, 0.035) 1px, transparent 1px) 25% 0 / 25% 100% no-repeat,
-    linear-gradient(180deg, rgba(255, 250, 243, 0.38), rgba(255, 250, 243, 0.14));
+  background: linear-gradient(180deg, rgba(255, 251, 245, 0.42), rgba(255, 248, 240, 0.18));
 }
 
 .home-stats__metrics::before {
@@ -556,8 +554,8 @@ onBeforeUnmount(() => {
   z-index: 0;
   width: calc(100% / var(--stat-count, 4));
   background:
-    linear-gradient(180deg, rgba(255, 250, 243, 0.9), rgba(255, 250, 243, 0.42)),
-    linear-gradient(135deg, rgba(var(--cm-primary-rgb), 0.12), rgba(var(--cm-accent-rgb), 0.08));
+    linear-gradient(180deg, rgba(255, 252, 247, 0.94), rgba(255, 246, 238, 0.52)),
+    linear-gradient(180deg, rgba(var(--cm-primary-rgb), 0.08), rgba(var(--cm-accent-rgb), 0.04));
   box-shadow:
     inset 0 -2px 0 var(--cm-text),
     0 18px 44px rgba(88, 62, 43, 0.07);
