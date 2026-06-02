@@ -7,7 +7,7 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/notification/NotificationController.java`
   - service: `backend/src/main/java/com/youyu/backend/service/notification/impl/NotificationServiceImpl.java`
   - request sample: `docs/06-http/notification.http`
-- Last updated: 2026-05-25
+- Last updated: 2026-06-01
 
 ## Scope
 
@@ -29,7 +29,7 @@ Notification objects include:
 |---|---|---|
 | `id` | number | Notification ID |
 | `userId` | number | Recipient user ID |
-| `type` | string | `order_status`, `review_reminder`, or `system` |
+| `type` | string | `order_status`, `support_ticket`, `mediation_update`, `review_reminder`, or `system` |
 | `title` | string | Display title |
 | `body` | string | Display body |
 | `actionUrl` | string | Optional app route to open |
@@ -79,6 +79,15 @@ Marks all notifications for the current user as read.
 ## Business Integration
 
 Order state transitions create `order_status` notifications for the buyer and, where relevant, the seller. Notification delivery is best-effort and must not block the order or payment state transition.
+
+Wave 1 also uses the same notification lane for:
+
+- `support_ticket`
+  - emitted when platform support posts a public reply or changes ticket status
+  - `actionUrl` targets the durable support-ticket page, currently `/app/support?ticketId={ticketId}`
+- `mediation_update`
+  - emitted when an order-backed report enters formal mediation, when mediation status changes, and when a final mediation decision is recorded
+  - `actionUrl` targets the user-facing order detail page, currently `/app/orders/{orderId}`
 
 ## Error Cases
 

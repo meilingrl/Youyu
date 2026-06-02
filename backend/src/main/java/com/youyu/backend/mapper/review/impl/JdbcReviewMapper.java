@@ -93,6 +93,25 @@ public class JdbcReviewMapper implements ReviewMapper {
         }).toList();
     }
 
+    @Override
+    public List<Map<String, Object>> summarizeProductRatingDistribution(Long productId) {
+        return jdbcTemplate.queryForList(
+                """
+                        SELECT score, COUNT(*) AS cnt
+                        FROM reviews
+                        WHERE product_id = ?
+                        GROUP BY score
+                        ORDER BY score ASC
+                        """,
+                productId
+        ).stream().map(row -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("score", toInt(row.get("score")));
+            map.put("count", toLong(row.get("cnt")));
+            return map;
+        }).toList();
+    }
+
     // ── Shop reviews ──
 
     @Override
@@ -154,6 +173,25 @@ public class JdbcReviewMapper implements ReviewMapper {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("count", toLong(row.get("cnt")));
             map.put("avgScore", toDouble(row.get("avg_score")));
+            return map;
+        }).toList();
+    }
+
+    @Override
+    public List<Map<String, Object>> summarizeShopRatingDistribution(Long shopId) {
+        return jdbcTemplate.queryForList(
+                """
+                        SELECT score, COUNT(*) AS cnt
+                        FROM shop_reviews
+                        WHERE shop_id = ?
+                        GROUP BY score
+                        ORDER BY score ASC
+                        """,
+                shopId
+        ).stream().map(row -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("score", toInt(row.get("score")));
+            map.put("count", toLong(row.get("cnt")));
             return map;
         }).toList();
     }

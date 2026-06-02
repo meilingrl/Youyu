@@ -7,7 +7,7 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/order/OrderController.java`
   - controller: `backend/src/main/java/com/youyu/backend/controller/order/AdminOrderController.java`
   - request sample: `docs/06-http/order.http`
-- Last updated: 2026-05-29
+- Last updated: 2026-06-01
 
 ## Scope
 
@@ -127,12 +127,53 @@ Return order detail for the current buyer.
 - `data` currently includes:
   - order base information
   - `fulfillment`
-  - `orderItems`
+  - `items`
   - `payments`
   - `refunds`
   - `appliedCoupon`
   - `availableActions`
   - digital asset visibility data when applicable
+  - `refundSupported`
+  - `refundRuleText`
+  - `relatedReports`
+  - `mediationSummary`
+  - `afterSalesSummary`
+
+#### After-sales visibility fields
+
+`GET /api/orders/{orderId}` and `GET /api/admin/orders/{orderId}` now return a shared after-sales visibility family:
+
+| Field | Type | Notes |
+|---|---|---|
+| `refundSupported` | boolean | `false` for digital orders that do not support refund. |
+| `refundRuleText` | string | Honest current-phase guidance text; it must not imply a completed payment-gateway refund upgrade. |
+| `relatedReports` | array | Order-linked reports visible in the current role context. Buyer view returns only reports submitted by the current buyer. Admin view returns all order-linked reports. |
+| `mediationSummary` | object or null | Latest report-backed mediation case summary for the order when one exists. |
+| `afterSalesSummary` | object | Aggregated visibility object for refund/report/mediation progress. |
+
+`relatedReports[]` items currently expose report list fields such as `id`, `reporterUserId`, `reporterName`, `targetType`, `targetId`, `reasonType`, `content`, `status`, `submittedAt`, `processedAt`, `processedBy`, and `resolution`.
+
+`mediationSummary` currently exposes:
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | number | Mediation case ID. |
+| `caseNo` | string | Human-readable mediation case number. |
+| `status` | string | Current mediation case status. |
+| `decisionCategory` | string or null | Present once a decision category exists. |
+| `sourceReportId` | number | Report ID used for the report-backed handoff. |
+| `updatedAt` | string | Latest mediation case update time. |
+| `reportCount` | number | Count of currently visible related reports in the response context. |
+
+`afterSalesSummary` currently exposes:
+
+| Field | Type | Notes |
+|---|---|---|
+| `hasRefunds` | boolean | Whether the order currently has refund records. |
+| `hasReports` | boolean | Whether the current response context includes linked reports. |
+| `hasMediation` | boolean | Whether a mediation case exists for the order. |
+| `currentStage` | string | Current aggregate after-sales stage, such as `normal`, `report_submitted`, `refund_in_progress`, `refund_completed`, or `mediation_in_progress`. |
+| `userGuidance` | string | Current-phase guidance text for the viewer. |
 
 #### Error Cases
 
@@ -247,6 +288,10 @@ Return order detail from the admin view.
 #### Response
 
 - `data`: same detail family as buyer view, but without buyer ownership restriction
+- Admin detail is the required handling continuation for the buyer-visible after-sales fields above:
+  - it includes all order-linked reports
+  - it includes the same mediation summary family
+  - it is expected to link operators onward into support-ticket, report, and mediation handling pages
 
 ### `POST /api/admin/orders/{orderId}/ship`
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useMarketStore } from '../market'
 import { getProductList } from '@/api/modules/product'
+import { addFavorite, listFavorites, removeFavorite } from '@/api/modules/favorite'
 
 vi.mock('@/api/modules/product', () => ({
   createProduct: vi.fn(),
@@ -11,8 +12,9 @@ vi.mock('@/api/modules/product', () => ({
 }))
 
 vi.mock('@/api/modules/favorite', () => ({
+  addFavorite: vi.fn(),
   listFavorites: vi.fn(),
-  toggleFavorite: vi.fn()
+  removeFavorite: vi.fn()
 }))
 
 vi.mock('@/api/modules/user', () => ({
@@ -97,5 +99,58 @@ describe('market store', () => {
     expect(store.products).toEqual([])
     expect(store.productError).toBe('Product service unavailable')
     expect(store.loadingProducts).toBe(false)
+  })
+
+  it('loads favorite products from the frozen favorites contract', async () => {
+    listFavorites.mockResolvedValue({
+      success: true,
+      data: [
+        {
+          id: 301,
+          title: 'Mock Favorite Product',
+          salePrice: 25,
+          categoryId: 9,
+          categoryName: 'Favorites'
+        }
+      ]
+    })
+
+    const store = setupStore()
+    const result = await store.loadFavorites()
+
+    expect(listFavorites).toHaveBeenCalledTimes(1)
+    expect(result).toHaveLength(1)
+    expect(store.favoriteIds).toEqual(['301'])
+    expect(store.favoriteProducts[0]).toMatchObject({
+      id: 301,
+      title: 'Mock Favorite Product'
+    })
+  })
+
+  it('uses POST and DELETE favorites endpoints for remote favorite changes', async () => {
+    addFavorite.mockResolvedValue({
+      success: true,
+      data: {
+        productId: 401,
+        favorite: true
+      }
+    })
+    removeFavorite.mockResolvedValue({
+      success: true,
+      data: {
+        productId: 401,
+        favorite: false
+      }
+    })
+
+    const store = setupStore()
+
+    await store.toggleFavoriteRemote(401)
+    expect(addFavorite).toHaveBeenCalledWith(401)
+    expect(store.favoriteIds).toEqual(['401'])
+
+    await store.toggleFavoriteRemote(401)
+    expect(removeFavorite).toHaveBeenCalledWith(401)
+    expect(store.favoriteIds).toEqual([])
   })
 })

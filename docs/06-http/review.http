@@ -87,10 +87,12 @@ Authorization: Bearer {{seedReviewToken}}
 GET {{baseUrl}}/api/products/3001/reviews?page=1&pageSize=10
 
 ### Public: product review summary (no auth required)
+# Expect: distribution always has five score buckets; reviewed scores return real counts.
 GET {{baseUrl}}/api/products/3001/review-summary
 
 ### Public: shop review list (no auth required)
 GET {{baseUrl}}/api/shops/4001/reviews?page=1&pageSize=10
 
 ### Public: shop review summary (no auth required)
+# Expect: distribution always has five score buckets; reviewed scores return real counts.
 GET {{baseUrl}}/api/shops/4001/review-summary

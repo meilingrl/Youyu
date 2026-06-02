@@ -3,8 +3,10 @@ package com.youyu.backend.service.order.impl;
 import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.enums.OrderStatus;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.mapper.mediation.MediationMapper;
 import com.youyu.backend.mapper.order.DigitalAccessMapper;
 import com.youyu.backend.mapper.product.ProductMapper;
+import com.youyu.backend.mapper.report.ReportMapper;
 import com.youyu.backend.service.marketing.MarketingService;
 import com.youyu.backend.service.notification.NotificationService;
 import com.youyu.backend.service.order.OrderService;
@@ -26,17 +28,23 @@ public class OrderServiceImpl implements OrderService {
     private final TransactionDataStore transactionDataStore;
     private final ProductMapper productMapper;
     private final DigitalAccessMapper digitalAccessMapper;
+    private final ReportMapper reportMapper;
+    private final MediationMapper mediationMapper;
     private final NotificationService notificationService;
     private final MarketingService marketingService;
 
     public OrderServiceImpl(TransactionDataStore transactionDataStore,
                             ProductMapper productMapper,
                             DigitalAccessMapper digitalAccessMapper,
+                            ReportMapper reportMapper,
+                            MediationMapper mediationMapper,
                             NotificationService notificationService,
                             MarketingService marketingService) {
         this.transactionDataStore = transactionDataStore;
         this.productMapper = productMapper;
         this.digitalAccessMapper = digitalAccessMapper;
+        this.reportMapper = reportMapper;
+        this.mediationMapper = mediationMapper;
         this.notificationService = notificationService;
         this.marketingService = marketingService;
     }
@@ -191,9 +199,12 @@ public class OrderServiceImpl implements OrderService {
         detail.put("digitalAssets", buildAccessibleDigitalAssets(order, fulfillment));
         detail.put("digitalAccessLogs", digitalAccessMapper.findByOrderId(orderId));
         detail.put("refundSupported", !isDigitalOrder(order));
-        // refundRuleText 为 MVP 占位文本。
-        // TODO: 接入真实支付网关后实现实际退款规则文案。
-        detail.put("refundRuleText", isDigitalOrder(order) ? "电子商品不支持退货，完整内容开放后原则上不支持无理由退款" : "当前仅保留退款记录基础结构与状态流转");
+        detail.put("refundRuleText", buildRefundRuleText(order));
+        List<Map<String, Object>> relatedReports = filterVisibleReports(orderId, userId, adminView);
+        Map<String, Object> mediationSummary = buildMediationSummary(orderId, relatedReports);
+        detail.put("relatedReports", relatedReports);
+        detail.put("mediationSummary", mediationSummary);
+        detail.put("afterSalesSummary", buildAfterSalesSummary(order, refunds, relatedReports, mediationSummary));
         return detail;
     }
 
@@ -657,6 +668,97 @@ public class OrderServiceImpl implements OrderService {
 
     private boolean isDigitalOrder(Map<String, Object> order) {
         return "digital".equals(order.get("fulfillmentType"));
+    }
+
+    private String buildRefundRuleText(Map<String, Object> order) {
+        if (isDigitalOrder(order)) {
+            return "数字商品在完整内容开放后不支持无理由退款；如存在履约或内容争议，请先提交举报或联系客服。";
+        }
+        return "当前售后支持退款申请、退款记录跟踪、举报升级和平台客服介入；支付网关级退款能力仍在后续支付升级阶段完善。";
+    }
+
+    private List<Map<String, Object>> filterVisibleReports(Long orderId, Long userId, boolean adminView) {
+        List<Map<String, Object>> reports = reportMapper.findByTarget("order", orderId);
+        if (adminView) {
+            return reports;
+        }
+        if (userId == null) {
+            return List.of();
+        }
+        return reports.stream()
+                .filter(report -> Objects.equals(report.get("reporterUserId"), userId))
+                .toList();
+    }
+
+    private Map<String, Object> buildMediationSummary(Long orderId, List<Map<String, Object>> relatedReports) {
+        List<Map<String, Object>> cases = mediationMapper.findCasesPaged("", "", null, orderId, "", 0, 5);
+        if (cases.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> latestCase = cases.get(0);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", latestCase.get("id"));
+        result.put("caseNo", latestCase.get("caseNo"));
+        result.put("status", latestCase.get("status"));
+        result.put("decisionCategory", latestCase.get("decisionCategory"));
+        result.put("sourceReportId", latestCase.get("sourceReportId"));
+        result.put("updatedAt", latestCase.get("updatedAt"));
+        result.put("reportCount", relatedReports.size());
+        return result;
+    }
+
+    private Map<String, Object> buildAfterSalesSummary(Map<String, Object> order,
+                                                       List<Map<String, Object>> refunds,
+                                                       List<Map<String, Object>> relatedReports,
+                                                       Map<String, Object> mediationSummary) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("hasRefunds", !refunds.isEmpty());
+        summary.put("hasReports", !relatedReports.isEmpty());
+        summary.put("hasMediation", mediationSummary != null);
+        summary.put("currentStage", resolveAfterSalesStage(order, refunds, relatedReports, mediationSummary));
+        summary.put("userGuidance", resolveAfterSalesGuidance(order, refunds, relatedReports, mediationSummary));
+        return summary;
+    }
+
+    private String resolveAfterSalesStage(Map<String, Object> order,
+                                          List<Map<String, Object>> refunds,
+                                          List<Map<String, Object>> relatedReports,
+                                          Map<String, Object> mediationSummary) {
+        if (mediationSummary != null) {
+            return "mediation_in_progress";
+        }
+        if (!refunds.isEmpty()) {
+            boolean refundCompleted = refunds.stream()
+                    .allMatch(refund -> "completed".equals(String.valueOf(refund.get("refundStatus"))));
+            return refundCompleted ? "refund_completed" : "refund_in_progress";
+        }
+        if (!relatedReports.isEmpty()) {
+            return "report_submitted";
+        }
+        if (OrderStatus.REFUNDING.getValue().equals(order.get("orderStatus"))
+                || "refunding".equals(String.valueOf(order.get("paymentStatus")))) {
+            return "refund_in_progress";
+        }
+        return "normal";
+    }
+
+    private String resolveAfterSalesGuidance(Map<String, Object> order,
+                                             List<Map<String, Object>> refunds,
+                                             List<Map<String, Object>> relatedReports,
+                                             Map<String, Object> mediationSummary) {
+        if (mediationSummary != null) {
+            return "平台已进入正式调解阶段，请关注调解状态与通知中心，必要时补充证据。";
+        }
+        if (!refunds.isEmpty()) {
+            return "退款已进入售后跟进阶段，可通过订单详情、客服工单或通知中心持续查看处理进度。";
+        }
+        if (!relatedReports.isEmpty()) {
+            return "你已提交交易举报，平台会先按举报流程核查，必要时再升级为正式调解。";
+        }
+        if (isDigitalOrder(order)) {
+            return "数字商品若出现内容争议，请优先提交举报或联系客服说明问题。";
+        }
+        return "如需售后协助，可先申请退款、联系卖家，或通过平台客服与举报入口发起平台介入。";
     }
 
     private void notifyOrderStatus(Map<String, Object> order, String statusText, boolean notifySeller) {

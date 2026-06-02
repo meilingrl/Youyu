@@ -89,7 +89,7 @@ class SupportChatTest extends BackendTestBase {
                         .param("page", "0")
                         .param("size", "5"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.content[0].senderUserId").value(1001));
+                .andExpect(jsonPath("$.data.totalElements").value(3));
 
         // Conversation appears in the admin pending queue.
         mockMvc.perform(get("/api/admin/support/chat/conversations")

@@ -7,7 +7,7 @@ import {
   getProductDetail,
   getProductList
 } from '@/api/modules/product'
-import { listFavorites, toggleFavorite as toggleFavoriteApi } from '@/api/modules/favorite'
+import { addFavorite as addFavoriteApi, listFavorites, removeFavorite as removeFavoriteApi } from '@/api/modules/favorite'
 import {
   bindUserEmail,
   createUserAddress,
@@ -141,6 +141,20 @@ export const useMarketStore = defineStore('market', () => {
 
   function setFavoriteIds(ids = []) {
     favoriteIds.value = [...new Set(ids.map((id) => String(id)).filter(Boolean))]
+  }
+
+  function mergeProducts(list = []) {
+    const normalized = list.map((item) => normalizeProduct(item.product || item))
+    if (!normalized.length) {
+      return []
+    }
+
+    const mergedById = new Map(products.value.map((item) => [String(item.id), item]))
+    normalized.forEach((item) => {
+      mergedById.set(String(item.id), item)
+    })
+    products.value = Array.from(mergedById.values())
+    return normalized
   }
 
   /**
@@ -302,23 +316,31 @@ export const useMarketStore = defineStore('market', () => {
       throw new Error(response?.message || '收藏列表加载失败')
     }
 
-    const data = response.data
-    if (Array.isArray(data?.productIds)) {
-      setFavoriteIds(data.productIds)
-      return favoriteProducts.value
-    }
-
-    const rows = Array.isArray(data) ? data : data?.items || data?.products || []
-    const normalized = rows.map((item) => normalizeProduct(item.product || item))
-    if (normalized.length) {
-      const knownIds = new Set(products.value.map((item) => String(item.id)))
-      products.value = [
-        ...products.value,
-        ...normalized.filter((item) => !knownIds.has(String(item.id)))
-      ]
-    }
+    const rows = Array.isArray(response.data) ? response.data : response.data?.items || response.data?.products || []
+    const normalized = mergeProducts(rows)
     setFavoriteIds(normalized.map((item) => item.id))
     return normalized
+  }
+
+  async function addFavoriteRemote(productId) {
+    const response = await addFavoriteApi(productId)
+    if (!response || response.success !== true) {
+      throw new Error(response?.message || '收藏失败')
+    }
+    const id = String(productId)
+    if (!favoriteIds.value.includes(id)) {
+      favoriteIds.value = [...favoriteIds.value, id]
+    }
+    return response.data
+  }
+
+  async function removeFavoriteRemote(productId) {
+    const response = await removeFavoriteApi(productId)
+    if (!response || response.success !== true) {
+      throw new Error(response?.message || '取消收藏失败')
+    }
+    favoriteIds.value = favoriteIds.value.filter((id) => id !== String(productId))
+    return response.data
   }
 
   /**
@@ -329,11 +351,11 @@ export const useMarketStore = defineStore('market', () => {
    * @sideEffects 调用远程 API，刷新 favoriteIds 和 products
    */
   async function toggleFavoriteRemote(productId) {
-    const response = await toggleFavoriteApi(productId)
-    if (!response || response.success !== true) {
-      throw new Error(response?.message || '收藏状态更新失败')
+    if (isFavorite(productId)) {
+      await removeFavoriteRemote(productId)
+      return
     }
-    await loadFavorites()
+    await addFavoriteRemote(productId)
   }
 
   /**
@@ -765,6 +787,8 @@ export const useMarketStore = defineStore('market', () => {
     uploadAvatar,
     bindEmail,
     loadFavorites,
+    addFavoriteRemote,
+    removeFavoriteRemote,
     toggleFavoriteRemote,
     loadMyShop,
     loadShopDetail,

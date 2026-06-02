@@ -8,6 +8,11 @@
 GET {{baseUrl}}/api/notifications?page=0&size=20
 Authorization: Bearer {{userToken}}
 
+### Expected Wave 1 content[] examples:
+### - order_status with actionUrl /app/orders/{orderId}
+### - support_ticket with actionUrl /app/support?ticketId={ticketId}
+### - mediation_update with actionUrl /app/orders/{orderId}
+
 ### 2. Get unread notification count
 GET {{baseUrl}}/api/notifications/unread-count
 Authorization: Bearer {{userToken}}

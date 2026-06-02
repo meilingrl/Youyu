@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from '@/plugins/element-plus-services'
 import EmptyState from '@/components/common/EmptyState.vue'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
@@ -9,82 +10,290 @@ import { useAuthStore } from '@/stores/auth'
 import {
   claimAdminSupportChatConversation,
   closeAdminSupportChatConversation,
+  createAdminSupportTicketMessage,
   getAdminSupportChatConversation,
   getAdminSupportChatConversations,
   getAdminSupportChatMessages,
+  getAdminSupportTicketDetail,
+  getAdminSupportTickets,
   markAdminSupportChatRead,
-  replyAdminSupportChatConversation
+  replyAdminSupportChatConversation,
+  updateAdminSupportTicketStatus
 } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
 
-const POLL_INTERVAL = 8000
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
-const filters = [
+const POLL_INTERVAL = 8000
+const workspaces = [
+  {
+    key: 'chat',
+    title: '在线客服',
+    eyebrow: '实时接待',
+    description: '用于处理升级到人工的在线客服会话，由 /api/admin/support/chat/** 提供支持。'
+  },
+  {
+    key: 'tickets',
+    title: '支持工单',
+    eyebrow: '异步工单',
+    description: '用于承接用户创建的客服工单，由 /api/admin/support/tickets/** 提供支持。'
+  }
+]
+const chatFilters = [
   { value: 'pending', label: '待接入' },
   { value: 'active', label: '进行中' },
   { value: 'mine', label: '我处理的' },
   { value: 'closed', label: '已结束' }
 ]
-
+const ticketStatuses = [
+  { value: '', label: '全部状态' },
+  { value: 'open', label: '待受理' },
+  { value: 'in_progress', label: '处理中' },
+  { value: 'waiting_user', label: '待用户补充' },
+  { value: 'resolved', label: '已解决' },
+  { value: 'closed', label: '已关闭' }
+]
+const ticketCategories = [
+  { value: '', label: '全部分类' },
+  { value: 'account', label: '账号' },
+  { value: 'order', label: '订单' },
+  { value: 'product', label: '商品' },
+  { value: 'shop', label: '店铺' },
+  { value: 'payment', label: '支付' },
+  { value: 'report', label: '举报' },
+  { value: 'other', label: '其他' }
+]
+const ticketMessageTypes = [
+  { value: 'public_reply', label: '公开回复' },
+  { value: 'internal_note', label: '内部备注' }
+]
 const statusMeta = {
   ai: { label: '智能客服', type: 'info' },
   pending: { label: '待接入', type: 'warning' },
   human: { label: '进行中', type: 'primary' },
-  closed: { label: '已结束', type: 'info' }
+  closed: { label: '已结束', type: 'info' },
+  open: { label: '待受理', type: 'warning' },
+  in_progress: { label: '处理中', type: 'primary' },
+  waiting_user: { label: '待用户补充', type: 'danger' },
+  resolved: { label: '已解决', type: 'success' }
 }
 
-const authStore = useAuthStore()
+const workspace = ref(normalizeWorkspace(route.query.lane))
 
-const activeFilter = ref('pending')
+const activeChatFilter = ref('pending')
 const conversations = ref([])
 const counts = ref({ pending: 0, active: 0, mine: 0, closed: 0 })
-const selectedId = ref(null)
-const detail = ref(null)
-const messages = ref([])
+const selectedConversationId = ref(null)
+const conversationDetail = ref(null)
+const conversationMessages = ref([])
 const replyContent = ref('')
 const quickReplyOpen = ref(false)
-
-const loadingList = ref(false)
-const loadingThread = ref(false)
-const submitting = ref(false)
-const claiming = ref(false)
-const closing = ref(false)
-const error = ref('')
-const threadError = ref('')
+const loadingChatList = ref(false)
+const loadingChatDetail = ref(false)
+const sendingChatReply = ref(false)
+const claimingChat = ref(false)
+const closingChat = ref(false)
+const chatError = ref('')
+const chatDetailError = ref('')
 const threadRef = ref(null)
 let pollingTimer = null
 
+const ticketFilters = reactive({
+  status: normalizeTicketStatus(route.query.status),
+  category: normalizeTicketCategory(route.query.category),
+  assignedToMe: route.query.assignedToMe === 'true',
+  keyword: normalizeQueryString(route.query.keyword),
+  page: 1,
+  pageSize: 10
+})
+const tickets = ref([])
+const ticketTotal = ref(0)
+const selectedTicketId = ref(null)
+const ticketDetail = ref(null)
+const ticketMessages = ref([])
+const ticketStatusForm = reactive({
+  status: '',
+  assignToMe: false
+})
+const ticketReplyForm = reactive({
+  messageType: 'public_reply',
+  content: ''
+})
+
+const workspaceDisplayMeta = {
+  chat: {
+    title: '在线客服',
+    eyebrow: '实时接待',
+    description: '接待需要人工跟进的在线咨询，快速响应当前用户会话。'
+  },
+  tickets: {
+    title: '支持工单',
+    eyebrow: '持续跟进',
+    description: '处理用户提交的客服工单，统一跟进补充材料、进度更新和处理结论。'
+  }
+}
+
+const chatFilterOptions = [
+  { value: 'pending', label: '待接入' },
+  { value: 'active', label: '处理中' },
+  { value: 'mine', label: '我负责的' },
+  { value: 'closed', label: '已结束' }
+]
+
+const ticketStatusOptions = [
+  { value: '', label: '全部状态' },
+  { value: 'open', label: '待受理' },
+  { value: 'in_progress', label: '处理中' },
+  { value: 'waiting_user', label: '待用户补充' },
+  { value: 'resolved', label: '已解决' },
+  { value: 'closed', label: '已关闭' }
+]
+
+const ticketCategoryOptions = [
+  { value: '', label: '全部分类' },
+  { value: 'account', label: '账号' },
+  { value: 'order', label: '订单' },
+  { value: 'product', label: '商品' },
+  { value: 'shop', label: '店铺' },
+  { value: 'payment', label: '支付' },
+  { value: 'report', label: '举报' },
+  { value: 'other', label: '其他' }
+]
+
+const ticketMessageTypeOptions = [
+  { value: 'public_reply', label: '公开回复' },
+  { value: 'internal_note', label: '内部备注' }
+]
+const loadingTicketList = ref(false)
+const loadingTicketDetail = ref(false)
+const updatingTicketStatus = ref(false)
+const submittingTicketMessage = ref(false)
+const ticketError = ref('')
+const ticketDetailError = ref('')
+
 const currentAdminId = computed(() => authStore.currentUser?.id ?? null)
-const selectedClosed = computed(() => detail.value?.supportStatus === 'closed')
+const currentWorkspaceMeta = computed(
+  () => workspaceDisplayMeta[workspace.value] || workspaceDisplayMeta.chat
+)
+const selectedChatClosed = computed(() => conversationDetail.value?.supportStatus === 'closed')
 const assignedToOther = computed(() => {
-  const assigned = detail.value?.assignedAdminId
+  const assigned = conversationDetail.value?.assignedAdminId
   return assigned != null && String(assigned) !== String(currentAdminId.value)
 })
-const canReply = computed(() => detail.value && !selectedClosed.value && !assignedToOther.value)
-
-const requester = computed(() => detail.value?.requester || {})
-const contextLinks = computed(() => {
-  const id = requester.value?.id
-  if (!id) return []
-  return [
-    { label: '用户资料', path: `/admin/users?keyword=${encodeURIComponent(id)}` },
-    { label: '订单履约', path: `/admin/orders?keyword=${encodeURIComponent(id)}` },
-    { label: '举报处置', path: `/admin/reports?keyword=${encodeURIComponent(id)}` },
-    { label: '调解案件', path: '/admin/mediation' }
-  ]
+const canReplyChat = computed(() => conversationDetail.value && !selectedChatClosed.value && !assignedToOther.value)
+const requester = computed(() => conversationDetail.value?.requester || {})
+const ticketClosed = computed(() => ticketDetail.value?.ticket?.status === 'closed')
+const ticketSummary = computed(() => ticketDetail.value?.ticket || null)
+const ticketStatusChoices = computed(() => {
+  const current = ticketSummary.value?.status || ''
+  const allowed = {
+    open: ['in_progress', 'closed'],
+    in_progress: ['waiting_user', 'resolved', 'closed'],
+    waiting_user: ['in_progress', 'resolved', 'closed'],
+    resolved: ['closed'],
+    closed: []
+  }[current] || []
+  return [current, ...allowed]
+    .filter(Boolean)
+    .map((value) => ({
+      value,
+      label: displayStatusLabel(value)
+    }))
+})
+const ticketContextLinks = computed(() => {
+  const ticket = ticketSummary.value
+  if (!ticket) return []
+  const links = []
+  if (ticket.requesterUserId) {
+    links.push({
+      label: '用户资料',
+      path: `/admin/users?keyword=${encodeURIComponent(ticket.requesterUserId)}`
+    })
+  }
+  if (ticket.relatedType === 'order' && ticket.relatedId) {
+    links.push({
+      label: '订单处理',
+      path: `/admin/orders?keyword=${encodeURIComponent(ticket.relatedId)}`
+    })
+    links.push({
+      label: '调解案件',
+      path: `/admin/mediation?orderId=${encodeURIComponent(ticket.relatedId)}`
+    })
+  }
+  if (ticket.relatedType === 'report' && ticket.relatedId) {
+    links.push({
+      label: '举报详情',
+      path: `/admin/reports?keyword=${encodeURIComponent(ticket.relatedId)}`
+    })
+    links.push({
+      label: '调解案件',
+      path: `/admin/mediation?reportId=${encodeURIComponent(ticket.relatedId)}`
+    })
+  }
+  if (ticket.relatedType === 'product' && ticket.relatedId) {
+    links.push({
+      label: '商品治理',
+      path: `/admin/products?keyword=${encodeURIComponent(ticket.relatedId)}`
+    })
+  }
+  if (ticket.relatedType === 'shop' && ticket.relatedId) {
+    links.push({
+      label: '店铺治理',
+      path: `/admin/shops?keyword=${encodeURIComponent(ticket.relatedId)}`
+    })
+  }
+  return links
 })
 
-function requesterName(item) {
-  const user = item?.requester || item || {}
-  return user.nickname || user.username || `用户 #${user.id ?? '-'}`
+function normalizeWorkspace(value) {
+  const candidate = Array.isArray(value) ? value[0] : value
+  return ['chat', 'tickets'].includes(candidate) ? candidate : 'chat'
+}
+
+function normalizeTicketStatus(value) {
+  const candidate = Array.isArray(value) ? value[0] : value
+  return ticketStatusOptions.some((item) => item.value === candidate) ? candidate : ''
+}
+
+function normalizeTicketCategory(value) {
+  const candidate = Array.isArray(value) ? value[0] : value
+  return ticketCategoryOptions.some((item) => item.value === candidate) ? candidate : ''
+}
+
+function normalizeQueryString(value) {
+  const candidate = Array.isArray(value) ? value[0] : value
+  return candidate ? String(candidate) : ''
+}
+
+function unwrap(response) {
+  return response?.data ?? response
 }
 
 function statusLabel(status) {
-  return statusMeta[status]?.label || '在线客服'
+  return statusMeta[status]?.label || status || '未知状态'
 }
 
 function statusTagType(status) {
   return statusMeta[status]?.type || 'info'
+}
+
+function displayStatusLabel(status) {
+  return {
+    ai: '智能客服',
+    pending: '待接入',
+    human: '处理中',
+    closed: '已结束',
+    open: '待受理',
+    in_progress: '处理中',
+    waiting_user: '待用户补充',
+    resolved: '已解决'
+  }[status] || status || '未知状态'
+}
+
+function displayTicketCategory(category) {
+  return ticketCategoryOptions.find((item) => item.value === category)?.label || category || '未分类'
 }
 
 function formatTime(value) {
@@ -95,7 +304,28 @@ function formatTime(value) {
   if (now - date < 24 * 60 * 60 * 1000) {
     return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
-  return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+function unreadFor(item) {
+  const count = Number(item.unreadCount ?? item.unread_count ?? 0)
+  if (!Number.isFinite(count) || count <= 0) return ''
+  return count > 99 ? '99+' : String(count)
+}
+
+function requesterName(item) {
+  const user = item?.requester || item || {}
+  return user.nickname || user.username || `用户 #${user.id ?? '-'}`
+}
+
+function isPlatformMessage(message) {
+  const requesterId = requester.value?.id
+  return requesterId != null && String(message.senderUserId) !== String(requesterId)
 }
 
 function normalizeMessage(raw = {}) {
@@ -109,200 +339,370 @@ function normalizeMessage(raw = {}) {
   }
 }
 
-function unwrap(response) {
-  return response?.data ?? response
+function normalizeTicketPage(payload) {
+  const data = payload || {}
+  return {
+    items: Array.isArray(data.items) ? data.items : [],
+    total: Number(data.total ?? 0),
+    page: Number(data.page ?? 1),
+    pageSize: Number(data.pageSize ?? 10)
+  }
 }
 
-function unreadFor(item) {
-  const count = Number(item.unreadCount ?? item.unread_count ?? 0)
-  if (!Number.isFinite(count) || count <= 0) return ''
-  return count > 99 ? '99+' : String(count)
+function normalizeTicketDetail(payload) {
+  return {
+    ticket: payload?.ticket || payload || null,
+    messages: Array.isArray(payload?.messages) ? payload.messages : []
+  }
 }
 
-function isPlatformMessage(message) {
-  const requesterId = requester.value?.id
-  return requesterId != null && String(message.senderUserId) !== String(requesterId)
+function updateLaneQuery(nextLane) {
+  router.replace({
+    query: {
+      ...route.query,
+      lane: nextLane
+    }
+  })
+}
+
+function updateTicketQuery() {
+  router.replace({
+    query: {
+      ...route.query,
+      lane: workspace.value,
+      status: ticketFilters.status || undefined,
+      category: ticketFilters.category || undefined,
+      assignedToMe: ticketFilters.assignedToMe ? 'true' : undefined,
+      keyword: ticketFilters.keyword || undefined
+    }
+  })
 }
 
 async function loadConversations(options = {}) {
-  if (!options.silent) loadingList.value = true
-  error.value = ''
+  if (!options.silent) loadingChatList.value = true
+  chatError.value = ''
   try {
-    const payload = unwrap(await getAdminSupportChatConversations({ filter: activeFilter.value, page: 0, size: 50 }))
+    const payload = unwrap(
+      await getAdminSupportChatConversations({ filter: activeChatFilter.value, page: 0, size: 50 })
+    )
     conversations.value = payload?.content ?? []
     counts.value = { ...counts.value, ...(payload?.counts ?? {}) }
-    if (!selectedId.value && conversations.value.length) {
+    if (!selectedConversationId.value && conversations.value.length) {
       selectConversation(conversations.value[0].id)
     }
-  } catch (err) {
-    error.value = resolveErrorMessage(err)
+  } catch (error) {
+    chatError.value = resolveErrorMessage(error)
   } finally {
-    if (!options.silent) loadingList.value = false
+    if (!options.silent) loadingChatList.value = false
   }
 }
 
-async function loadThread(conversationId, options = {}) {
+async function loadConversationDetail(conversationId, options = {}) {
   if (!conversationId) {
-    detail.value = null
-    messages.value = []
+    conversationDetail.value = null
+    conversationMessages.value = []
     return
   }
-  if (!options.silent) loadingThread.value = true
-  threadError.value = ''
+  if (!options.silent) loadingChatDetail.value = true
+  chatDetailError.value = ''
   try {
     const [detailPayload, messagesPayload] = await Promise.all([
       getAdminSupportChatConversation(conversationId),
       getAdminSupportChatMessages(conversationId, { page: 0, size: 50 })
     ])
-    detail.value = unwrap(detailPayload)
-    messages.value = (unwrap(messagesPayload)?.content ?? []).map(normalizeMessage).reverse()
+    conversationDetail.value = unwrap(detailPayload)
+    conversationMessages.value = (unwrap(messagesPayload)?.content ?? []).map(normalizeMessage).reverse()
     await markAdminSupportChatRead(conversationId).catch(() => {})
+    await nextTick()
     scrollToBottom()
-  } catch (err) {
-    if (!options.silent) threadError.value = resolveErrorMessage(err)
+  } catch (error) {
+    if (!options.silent) chatDetailError.value = resolveErrorMessage(error)
   } finally {
-    if (!options.silent) loadingThread.value = false
+    if (!options.silent) loadingChatDetail.value = false
+  }
+}
+
+async function loadTickets() {
+  loadingTicketList.value = true
+  ticketError.value = ''
+  try {
+    const payload = unwrap(
+      await getAdminSupportTickets({
+        status: ticketFilters.status,
+        category: ticketFilters.category,
+        assignedToMe: ticketFilters.assignedToMe,
+        keyword: ticketFilters.keyword,
+        page: ticketFilters.page,
+        pageSize: ticketFilters.pageSize
+      })
+    )
+    const page = normalizeTicketPage(payload)
+    tickets.value = page.items
+    ticketTotal.value = page.total
+    ticketFilters.page = page.page
+    ticketFilters.pageSize = page.pageSize
+    if (!selectedTicketId.value && tickets.value.length) {
+      selectTicket(tickets.value[0].id)
+    }
+  } catch (error) {
+    ticketError.value = resolveErrorMessage(error)
+  } finally {
+    loadingTicketList.value = false
+  }
+}
+
+async function loadTicketDetail(ticketId) {
+  if (!ticketId) {
+    ticketDetail.value = null
+    ticketMessages.value = []
+    return
+  }
+  loadingTicketDetail.value = true
+  ticketDetailError.value = ''
+  try {
+    const payload = unwrap(await getAdminSupportTicketDetail(ticketId))
+    const detail = normalizeTicketDetail(payload)
+    ticketDetail.value = detail
+    ticketMessages.value = detail.messages
+    ticketStatusForm.status = detail.ticket?.status || ''
+    ticketStatusForm.assignToMe = false
+  } catch (error) {
+    ticketDetailError.value = resolveErrorMessage(error)
+  } finally {
+    loadingTicketDetail.value = false
   }
 }
 
 function selectConversation(id) {
-  selectedId.value = id
+  selectedConversationId.value = id
   quickReplyOpen.value = false
 }
 
-function changeFilter(value) {
-  activeFilter.value = value
-  selectedId.value = null
-  detail.value = null
-  messages.value = []
+function selectTicket(id) {
+  selectedTicketId.value = id
+}
+
+function switchWorkspace(nextLane) {
+  if (workspace.value === nextLane) return
+  workspace.value = nextLane
+  updateLaneQuery(nextLane)
+}
+
+function changeChatFilter(value) {
+  activeChatFilter.value = value
+  selectedConversationId.value = null
+  conversationDetail.value = null
+  conversationMessages.value = []
   loadConversations()
 }
 
 async function claim() {
-  if (!selectedId.value || claiming.value) return
-  claiming.value = true
+  if (!selectedConversationId.value || claimingChat.value) return
+  claimingChat.value = true
   try {
-    detail.value = unwrap(await claimAdminSupportChatConversation(selectedId.value))
+    conversationDetail.value = unwrap(await claimAdminSupportChatConversation(selectedConversationId.value))
     ElMessage.success('已接入该会话')
-    await Promise.all([loadConversations({ silent: true }), loadThread(selectedId.value, { silent: true })])
-  } catch (err) {
-    ElMessage.error(resolveErrorMessage(err))
+    await Promise.all([
+      loadConversations({ silent: true }),
+      loadConversationDetail(selectedConversationId.value, { silent: true })
+    ])
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error))
   } finally {
-    claiming.value = false
+    claimingChat.value = false
   }
 }
 
 async function closeConversation() {
-  if (!selectedId.value || closing.value) return
-  closing.value = true
+  if (!selectedConversationId.value || closingChat.value) return
+  closingChat.value = true
   try {
-    detail.value = unwrap(await closeAdminSupportChatConversation(selectedId.value))
+    conversationDetail.value = unwrap(await closeAdminSupportChatConversation(selectedConversationId.value))
     ElMessage.success('会话已结束')
     await loadConversations({ silent: true })
-  } catch (err) {
-    ElMessage.error(resolveErrorMessage(err))
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error))
   } finally {
-    closing.value = false
+    closingChat.value = false
   }
 }
 
-async function submitReply() {
+async function submitChatReply() {
   const body = replyContent.value.trim()
-  if (!body || !selectedId.value || submitting.value) return
-  submitting.value = true
+  if (!body || !selectedConversationId.value || sendingChatReply.value) return
+  sendingChatReply.value = true
   try {
-    await replyAdminSupportChatConversation(selectedId.value, { body })
+    await replyAdminSupportChatConversation(selectedConversationId.value, { body })
     replyContent.value = ''
     quickReplyOpen.value = false
-    await Promise.all([loadThread(selectedId.value, { silent: true }), loadConversations({ silent: true })])
+    await Promise.all([
+      loadConversationDetail(selectedConversationId.value, { silent: true }),
+      loadConversations({ silent: true })
+    ])
     scrollToBottom()
-  } catch (err) {
-    ElMessage.error(resolveErrorMessage(err))
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error))
   } finally {
-    submitting.value = false
+    sendingChatReply.value = false
   }
 }
 
-function applyQuickReply(content) {
-  replyContent.value = content
-  quickReplyOpen.value = false
+async function applyTicketFilters() {
+  ticketFilters.page = 1
+  selectedTicketId.value = null
+  updateTicketQuery()
+  await loadTickets()
+}
+
+async function updateTicketStatus() {
+  if (!selectedTicketId.value || !ticketStatusForm.status || updatingTicketStatus.value) return
+  updatingTicketStatus.value = true
+  try {
+    await updateAdminSupportTicketStatus(selectedTicketId.value, {
+      status: ticketStatusForm.status,
+      assignToMe: ticketStatusForm.assignToMe
+    })
+    ElMessage.success('工单状态已更新')
+    ticketStatusForm.assignToMe = false
+    await Promise.all([loadTickets(), loadTicketDetail(selectedTicketId.value)])
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error))
+  } finally {
+    updatingTicketStatus.value = false
+  }
+}
+
+async function submitTicketMessage() {
+  if (!selectedTicketId.value || !ticketReplyForm.content.trim() || submittingTicketMessage.value) return
+  submittingTicketMessage.value = true
+  try {
+    await createAdminSupportTicketMessage(selectedTicketId.value, {
+      messageType: ticketReplyForm.messageType,
+      content: ticketReplyForm.content.trim()
+    })
+    ticketReplyForm.content = ''
+    ElMessage.success(ticketReplyForm.messageType === 'internal_note' ? '内部备注已保存' : '公开回复已发送')
+    await Promise.all([loadTickets(), loadTicketDetail(selectedTicketId.value)])
+  } catch (error) {
+    ElMessage.error(resolveErrorMessage(error))
+  } finally {
+    submittingTicketMessage.value = false
+  }
 }
 
 function scrollToBottom() {
   requestAnimationFrame(() => {
-    if (threadRef.value) threadRef.value.scrollTop = threadRef.value.scrollHeight
+    if (threadRef.value) {
+      threadRef.value.scrollTop = threadRef.value.scrollHeight
+    }
   })
 }
 
 function startPolling() {
   stopPolling()
-  pollingTimer = setInterval(() => {
+  pollingTimer = window.setInterval(() => {
+    if (workspace.value !== 'chat') return
     loadConversations({ silent: true })
-    if (selectedId.value) loadThread(selectedId.value, { silent: true })
+    if (selectedConversationId.value) {
+      loadConversationDetail(selectedConversationId.value, { silent: true })
+    }
   }, POLL_INTERVAL)
 }
 
 function stopPolling() {
   if (pollingTimer) {
-    clearInterval(pollingTimer)
+    window.clearInterval(pollingTimer)
     pollingTimer = null
   }
 }
 
-watch(selectedId, (id) => {
-  loadThread(id)
+watch(selectedConversationId, (id) => {
+  if (workspace.value === 'chat') {
+    loadConversationDetail(id)
+  }
+})
+
+watch(selectedTicketId, (id) => {
+  if (workspace.value === 'tickets') {
+    loadTicketDetail(id)
+  }
+})
+
+watch(workspace, async (nextLane) => {
+  if (nextLane === 'chat') {
+    startPolling()
+    if (!conversations.value.length) {
+      await loadConversations()
+    } else if (selectedConversationId.value) {
+      await loadConversationDetail(selectedConversationId.value)
+    }
+  } else {
+    stopPolling()
+    if (!tickets.value.length) {
+      await loadTickets()
+    } else if (selectedTicketId.value) {
+      await loadTicketDetail(selectedTicketId.value)
+    }
+  }
 })
 
 onMounted(async () => {
-  await loadConversations()
-  startPolling()
+  if (workspace.value === 'tickets') {
+    await loadTickets()
+  } else {
+    await loadConversations()
+    startPolling()
+  }
 })
 
 onBeforeUnmount(stopPolling)
 </script>
 
 <template>
-  <div class="page-stack admin-cs">
-    <section class="shell-hero shell-hero--compact admin-cs__hero">
+  <div class="page-stack admin-support">
+    <section class="shell-hero shell-hero--compact admin-support__hero">
       <div>
-        <span class="eyebrow">在线客服</span>
-        <h1>在线客服控制台</h1>
-        <p>实时接待用户的客服会话：认领待接入会话、以平台客服身份回复，并在解决后结束会话。</p>
+        <span class="eyebrow">客服运营工作台</span>
+        <h1>客服接待与工单跟进</h1>
+        <p>{{ currentWorkspaceMeta.description }}</p>
       </div>
-      <div class="admin-cs__metrics">
-        <div class="admin-cs__metric">
-          <strong>{{ counts.pending }}</strong>
-          <span>待接入</span>
-        </div>
-        <div class="admin-cs__metric">
-          <strong>{{ counts.mine }}</strong>
-          <span>我处理的</span>
-        </div>
+      <div class="admin-support__hero-actions">
+        <button
+          v-for="item in workspaces"
+          :key="item.key"
+          type="button"
+          class="admin-support__workspace-chip"
+          :class="{ 'is-active': workspace === item.key }"
+          @click="switchWorkspace(item.key)"
+        >
+          <strong>{{ workspaceDisplayMeta[item.key]?.title || item.title }}</strong>
+          <span>{{ workspaceDisplayMeta[item.key]?.eyebrow || item.eyebrow }}</span>
+        </button>
       </div>
     </section>
 
-    <section class="admin-cs__workspace">
+    <section v-if="workspace === 'chat'" class="admin-cs__workspace">
       <aside class="admin-cs__queue">
         <div class="admin-cs__filters">
           <button
-            v-for="item in filters"
+            v-for="item in chatFilterOptions"
             :key="item.value"
             type="button"
             class="admin-cs__filter"
-            :class="{ 'is-active': activeFilter === item.value }"
-            @click="changeFilter(item.value)"
+            :class="{ 'is-active': activeChatFilter === item.value }"
+            @click="changeChatFilter(item.value)"
           >
             {{ item.label }}
             <span v-if="item.value === 'pending' && counts.pending" class="admin-cs__filter-badge">{{ counts.pending }}</span>
           </button>
         </div>
 
-        <ErrorBlock v-if="error" :message="error" @retry="loadConversations" />
-        <SkeletonCard v-else-if="loadingList" :count="4" />
+        <ErrorBlock v-if="chatError" :message="chatError" @retry="loadConversations" />
+        <SkeletonCard v-else-if="loadingChatList" :count="4" />
         <EmptyState
           v-else-if="!conversations.length"
-          title="暂无客服会话"
-          description="当前筛选条件下没有会话，可切换其他状态查看。"
+              title="暂无在线客服会话"
+              description="当前筛选条件下没有需要接待的在线咨询。"
         />
         <div v-else class="admin-cs__list">
           <button
@@ -310,13 +710,13 @@ onBeforeUnmount(stopPolling)
             :key="item.id"
             type="button"
             class="admin-cs__session"
-            :class="{ 'is-active': String(selectedId) === String(item.id) }"
+            :class="{ 'is-active': String(selectedConversationId) === String(item.id) }"
             @click="selectConversation(item.id)"
           >
             <span class="admin-cs__session-top">
               <strong>{{ requesterName(item) }}</strong>
               <el-tag :type="statusTagType(item.supportStatus)" size="small" effect="plain">
-                {{ statusLabel(item.supportStatus) }}
+                {{ displayStatusLabel(item.supportStatus) }}
               </el-tag>
             </span>
             <span class="admin-cs__session-preview">{{ item.lastMessagePreview || '开始对话' }}</span>
@@ -329,28 +729,27 @@ onBeforeUnmount(stopPolling)
       </aside>
 
       <main class="admin-cs__thread">
-        <ErrorBlock v-if="threadError" :message="threadError" @retry="loadThread(selectedId)" />
-        <SkeletonCard v-else-if="loadingThread && !messages.length" :count="3" />
+        <ErrorBlock v-if="chatDetailError" :message="chatDetailError" @retry="loadConversationDetail(selectedConversationId)" />
+        <SkeletonCard v-else-if="loadingChatDetail && !conversationMessages.length" :count="3" />
         <EmptyState
-          v-else-if="!detail"
-          title="请选择一个会话"
-          description="从左侧队列选择客服会话后即可查看对话并回复。"
+          v-else-if="!conversationDetail"
+          title="请选择一个在线客服会话"
+          description="从左侧队列选择会话后即可查看对话并接入处理。"
         />
-
         <template v-else>
           <header class="admin-cs__thread-head">
             <div>
-              <h2>{{ requesterName(detail) }}</h2>
-              <el-tag :type="statusTagType(detail.supportStatus)" size="small" effect="plain">
-                {{ statusLabel(detail.supportStatus) }}
+              <h2>{{ requesterName(conversationDetail) }}</h2>
+              <el-tag :type="statusTagType(conversationDetail.supportStatus)" size="small" effect="plain">
+                {{ displayStatusLabel(conversationDetail.supportStatus) }}
               </el-tag>
             </div>
           </header>
 
           <div ref="threadRef" class="admin-cs__messages">
-            <EmptyState v-if="!messages.length" title="暂无消息" description="该会话还没有消息记录。" />
+            <EmptyState v-if="!conversationMessages.length" title="暂无消息" description="该会话还没有消息记录。" />
             <article
-              v-for="message in messages"
+              v-for="message in conversationMessages"
               v-else
               :key="message.id"
               class="admin-cs__bubble"
@@ -364,7 +763,7 @@ onBeforeUnmount(stopPolling)
 
           <div class="admin-cs__composer">
             <el-alert
-              v-if="selectedClosed"
+              v-if="selectedChatClosed"
               type="info"
               show-icon
               :closable="false"
@@ -382,7 +781,7 @@ onBeforeUnmount(stopPolling)
                 v-if="quickReplyOpen"
                 class="admin-cs__quick-reply"
                 scenario="support"
-                @select="applyQuickReply"
+                @select="replyContent = $event; quickReplyOpen = false"
               />
               <el-input
                 v-model="replyContent"
@@ -394,24 +793,29 @@ onBeforeUnmount(stopPolling)
               />
               <div class="admin-cs__composer-actions">
                 <el-button text @click="quickReplyOpen = !quickReplyOpen">快捷话术</el-button>
-                <el-button type="primary" :loading="submitting" @click="submitReply">发送回复</el-button>
+                <el-button type="primary" :loading="sendingChatReply" :disabled="!canReplyChat" @click="submitChatReply">
+                  发送回复
+                </el-button>
               </div>
             </template>
           </div>
         </template>
       </main>
 
-      <aside v-if="detail" class="admin-cs__context">
+      <aside v-if="conversationDetail" class="admin-cs__context">
         <section class="admin-cs__panel">
           <h3>请求者</h3>
-          <p class="admin-cs__requester">{{ requesterName(detail) }}</p>
+          <p class="admin-cs__requester">{{ requesterName(conversationDetail) }}</p>
           <p class="admin-cs__requester-sub">用户 ID：{{ requester.id || '-' }}</p>
         </section>
 
         <section class="admin-cs__panel">
           <h3>快捷跳转</h3>
           <div class="admin-cs__links">
-            <router-link v-for="link in contextLinks" :key="link.path" :to="link.path">{{ link.label }}</router-link>
+            <router-link :to="`/admin/users?keyword=${encodeURIComponent(requester.id || '')}`">用户资料</router-link>
+            <router-link :to="`/admin/orders?keyword=${encodeURIComponent(requester.id || '')}`">订单履约</router-link>
+            <router-link :to="`/admin/reports?keyword=${encodeURIComponent(requester.id || '')}`">举报处置</router-link>
+            <router-link to="/admin/mediation">调解案件</router-link>
           </div>
         </section>
 
@@ -419,17 +823,17 @@ onBeforeUnmount(stopPolling)
           <h3>会话操作</h3>
           <div class="admin-cs__actions">
             <el-button
-              v-if="detail.supportStatus !== 'human' || assignedToOther"
+              v-if="conversationDetail.supportStatus !== 'human' || assignedToOther"
               type="primary"
-              :loading="claiming"
-              :disabled="selectedClosed"
+              :loading="claimingChat"
+              :disabled="selectedChatClosed"
               @click="claim"
             >
               认领 / 接入
             </el-button>
             <el-button
-              :loading="closing"
-              :disabled="selectedClosed || assignedToOther"
+              :loading="closingChat"
+              :disabled="selectedChatClosed || assignedToOther"
               @click="closeConversation"
             >
               结束会话
@@ -438,70 +842,269 @@ onBeforeUnmount(stopPolling)
         </section>
       </aside>
     </section>
+
+    <section v-else class="ticket-workspace">
+      <aside class="ticket-workspace__queue">
+        <section class="ticket-card">
+          <header class="ticket-card__head">
+            <div>
+              <h2>支持工单队列</h2>
+              <p>处理用户提交的问题单，持续跟进材料补充、进度同步和处理结果。</p>
+            </div>
+            <strong>{{ ticketTotal }}</strong>
+          </header>
+
+          <div class="ticket-filter-grid">
+            <el-select v-model="ticketFilters.status" placeholder="状态" @change="applyTicketFilters">
+              <el-option v-for="item in ticketStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+            <el-select v-model="ticketFilters.category" placeholder="分类" @change="applyTicketFilters">
+              <el-option v-for="item in ticketCategoryOptions" :key="item.value" :label="item.label" :value="item.value" />
+            </el-select>
+            <el-checkbox v-model="ticketFilters.assignedToMe" @change="applyTicketFilters">仅看指派给我</el-checkbox>
+            <div class="ticket-filter-grid__keyword">
+              <el-input
+                v-model="ticketFilters.keyword"
+                placeholder="搜索工单号、标题或描述"
+                @keyup.enter="applyTicketFilters"
+              />
+              <el-button type="primary" @click="applyTicketFilters">筛选</el-button>
+            </div>
+          </div>
+
+          <ErrorBlock v-if="ticketError" :message="ticketError" @retry="loadTickets" />
+          <SkeletonCard v-else-if="loadingTicketList" :count="4" />
+          <EmptyState
+            v-else-if="!tickets.length"
+            title="暂无支持工单"
+            description="当前筛选条件下没有匹配的工单。"
+          />
+          <div v-else class="ticket-list">
+            <button
+              v-for="item in tickets"
+              :key="item.id"
+              type="button"
+              class="ticket-list__item"
+              :class="{ 'is-active': String(selectedTicketId) === String(item.id) }"
+              @click="selectTicket(item.id)"
+            >
+              <span class="ticket-list__top">
+                <strong>{{ item.subject }}</strong>
+                <el-tag :type="statusTagType(item.status)" size="small" effect="plain">
+                  {{ displayStatusLabel(item.status) }}
+                </el-tag>
+              </span>
+              <span class="ticket-list__meta">
+                {{ item.ticketNo || `#${item.id}` }} / {{ displayTicketCategory(item.category) }} / {{ item.requesterName || `用户 ${item.requesterUserId}` }}
+              </span>
+              <span class="ticket-list__time">更新于 {{ formatTime(item.updatedAt) }}</span>
+            </button>
+          </div>
+
+          <el-pagination
+            v-if="ticketTotal > ticketFilters.pageSize"
+            v-model:current-page="ticketFilters.page"
+            :page-size="ticketFilters.pageSize"
+            :total="ticketTotal"
+            layout="prev, pager, next"
+            small
+            background
+            @current-change="loadTickets"
+          />
+        </section>
+      </aside>
+
+      <main class="ticket-card ticket-detail">
+        <ErrorBlock v-if="ticketDetailError" :message="ticketDetailError" @retry="loadTicketDetail(selectedTicketId)" />
+        <SkeletonCard v-else-if="loadingTicketDetail" :count="3" />
+        <EmptyState
+          v-else-if="!ticketSummary"
+          title="请选择一个支持工单"
+          description="从左侧工单队列选择一条工单后即可查看详情、变更状态并回复。"
+        />
+        <template v-else>
+          <header class="ticket-detail__head">
+            <div>
+              <span class="eyebrow">工单 {{ ticketSummary.ticketNo || `#${ticketSummary.id}` }}</span>
+              <h2>{{ ticketSummary.subject }}</h2>
+              <p>分类：{{ displayTicketCategory(ticketSummary.category) }} / 请求人：{{ ticketSummary.requesterName || ticketSummary.requesterUserId }}</p>
+            </div>
+            <el-tag :type="statusTagType(ticketSummary.status)" effect="plain">{{ displayStatusLabel(ticketSummary.status) }}</el-tag>
+          </header>
+
+          <section class="ticket-detail__content">
+            <h3>问题说明</h3>
+            <p>{{ ticketSummary.content }}</p>
+          </section>
+
+          <section class="ticket-detail__grid">
+            <article class="ticket-detail__panel">
+              <h3>状态处理</h3>
+              <el-select v-model="ticketStatusForm.status" :disabled="ticketClosed">
+                <el-option
+                  v-for="option in ticketStatusChoices"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </el-select>
+              <el-checkbox v-model="ticketStatusForm.assignToMe" :disabled="ticketClosed">指派给我</el-checkbox>
+              <el-button type="primary" :loading="updatingTicketStatus" :disabled="ticketClosed" @click="updateTicketStatus">
+                更新工单状态
+              </el-button>
+            </article>
+
+            <article class="ticket-detail__panel">
+              <h3>上下文跳转</h3>
+              <div class="ticket-detail__links">
+                <router-link v-for="link in ticketContextLinks" :key="link.path" :to="link.path">{{ link.label }}</router-link>
+              </div>
+              <p v-if="!ticketContextLinks.length" class="ticket-detail__muted">该工单当前没有可跳转的关联上下文。</p>
+            </article>
+          </section>
+
+          <section class="ticket-messages">
+            <h3>工单消息</h3>
+            <EmptyState
+              v-if="!ticketMessages.length"
+              title="暂无工单消息"
+              description="工单创建后，公开回复和内部备注会显示在这里。"
+            />
+            <article
+              v-for="message in ticketMessages"
+              v-else
+              :key="message.id"
+              class="ticket-message"
+              :class="{ 'is-internal': message.messageType === 'internal_note' }"
+            >
+              <header>
+                <strong>{{ message.senderName || message.senderRole || '平台' }}</strong>
+                <span>{{ message.messageType === 'internal_note' ? '内部备注' : '公开回复' }} / {{ formatTime(message.createdAt) }}</span>
+              </header>
+              <p>{{ message.content }}</p>
+            </article>
+          </section>
+
+          <section class="ticket-reply">
+            <h3>新增回复 / 备注</h3>
+            <el-alert
+              v-if="ticketClosed"
+              type="info"
+              show-icon
+              :closable="false"
+              title="该工单已关闭，不能继续回复或添加备注。"
+            />
+            <template v-else>
+              <el-radio-group v-model="ticketReplyForm.messageType">
+              <el-radio-button v-for="item in ticketMessageTypeOptions" :key="item.value" :label="item.value">
+                {{ item.label }}
+              </el-radio-button>
+              </el-radio-group>
+              <el-input
+                v-model="ticketReplyForm.content"
+                type="textarea"
+                :rows="4"
+                maxlength="2000"
+                show-word-limit
+                placeholder="公开回复会同步给用户；内部备注仅供平台处理团队查看。"
+              />
+              <el-button type="primary" :loading="submittingTicketMessage" @click="submitTicketMessage">
+                提交{{ ticketReplyForm.messageType === 'internal_note' ? '内部备注' : '公开回复' }}
+              </el-button>
+            </template>
+          </section>
+        </template>
+      </main>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.admin-cs__hero {
+.admin-support__hero {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
 }
 
-.admin-cs__metrics {
+.admin-support__hero-actions {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.admin-cs__metric {
+.admin-support__workspace-chip {
   display: grid;
-  min-width: 96px;
   gap: 4px;
-  padding: 14px;
+  min-width: 150px;
+  padding: 14px 16px;
   border: 1px solid var(--cm-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.76);
-  text-align: center;
-}
-
-.admin-cs__metric strong {
-  font-size: 28px;
-  line-height: 1;
-}
-
-.admin-cs__metric span {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.78);
   color: var(--cm-text-secondary);
-  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
 }
 
-.admin-cs__workspace {
+.admin-support__workspace-chip strong {
+  color: var(--cm-text);
+}
+
+.admin-support__workspace-chip.is-active {
+  border-color: rgba(var(--cm-primary-rgb), 0.4);
+  background: rgba(var(--cm-primary-rgb), 0.1);
+  color: var(--cm-primary);
+}
+
+.admin-cs__workspace,
+.ticket-workspace {
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(220px, 280px);
   gap: 16px;
   align-items: start;
 }
 
+.admin-cs__workspace {
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(220px, 280px);
+}
+
+.ticket-workspace {
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+}
+
 .admin-cs__queue,
 .admin-cs__thread,
-.admin-cs__context {
+.admin-cs__context,
+.ticket-card {
   min-width: 0;
   border: 1px solid var(--cm-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.84);
   box-shadow: var(--cm-shadow-soft);
 }
 
-.admin-cs__queue {
+.admin-cs__queue,
+.admin-cs__context,
+.ticket-card {
   display: grid;
-  gap: 12px;
-  padding: 14px;
+  gap: 14px;
+  padding: 16px;
 }
 
-.admin-cs__filters {
+.admin-cs__filters,
+.ticket-filter-grid,
+.ticket-filter-grid__keyword,
+.admin-cs__links,
+.ticket-detail__links,
+.admin-cs__actions {
   display: flex;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 6px;
+}
+
+.admin-cs__filter,
+.ticket-list__item,
+.admin-support__workspace-chip {
+  font: inherit;
 }
 
 .admin-cs__filter {
@@ -512,8 +1115,6 @@ onBeforeUnmount(stopPolling)
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.7);
   color: var(--cm-text-secondary);
-  font: inherit;
-  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
 }
@@ -529,49 +1130,56 @@ onBeforeUnmount(stopPolling)
   color: #dc2626;
 }
 
-.admin-cs__list {
+.admin-cs__list,
+.ticket-list,
+.ticket-messages,
+.ticket-detail,
+.ticket-detail__panel,
+.ticket-reply,
+.ticket-detail__content {
   display: grid;
-  gap: 8px;
-  max-height: 620px;
-  overflow-y: auto;
+  gap: 10px;
 }
 
-.admin-cs__session {
+.admin-cs__session,
+.ticket-list__item {
   display: grid;
   gap: 6px;
   padding: 12px;
   border: 1px solid var(--cm-border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.74);
   color: var(--cm-text);
   text-align: left;
   cursor: pointer;
 }
 
-.admin-cs__session.is-active {
+.admin-cs__session.is-active,
+.ticket-list__item.is-active {
   border-color: rgba(var(--cm-primary-rgb), 0.4);
   background: rgba(var(--cm-primary-rgb), 0.08);
 }
 
 .admin-cs__session-top,
-.admin-cs__session-foot {
+.admin-cs__session-foot,
+.ticket-list__top,
+.ticket-detail__head,
+.ticket-message header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
-.admin-cs__session-preview {
+.admin-cs__session-preview,
+.admin-cs__session-foot span,
+.ticket-list__meta,
+.ticket-list__time,
+.ticket-card__head p,
+.ticket-message header span,
+.ticket-detail__muted,
+.ticket-detail__head p {
   color: var(--cm-text-secondary);
   font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admin-cs__session-foot span {
-  color: var(--cm-text-secondary);
-  font-size: 12px;
 }
 
 .admin-cs__session-unread {
@@ -600,9 +1208,14 @@ onBeforeUnmount(stopPolling)
   border-bottom: 1px solid var(--cm-border);
 }
 
-.admin-cs__thread-head h2 {
-  margin: 0 0 6px;
-  font-size: 18px;
+.admin-cs__thread-head h2,
+.ticket-card__head h2,
+.ticket-detail__head h2,
+.ticket-detail__panel h3,
+.ticket-reply h3,
+.ticket-messages h3,
+.ticket-detail__content h3 {
+  margin: 0;
 }
 
 .admin-cs__messages {
@@ -622,18 +1235,6 @@ onBeforeUnmount(stopPolling)
   border-radius: 14px;
 }
 
-.admin-cs__bubble p {
-  margin: 0;
-  line-height: 1.6;
-}
-
-.admin-cs__bubble time {
-  display: block;
-  margin-top: 4px;
-  font-size: 11px;
-  opacity: 0.6;
-}
-
 .admin-cs__bubble--other {
   align-self: flex-start;
   background: #fff;
@@ -643,6 +1244,20 @@ onBeforeUnmount(stopPolling)
 .admin-cs__bubble--self {
   align-self: flex-end;
   background: rgba(var(--cm-primary-rgb), 0.12);
+}
+
+.admin-cs__bubble p,
+.ticket-message p,
+.ticket-detail__content p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.admin-cs__bubble time {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.6;
 }
 
 .admin-cs__bubble-recalled {
@@ -671,22 +1286,6 @@ onBeforeUnmount(stopPolling)
   z-index: 10;
 }
 
-.admin-cs__context {
-  display: grid;
-  gap: 14px;
-  padding: 16px;
-}
-
-.admin-cs__panel {
-  display: grid;
-  gap: 8px;
-}
-
-.admin-cs__panel h3 {
-  margin: 0;
-  font-size: 14px;
-}
-
 .admin-cs__requester {
   margin: 0;
   font-weight: 700;
@@ -698,13 +1297,8 @@ onBeforeUnmount(stopPolling)
   font-size: 13px;
 }
 
-.admin-cs__links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.admin-cs__links a {
+.admin-cs__links a,
+.ticket-detail__links a {
   display: inline-flex;
   align-items: center;
   min-height: 32px;
@@ -716,14 +1310,78 @@ onBeforeUnmount(stopPolling)
   font-weight: 700;
 }
 
-.admin-cs__actions {
+.ticket-card__head,
+.ticket-detail__grid {
   display: grid;
-  gap: 8px;
+  gap: 14px;
+}
+
+.ticket-card__head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.ticket-card__head strong {
+  color: var(--cm-primary);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.ticket-filter-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.ticket-filter-grid__keyword {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ticket-detail__content,
+.ticket-detail__panel,
+.ticket-message {
+  padding: 14px;
+  border: 1px solid var(--cm-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.ticket-detail__content {
+  background: rgba(var(--cm-primary-rgb), 0.06);
+}
+
+.ticket-detail__grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.ticket-message.is-internal {
+  border-color: rgba(234, 88, 12, 0.22);
+  background: rgba(234, 88, 12, 0.06);
+}
+
+.ticket-reply {
+  gap: 12px;
 }
 
 @media (max-width: 1180px) {
-  .admin-cs__workspace {
+  .admin-cs__workspace,
+  .ticket-workspace {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-support__hero,
+  .ticket-card__head,
+  .admin-cs__session-top,
+  .admin-cs__session-foot,
+  .ticket-list__top,
+  .ticket-message header,
+  .ticket-detail__head,
+  .ticket-filter-grid__keyword {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

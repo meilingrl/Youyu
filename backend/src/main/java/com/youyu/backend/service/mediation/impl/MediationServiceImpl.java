@@ -4,6 +4,7 @@ import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.exception.BusinessException;
 import com.youyu.backend.mapper.mediation.MediationMapper;
 import com.youyu.backend.mapper.report.ReportMapper;
+import com.youyu.backend.service.notification.NotificationService;
 import com.youyu.backend.service.mediation.MediationService;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -37,10 +38,14 @@ public class MediationServiceImpl implements MediationService {
 
     private final MediationMapper mediationMapper;
     private final ReportMapper reportMapper;
+    private final NotificationService notificationService;
 
-    public MediationServiceImpl(MediationMapper mediationMapper, ReportMapper reportMapper) {
+    public MediationServiceImpl(MediationMapper mediationMapper,
+                                ReportMapper reportMapper,
+                                NotificationService notificationService) {
         this.mediationMapper = mediationMapper;
         this.reportMapper = reportMapper;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -93,6 +98,11 @@ public class MediationServiceImpl implements MediationService {
                     defaultIfBlank(escalationReason, "Escalated to mediation case " + createdCase.get("caseNo"))
             );
         }
+        notifyCaseParticipants(
+                createdCase,
+                "Formal mediation started",
+                "Order " + createdCase.get("relatedOrderId") + " has entered formal mediation as case " + createdCase.get("caseNo") + "."
+        );
         return linkedMap("case", createdCase, "created", true);
     }
 
@@ -175,7 +185,13 @@ public class MediationServiceImpl implements MediationService {
             throw new BusinessException(ResultCode.BAD_REQUEST, "Invalid mediation status transition");
         }
         mediationMapper.updateStatus(caseId, nextStatus, "cancelled".equals(nextStatus) ? defaultString(cancelReason) : null);
-        return linkedMap("case", findCase(caseId));
+        Map<String, Object> updatedCase = findCase(caseId);
+        notifyCaseParticipants(
+                updatedCase,
+                "Mediation status updated",
+                "Mediation case " + updatedCase.get("caseNo") + " moved to " + nextStatus + "."
+        );
+        return linkedMap("case", updatedCase);
     }
 
     @Override
@@ -223,7 +239,25 @@ public class MediationServiceImpl implements MediationService {
                 adminLabel(adminUserId),
                 "Resolved by mediation case " + updatedCase.get("caseNo") + ": " + normalizedDecisionCategory
         );
+        notifyCaseParticipants(
+                updatedCase,
+                "Mediation decision recorded",
+                "Mediation case " + updatedCase.get("caseNo") + " recorded a final decision: " + normalizedDecisionCategory + "."
+        );
         return linkedMap("case", updatedCase);
+    }
+
+    private void notifyCaseParticipants(Map<String, Object> mediationCase, String title, String body) {
+        notifyParticipant(toLong(mediationCase.get("reporterUserId")), mediationCase, title, body);
+        notifyParticipant(toLong(mediationCase.get("buyerUserId")), mediationCase, title, body);
+        notifyParticipant(toLong(mediationCase.get("sellerUserId")), mediationCase, title, body);
+    }
+
+    private void notifyParticipant(Long userId, Map<String, Object> mediationCase, String title, String body) {
+        if (userId == null) {
+            return;
+        }
+        notificationService.createMediationNotification(userId, mediationCase, title, body);
     }
 
     private Map<String, Object> findCase(Long caseId) {

@@ -72,7 +72,7 @@ public class NotificationServiceImpl implements NotificationService {
         Long buyerUserId = toLong(order.get("buyerUserId"));
         Long sellerUserId = toLong(order.get("sellerUserId"));
         String orderNo = String.valueOf(order.getOrDefault("orderNo", orderId));
-        String actionUrl = "/app/orders?orderId=" + orderId;
+        String actionUrl = "/app/orders/" + orderId;
         String title = "Order status updated";
         String buyerBody = "Order " + orderNo + " status changed to " + statusText + ".";
         createNotification(buyerUserId, "order_status", title, buyerBody, actionUrl);
@@ -80,6 +80,26 @@ public class NotificationServiceImpl implements NotificationService {
             String sellerBody = "Order " + orderNo + " status changed to " + statusText + ".";
             createNotification(sellerUserId, "order_status", title, sellerBody, actionUrl);
         }
+    }
+
+    @Override
+    @Transactional
+    public void createSupportTicketNotification(Long userId, Map<String, Object> ticket, String title, String body) {
+        if (userId == null || ticket == null || ticket.get("id") == null) {
+            return;
+        }
+        String actionUrl = "/app/support?ticketId=" + toLong(ticket.get("id"));
+        createNotification(userId, "support_ticket", title, body, actionUrl);
+    }
+
+    @Override
+    @Transactional
+    public void createMediationNotification(Long userId, Map<String, Object> mediationCase, String title, String body) {
+        if (userId == null || mediationCase == null || mediationCase.get("relatedOrderId") == null) {
+            return;
+        }
+        String actionUrl = "/app/orders/" + toLong(mediationCase.get("relatedOrderId"));
+        createNotification(userId, "mediation_update", title, body, actionUrl);
     }
 
     @Override

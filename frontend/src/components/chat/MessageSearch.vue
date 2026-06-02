@@ -15,7 +15,7 @@ const hasSearched = ref(false)
 
 const results = computed(() => chatStore.searchResults)
 const conversationMap = computed(() => new Map(chatStore.conversations.map((item) => [String(item.id), item])))
-const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月']
+const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
 const weekdays = ['日', '一', '二', '三', '四', '五', '六']
 
 const monthLabel = computed(() => `${calendarCursor.value.getFullYear()} 年 ${monthNames[calendarCursor.value.getMonth()]}`)
@@ -167,7 +167,7 @@ function openResult(result) {
 <template>
   <section class="message-search">
     <form class="message-search__form" @submit.prevent="submit(0)">
-      <input v-model="keyword" type="search" class="message-search__keyword" placeholder="搜索消息、商品名、订单号" />
+      <input v-model="keyword" type="search" class="message-search__keyword" placeholder="搜索消息、商品名或订单号" />
       <div class="message-search__date-filter">
         <button type="button" class="message-search__date-trigger" :class="{ 'is-open': dateFilterOpen }" @click="dateFilterOpen = !dateFilterOpen">
           <span>日期</span>
@@ -177,7 +177,7 @@ function openResult(result) {
           <header class="message-search__calendar-head">
             <div>
               <strong>按日期筛选</strong>
-              <span>{{ selectedDates.length ? `已选 ${selectedDates.length} 天` : '点击日期，第二次点击可选一段范围' }}</span>
+              <span>{{ selectedDates.length ? `已选 ${selectedDates.length} 天` : '点击两个日期可快速选中一段范围' }}</span>
             </div>
             <button type="button" @click="clearDateRange">清空</button>
           </header>
@@ -248,14 +248,14 @@ function openResult(result) {
 
       <EmptyState
         v-else-if="hasSearched"
-        emoji="🔎"
-        title="未找到匹配的消息"
-        description="可以换一个关键词或放宽日期范围。"
+        emoji="馃攷"
+        title="没有找到匹配消息"
+        description="可以换一个关键词，或者放宽日期范围。"
       />
 
       <EmptyState
         v-else
-        emoji="🕑"
+        emoji="馃晳"
         title="搜索历史消息"
         description="输入关键词或日期范围，快速定位聊天记录。"
       />

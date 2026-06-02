@@ -5,22 +5,22 @@
 - Status: active
 - Source of truth:
   - controller: `backend/src/main/java/com/youyu/backend/controller/review/ReviewController.java`
-  - controller: `backend/src/main/java/com/youyu/backend/controller/product/ProductController.java` (public review list and summary)
-  - controller: `backend/src/main/java/com/youyu/backend/controller/shop/ShopController.java` (public shop review list and summary)
+  - controller: `backend/src/main/java/com/youyu/backend/controller/product/ProductController.java`
+  - controller: `backend/src/main/java/com/youyu/backend/controller/shop/ShopController.java`
   - service: `backend/src/main/java/com/youyu/backend/service/review/impl/ReviewServiceImpl.java`
   - request sample: `docs/06-http/review.http`
-- Last updated: 2026-05-20
+- Last updated: 2026-06-01
 
 ## Scope
 
 This document covers:
 
-- product review submission and shop review submission (authenticated buyer)
-- pending reviewable order items and my-reviews history (authenticated buyer)
-- public product review lists and review summaries (hosted under `/api/products/`)
-- public shop review lists and review summaries (hosted under `/api/shops/`)
+- product review submission and shop review submission
+- pending reviewable order items and my review history
+- public product review lists and review summaries
+- public shop review lists and review summaries
 
-It does not cover review-task management (admin-side product review tasks belong to the admin spec).
+It does not cover admin review-task management.
 
 ## Authentication And Roles
 
@@ -28,16 +28,16 @@ It does not cover review-task management (admin-side product review tasks belong
 |---|---|
 | `POST /api/reviews/products`, `POST /api/reviews/shops` | USER role required |
 | `GET /api/reviews/pending`, `GET /api/reviews/mine` | USER role required |
-| `GET /api/products/{id}/reviews`, `GET /api/products/{id}/review-summary` | Public (no auth) |
-| `GET /api/shops/{shopId}/reviews`, `GET /api/shops/{shopId}/review-summary` | Public (no auth) |
+| `GET /api/products/{id}/reviews`, `GET /api/products/{id}/review-summary` | Public |
+| `GET /api/shops/{shopId}/reviews`, `GET /api/shops/{shopId}/review-summary` | Public |
 
 - Token format: `Authorization: Bearer <token>`
-- Missing or invalid token on protected endpoints returns HTTP 401 (`UNAUTHORIZED`)
-- Valid token with wrong role returns HTTP 403 (`FORBIDDEN`)
+- Missing or invalid token on protected endpoints returns HTTP `401` with `UNAUTHORIZED`
+- Valid token with wrong role returns HTTP `403` with `FORBIDDEN`
 
 ## Response Envelope
 
-All endpoints in this module use the unified response envelope:
+All endpoints use the unified response envelope:
 
 ```json
 {
@@ -49,11 +49,9 @@ All endpoints in this module use the unified response envelope:
 }
 ```
 
-Failures use the same envelope with `success=false` and the appropriate `code` and HTTP status.
+Failures use the same envelope with `success=false`.
 
 ## Error Semantics
-
-### HTTP Status And `ResultCode`
 
 | HTTP status | `ResultCode` | Meaning |
 |---|---|---|
@@ -62,317 +60,213 @@ Failures use the same envelope with `success=false` and the appropriate `code` a
 | `403` | `FORBIDDEN` | Authenticated but wrong role |
 | `404` | `NOT_FOUND` | Referenced resource does not exist |
 | `500` | `INTERNAL_SERVER_ERROR` | Unhandled or server-side failure |
-| `200` | `BUSINESS_ERROR` | Domain-rule rejection (duplicate review, ineligible order, etc.) |
+| `200` | `BUSINESS_ERROR` | Domain-rule rejection |
 
-`BUSINESS_ERROR` responses return HTTP 200 with `success=false` and `code="BUSINESS_ERROR"`. Callers must check `success` or `code`, not just HTTP status.
+`BUSINESS_ERROR` responses return HTTP `200` with `success=false`.
 
 ## Endpoints
 
 ### `POST /api/reviews/products`
 
-#### Purpose
-
 Submit a product review for a completed order item.
 
-#### Request
-
-- Header:
-  - `Authorization: Bearer <token>`
-
-##### Body
+Request body:
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
 | `orderItemId` | yes | integer | Must belong to a completed order owned by the caller |
-| `score` | yes | integer | 1–5 |
+| `score` | yes | integer | 1-5 |
 | `content` | no | string | Max 1000 characters, defaults to empty string |
 
-#### Response
+Response `data`:
 
-- `data` shape:
+| Field | Type |
+|---|---|
+| `id` | integer |
+| `orderItemId` | integer |
+| `buyerUserId` | integer |
+| `productId` | integer |
+| `score` | integer |
+| `content` | string |
+| `createdAt` | string |
+| `updatedAt` | string |
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | integer | Review ID |
-| `orderItemId` | integer | |
-| `buyerUserId` | integer | |
-| `productId` | integer | |
-| `score` | integer | 1–5 |
-| `content` | string | |
-| `createdAt` | string | Format `yyyy-MM-dd HH:mm` |
-| `updatedAt` | string | Format `yyyy-MM-dd HH:mm` |
+Error cases:
 
-#### Error Cases
-
-- `400`: missing `orderItemId` or `score`, score outside 1–5, content exceeds 1000 characters
+- `400`: missing fields, invalid score, content too long
 - `401`: not logged in
-- `403`: current role is not USER
+- `403`: wrong role
 - `404`: order item does not exist
-- `BUSINESS_ERROR`: order not completed, order does not belong to caller, duplicate review
+- `BUSINESS_ERROR`: order not completed, wrong buyer, duplicate review
 
 ### `POST /api/reviews/shops`
 
-#### Purpose
-
 Submit a shop review. Caller must have at least one completed order from the target shop.
 
-#### Request
-
-- Header:
-  - `Authorization: Bearer <token>`
-
-##### Body
+Request body:
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
 | `shopId` | yes | integer | Target shop |
-| `score` | yes | integer | 1–5 |
+| `score` | yes | integer | 1-5 |
 | `content` | no | string | Max 1000 characters, defaults to empty string |
 
-#### Response
+Response `data`:
 
-- `data` shape:
+| Field | Type |
+|---|---|
+| `id` | integer |
+| `shopId` | integer |
+| `buyerUserId` | integer |
+| `score` | integer |
+| `content` | string |
+| `createdAt` | string |
+| `updatedAt` | string |
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | integer | Review ID |
-| `shopId` | integer | |
-| `buyerUserId` | integer | |
-| `score` | integer | 1–5 |
-| `content` | string | |
-| `createdAt` | string | Format `yyyy-MM-dd HH:mm` |
-| `updatedAt` | string | Format `yyyy-MM-dd HH:mm` |
+Error cases:
 
-#### Error Cases
-
-- `400`: missing `shopId` or `score`, score outside 1–5, content exceeds 1000 characters
+- `400`: missing fields, invalid score, content too long
 - `401`: not logged in
-- `403`: current role is not USER
+- `403`: wrong role
 - `404`: shop does not exist
-- `BUSINESS_ERROR`: shop review status is not `approved`, no completed order from this shop, duplicate review
+- `BUSINESS_ERROR`: shop not reviewable, no completed order, duplicate review
 
 ### `GET /api/reviews/pending`
 
-#### Purpose
+Return order items eligible for review but not yet reviewed by the current user.
 
-Return order items that are eligible for review but have not yet been reviewed by the current user.
-
-#### Request
-
-- Header:
-  - `Authorization: Bearer <token>`
-
-#### Response
-
-- `data` shape:
+Response `data`:
 
 | Field | Type | Notes |
 |---|---|---|
 | `items` | array | Pending order items |
 
-Each item in `items`:
+Each item includes:
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | integer | Order item ID |
-| `orderId` | integer | |
-| `productId` | integer | |
-| `titleSnapshot` | string | Product title at order time |
-| `imageSnapshot` | string | Product image at order time |
-| `priceSnapshot` | number | Price at order time |
-| `quantity` | integer | |
-| `shopId` | integer | Shop that fulfilled this item |
-| `completedAt` | string | Order completion timestamp, format `yyyy-MM-dd HH:mm` |
-
-#### Error Cases
-
-- `401`: not logged in
+| Field | Type |
+|---|---|
+| `id` | integer |
+| `orderId` | integer |
+| `productId` | integer |
+| `titleSnapshot` | string |
+| `imageSnapshot` | string |
+| `priceSnapshot` | number |
+| `quantity` | integer |
+| `shopId` | integer |
+| `completedAt` | string |
 
 ### `GET /api/reviews/mine`
 
-#### Purpose
+Return all reviews written by the current user.
 
-Return all reviews written by the current user, split into product reviews and shop reviews.
+Response `data`:
 
-#### Request
-
-- Header:
-  - `Authorization: Bearer <token>`
-
-#### Response
-
-- `data` shape:
-
-| Field | Type | Notes |
-|---|---|---|
-| `productReviews` | array | Product reviews by the current user |
-| `shopReviews` | array | Shop reviews by the current user |
-
-Product review items add `productTitle` and `productImage` (from order-item snapshot, nullable via LEFT JOIN).
-
-Shop review items add `shopName` and `shopAvatar` (from shop record, nullable via LEFT JOIN).
-
-#### Error Cases
-
-- `401`: not logged in
+| Field | Type |
+|---|---|
+| `productReviews` | array |
+| `shopReviews` | array |
 
 ### `GET /api/products/{id}/reviews`
 
-#### Purpose
+Public paginated product review list.
 
-Public paginated list of reviews for a product, with reviewer nickname and avatar.
-
-#### Request
-
-##### Path
-
-| Field | Required | Type | Notes |
-|---|---|---|---|
-| `id` | yes | integer | Product ID |
-
-##### Query
+Query params:
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
 | `page` | no | integer | Default `1` |
 | `pageSize` | no | integer | Default `10`, max `50` |
 
-#### Response
+Response `data`:
 
-- `data` shape:
+| Field | Type |
+|---|---|
+| `items` | array |
+| `total` | integer |
+| `page` | integer |
+| `pageSize` | integer |
 
-| Field | Type | Notes |
-|---|---|---|
-| `items` | array | Review items, newest first |
-| `total` | integer | Total review count for this product |
-| `page` | integer | Current page |
-| `pageSize` | integer | Current page size |
+Each review item includes reviewer display fields:
 
-Each review item includes the base product review fields plus:
-
-| Field | Type | Notes |
-|---|---|---|
-| `reviewerNickname` | string | Reviewer display name |
-| `reviewerAvatar` | string | Reviewer avatar URL |
-
-#### Error Cases
-
-- `404`: product does not exist
+| Field | Type |
+|---|---|
+| `reviewerNickname` | string |
+| `reviewerAvatar` | string |
 
 ### `GET /api/products/{id}/review-summary`
 
-#### Purpose
-
 Aggregated rating summary for a product.
 
-#### Request
-
-##### Path
-
-| Field | Required | Type | Notes |
-|---|---|---|---|
-| `id` | yes | integer | Product ID |
-
-#### Response
-
-- `data` shape:
+Response `data`:
 
 | Field | Type | Notes |
 |---|---|---|
-| `avgScore` | number | Rounded to 2 decimal places, 0.0 when no reviews |
+| `avgScore` | number | Rounded to 2 decimal places, `0.0` when no reviews |
 | `reviewCount` | integer | Total number of reviews |
-| `distribution` | array | Score distribution, 5 entries (score 1–5, each with `score` and `count`) |
+| `distribution` | array | Always 5 entries for scores 1-5 |
 
-The `distribution` array is currently a stub — all score levels return `count=0`. This will be replaced with real GROUP BY aggregation in a future iteration.
+`distribution` always returns all five score buckets. Real review scores carry aggregated counts and missing score levels return `count=0`.
 
-#### Error Cases
+Each `distribution` item:
 
-- `404`: product does not exist
+| Field | Type |
+|---|---|
+| `score` | integer |
+| `count` | integer |
 
 ### `GET /api/shops/{shopId}/reviews`
 
-#### Purpose
+Public paginated shop review list.
 
-Public paginated list of reviews for a shop, with reviewer nickname and avatar.
-
-#### Request
-
-##### Path
-
-| Field | Required | Type | Notes |
-|---|---|---|---|
-| `shopId` | yes | integer | Shop ID |
-
-##### Query
+Query params:
 
 | Field | Required | Type | Notes |
 |---|---|---|---|
 | `page` | no | integer | Default `1` |
 | `pageSize` | no | integer | Default `10`, max `50` |
 
-#### Response
+Response `data` uses the same pagination envelope as product reviews.
 
-- `data` shape: same pagination envelope as product reviews (`items`, `total`, `page`, `pageSize`).
+Each review item includes:
 
-Each shop review item:
-
-| Field | Type | Notes |
-|---|---|---|
-| `id` | integer | Review ID |
-| `shopId` | integer | |
-| `buyerUserId` | integer | |
-| `score` | integer | 1–5 |
-| `content` | string | |
-| `createdAt` | string | Format `yyyy-MM-dd HH:mm` |
-| `updatedAt` | string | Format `yyyy-MM-dd HH:mm` |
-| `reviewerNickname` | string | Reviewer display name |
-| `reviewerAvatar` | string | Reviewer avatar URL |
-
-#### Error Cases
-
-- `404`: shop does not exist
+| Field | Type |
+|---|---|
+| `id` | integer |
+| `shopId` | integer |
+| `buyerUserId` | integer |
+| `score` | integer |
+| `content` | string |
+| `createdAt` | string |
+| `updatedAt` | string |
+| `reviewerNickname` | string |
+| `reviewerAvatar` | string |
 
 ### `GET /api/shops/{shopId}/review-summary`
 
-#### Purpose
-
 Aggregated rating summary for a shop.
 
-#### Request
+Response `data` has the same structure as product review summary: `avgScore`, `reviewCount`, and `distribution`.
 
-##### Path
-
-| Field | Required | Type | Notes |
-|---|---|---|---|
-| `shopId` | yes | integer | Shop ID |
-
-#### Response
-
-- `data` shape: same structure as product review summary (`avgScore`, `reviewCount`, `distribution`).
-
-The `distribution` array is also a stub — same limitation as the product review summary.
-
-#### Error Cases
-
-- `404`: shop does not exist
+`distribution` follows the same rules as product review summary: all five score buckets are always present and use real aggregated counts.
 
 ## Shared Types / Enumerations
 
-- **Score**: integer 1–5, validated server-side with `BusinessException(BAD_REQUEST)` for out-of-range values.
-- **Content**: string, max 1000 characters. Empty string is the default.
-- **Pagination**: `page` defaults to 1 (clamped to ≥1), `pageSize` defaults to 10 (clamped to 1–50).
-- **Scoring side effects**: Submitting a review triggers a recalculation of the product or shop `rating_score` and `review_count` denormalized fields. These are written transactionally alongside the review insert.
-- **Duplicate detection**: The `reviews` table has a unique constraint on `(order_item_id, buyer_user_id)`; the `shop_reviews` table has a unique constraint on `(shop_id, buyer_user_id)`. Duplicate submissions are caught via `DuplicateKeyException` and surfaced as `BUSINESS_ERROR`.
+- **Score**: integer 1-5
+- **Content**: max 1000 characters
+- **Pagination**: `page` clamps to at least `1`; `pageSize` clamps to `1-50`
+- **Scoring side effects**: review submission recalculates the denormalized `rating_score` and `review_count` fields on the owning product or shop
+- **Duplicate detection**:
+  - product reviews: unique `(order_item_id, buyer_user_id)`
+  - shop reviews: unique `(shop_id, buyer_user_id)`
 
 ## HTTP Asset Mapping
 
 - Primary validation file: `docs/06-http/review.http`
 - Additional related files:
-  - `docs/06-http/product.http` (covers public product review list and summary endpoints)
-  - `docs/06-http/order.http` (covers order completion flow needed to produce reviewable items)
+  - `docs/06-http/product.http`
+  - `docs/06-http/order.http`
 
 ## Known Drift Or Follow-Up Notes
 
-- `review.http` matches current controller behavior — no drift.
-- The `distribution` array in both review summaries is a known stub (all score levels return `count=0`). Real GROUP BY aggregation is tracked as a TODO in `ReviewServiceImpl`.
-- Four public review endpoints live on `ProductController` and `ShopController`, not `ReviewController`. Callers should not assume all review-related paths start with `/api/reviews/`.
+- `review.http` matches current controller behavior.
+- Four public review endpoints live on `ProductController` and `ShopController`, not `ReviewController`.

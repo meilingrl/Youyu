@@ -48,7 +48,6 @@ public class ReviewServiceImpl implements ReviewService {
 
         Long orderItemId = requiredLong(command.get("orderItemId"), "orderItemId");
 
-        // Resolve order context from order item in a single bounded query
         Map<String, Object> orderContext = reviewMapper.findOrderContextByOrderItemId(orderItemId)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "订单项不存在"));
 
@@ -75,9 +74,6 @@ public class ReviewServiceImpl implements ReviewService {
             throw new BusinessException(ResultCode.BUSINESS_ERROR, "您已评价过该商品");
         }
 
-        // 重新聚合并持久化评分到 products 表的冗余字段（rating_score / review_count），
-        // 避免每次商品列表/详情读取时执行 AVG / COUNT 聚合查询。
-        // 注意：此操作在事务内执行，并发提交评价时存在短暂的读写竞争窗口。
         recalculateProductRating(productId);
 
         return reviewMapper.findProductReviewById(reviewId)
@@ -99,14 +95,12 @@ public class ReviewServiceImpl implements ReviewService {
 
         Long shopId = requiredLong(command.get("shopId"), "shopId");
 
-        // Verify shop exists and is approved
         Map<String, Object> shop = shopMapper.findById(shopId)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "店铺不存在"));
         if (!"approved".equals(shop.get("reviewStatus"))) {
             throw new BusinessException(ResultCode.BUSINESS_ERROR, "该店铺暂不支持评价");
         }
 
-        // Verify buyer has at least one completed order from this shop
         List<Map<String, Object>> buyerOrders = transactionDataStore.listOrdersForBuyer(buyerUserId);
         boolean hasCompletedOrderFromShop = buyerOrders.stream()
                 .anyMatch(o -> "completed".equals(o.get("orderStatus"))
@@ -128,7 +122,6 @@ public class ReviewServiceImpl implements ReviewService {
             throw new BusinessException(ResultCode.BUSINESS_ERROR, "您已评价过该店铺");
         }
 
-        // 同上：将店铺评分聚合并写入 shops 表冗余字段，以读优化换写开销。
         recalculateShopRating(shopId);
 
         return reviewMapper.findShopReviewById(reviewId)
@@ -166,23 +159,13 @@ public class ReviewServiceImpl implements ReviewService {
         long reviewCount = 0;
         if (!agg.isEmpty()) {
             Map<String, Object> row = agg.get(0);
-            // 防御性解包：JDBC queryForList 返回原始 Object，可能是 BigDecimal、Double、Long 或 null。
-            // Mapper 层 SQL 已使用 COALESCE(AVG(score), 0.0)，此处是双重保险。
             avgScore = row.get("avgScore") instanceof Number n ? n.doubleValue() : 0.0;
             reviewCount = row.get("count") instanceof Number n ? n.longValue() : 0;
         }
         avgScore = Math.round(avgScore * 100.0) / 100.0;
 
-        // TODO: 用真实 GROUP BY 查询替换 stub distribution：
-        //   SELECT score, COUNT(*) FROM reviews WHERE product_id = ? GROUP BY score
-        // 当前返回 5 个评分级别全 0，作为 MVP 占位。
-        List<Map<String, Object>> distribution = new ArrayList<>();
-        for (int s = 1; s <= 5; s++) {
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("score", s);
-            entry.put("count", 0L);
-            distribution.add(entry);
-        }
+        List<Map<String, Object>> distribution =
+                buildDistribution(reviewMapper.summarizeProductRatingDistribution(productId));
 
         return linkedMap("avgScore", avgScore, "reviewCount", reviewCount, "distribution", distribution);
     }
@@ -199,16 +182,8 @@ public class ReviewServiceImpl implements ReviewService {
         }
         avgScore = Math.round(avgScore * 100.0) / 100.0;
 
-        // TODO: 用真实 GROUP BY 查询替换 stub distribution：
-        //   SELECT score, COUNT(*) FROM shop_reviews WHERE shop_id = ? GROUP BY score
-        // 当前返回 5 个评分级别全 0，作为 MVP 占位。
-        List<Map<String, Object>> distribution = new ArrayList<>();
-        for (int s = 1; s <= 5; s++) {
-            Map<String, Object> entry = new LinkedHashMap<>();
-            entry.put("score", s);
-            entry.put("count", 0L);
-            distribution.add(entry);
-        }
+        List<Map<String, Object>> distribution =
+                buildDistribution(reviewMapper.summarizeShopRatingDistribution(shopId));
 
         return linkedMap("avgScore", avgScore, "reviewCount", reviewCount, "distribution", distribution);
     }
@@ -232,13 +207,6 @@ public class ReviewServiceImpl implements ReviewService {
         return linkedMap("productReviews", productReviews, "shopReviews", shopReviews);
     }
 
-    // ── Private helpers ──
-
-    /**
-     * 重新聚合所有商品评价分数，更新 products 表的冗余评分字段。
-     * avgScore 四舍五入到 2 位小数以避免浮点 artifacts（如 4.299999999）。
-     * 防御性的 instanceof Number 类型检查兼容 JDBC 驱动返回 BigDecimal / Double / null 的差异。
-     */
     private void recalculateProductRating(Long productId) {
         List<Map<String, Object>> agg = reviewMapper.summarizeProductRatings(productId);
         double avgScore = 0.0;
@@ -246,15 +214,12 @@ public class ReviewServiceImpl implements ReviewService {
         if (!agg.isEmpty()) {
             Map<String, Object> row = agg.get(0);
             avgScore = row.get("avgScore") instanceof Number n ? n.doubleValue() : 0.0;
-            count = row.get("count") instanceof Number n ? ((Number) row.get("count")).intValue() : 0;
+            count = row.get("count") instanceof Number n ? n.intValue() : 0;
         }
         avgScore = Math.round(avgScore * 100.0) / 100.0;
         reviewMapper.updateProductRating(productId, avgScore, count);
     }
 
-    /**
-     * 同上：重新聚合店铺评分，更新 shops 表冗余字段。
-     */
     private void recalculateShopRating(Long shopId) {
         List<Map<String, Object>> agg = reviewMapper.summarizeShopRatings(shopId);
         double avgScore = 0.0;
@@ -262,7 +227,7 @@ public class ReviewServiceImpl implements ReviewService {
         if (!agg.isEmpty()) {
             Map<String, Object> row = agg.get(0);
             avgScore = row.get("avgScore") instanceof Number n ? n.doubleValue() : 0.0;
-            count = row.get("count") instanceof Number n ? ((Number) row.get("count")).intValue() : 0;
+            count = row.get("count") instanceof Number n ? n.intValue() : 0;
         }
         avgScore = Math.round(avgScore * 100.0) / 100.0;
         reviewMapper.updateShopRating(shopId, avgScore, count);
@@ -297,7 +262,9 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     private String optionalString(Object value, String fallback) {
-        if (value == null) return fallback;
+        if (value == null) {
+            return fallback;
+        }
         return String.valueOf(value);
     }
 
@@ -314,9 +281,34 @@ public class ReviewServiceImpl implements ReviewService {
     }
 
     private Long toLong(Object value) {
-        if (value instanceof Number n) return n.longValue();
-        if (value == null) return null;
+        if (value instanceof Number n) {
+            return n.longValue();
+        }
+        if (value == null) {
+            return null;
+        }
         return Long.parseLong(String.valueOf(value));
+    }
+
+    private List<Map<String, Object>> buildDistribution(List<Map<String, Object>> groupedRows) {
+        Map<Integer, Long> groupedCounts = new LinkedHashMap<>();
+        for (Map<String, Object> row : groupedRows) {
+            Integer score = row.get("score") instanceof Number n ? n.intValue() : null;
+            if (score == null) {
+                continue;
+            }
+            long count = row.get("count") instanceof Number n ? n.longValue() : 0L;
+            groupedCounts.put(score, count);
+        }
+
+        List<Map<String, Object>> distribution = new ArrayList<>();
+        for (int score = 1; score <= 5; score++) {
+            Map<String, Object> entry = new LinkedHashMap<>();
+            entry.put("score", score);
+            entry.put("count", groupedCounts.getOrDefault(score, 0L));
+            distribution.add(entry);
+        }
+        return distribution;
     }
 
     @SuppressWarnings("unchecked")

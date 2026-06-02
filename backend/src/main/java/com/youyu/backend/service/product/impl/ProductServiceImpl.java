@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ProductServiceImpl implements ProductService {
@@ -85,6 +86,41 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public List<Map<String, Object>> listMyProducts(Long sellerUserId) {
         return productMapper.findBySellerId(sellerUserId);
+    }
+
+    @Override
+    public List<Map<String, Object>> listFavorites(Long userId) {
+        return productMapper.findFavoritesByUserId(userId)
+                .stream()
+                .map(this::listItem)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> addFavorite(Long userId, Long productId) {
+        Map<String, Object> product = productMapper.findById(productId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Product not found"));
+        if (!isFavoriteableProduct(product)) {
+            throw new BusinessException(ResultCode.NOT_FOUND, "Product not found");
+        }
+
+        boolean existed = productMapper.isFavorite(userId, productId);
+        productMapper.addFavorite(userId, productId);
+        if (!existed) {
+            productMapper.updateFavoriteCount(productId, 1);
+        }
+        return favoriteResult(productId, true);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> removeFavorite(Long userId, Long productId) {
+        boolean removed = productMapper.removeFavorite(userId, productId);
+        if (removed) {
+            productMapper.updateFavoriteCount(productId, -1);
+        }
+        return favoriteResult(productId, false);
     }
 
     @Override
@@ -173,8 +209,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private boolean isVisibleToCurrentUser(Map<String, Object> product) {
-        boolean publicProduct = "on_sale".equals(product.get("status"))
-                && ("not_required".equals(product.get("reviewStatus")) || "approved".equals(product.get("reviewStatus")));
+        boolean publicProduct = isFavoriteableProduct(product);
         if (publicProduct) {
             return true;
         }
@@ -183,6 +218,18 @@ public class ProductServiceImpl implements ProductService {
         }
         return AdminPermissionPolicy.isAdminRole(AuthContextHolder.get().getRole())
                 || Objects.equals(AuthContextHolder.get().getUserId(), product.get("sellerUserId"));
+    }
+
+    private boolean isFavoriteableProduct(Map<String, Object> product) {
+        return "on_sale".equals(product.get("status"))
+                && ("not_required".equals(product.get("reviewStatus")) || "approved".equals(product.get("reviewStatus")));
+    }
+
+    private Map<String, Object> favoriteResult(Long productId, boolean favorite) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("productId", productId);
+        result.put("favorite", favorite);
+        return result;
     }
 
     private void assertCanPublish(Long sellerUserId) {

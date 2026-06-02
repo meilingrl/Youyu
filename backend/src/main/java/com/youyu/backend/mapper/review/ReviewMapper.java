@@ -16,6 +16,8 @@ public interface ReviewMapper {
 
     List<Map<String, Object>> summarizeProductRatings(Long productId);
 
+    List<Map<String, Object>> summarizeProductRatingDistribution(Long productId);
+
     Long insertShopReview(Map<String, Object> reviewData);
 
     Optional<Map<String, Object>> findShopReviewById(Long id);
@@ -25,6 +27,8 @@ public interface ReviewMapper {
     long countShopReviewsByShopId(Long shopId);
 
     List<Map<String, Object>> summarizeShopRatings(Long shopId);
+
+    List<Map<String, Object>> summarizeShopRatingDistribution(Long shopId);
 
     void updateProductRating(Long productId, double avgScore, int count);
 

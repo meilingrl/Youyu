@@ -46,6 +46,10 @@ const detailOrderMeta = computed(() => getOrderStatusMeta(detail.value?.orderSta
 const detailPaymentMeta = computed(() => getPaymentStatusMeta(detail.value?.paymentStatus))
 const detailFulfillmentMeta = computed(() => getFulfillmentTypeMeta(detail.value?.fulfillmentType))
 const availableActions = computed(() => detail.value?.availableActions || [])
+const refunds = computed(() => detail.value?.refunds || [])
+const relatedReports = computed(() => detail.value?.relatedReports || [])
+const mediationSummary = computed(() => detail.value?.mediationSummary || null)
+const afterSalesSummary = computed(() => detail.value?.afterSalesSummary || null)
 const hasPrimaryActions = computed(() =>
   ['pay', 'cancel', 'confirm_receipt', 'offline_buyer_confirm', 'apply_refund'].some((action) =>
     availableActions.value.includes(action)
@@ -54,6 +58,36 @@ const hasPrimaryActions = computed(() =>
 
 function hasAction(action) {
   return availableActions.value.includes(action)
+}
+
+function refundStatusLabel(status) {
+  const labels = {
+    pending: '待处理',
+    completed: '已完成',
+    rejected: '已驳回'
+  }
+  return labels[status] || status || '未知状态'
+}
+
+function reportStatusLabel(status) {
+  const labels = {
+    pending: '待核查',
+    processing: '处理中',
+    resolved: '已处理',
+    rejected: '已驳回'
+  }
+  return labels[status] || status || '未知状态'
+}
+
+function mediationStatusLabel(status) {
+  const labels = {
+    opened: '已立案',
+    evidence_review: '证据审核中',
+    decision_pending: '等待裁决',
+    resolved: '已结案',
+    cancelled: '已取消'
+  }
+  return labels[status] || status || '未知状态'
 }
 
 async function loadDetail() {
@@ -365,16 +399,42 @@ watch(orderId, loadDetail, { immediate: true })
         </article>
       </section>
 
+      <section v-if="afterSalesSummary" class="detail-panel">
+        <h3>售后进度</h3>
+        <div class="detail-grid">
+          <div class="detail-kv">
+            <span>当前阶段</span>
+            <strong>{{ afterSalesSummary.currentStage || 'normal' }}</strong>
+          </div>
+          <div class="detail-kv">
+            <span>退款记录</span>
+            <strong>{{ refunds.length }}</strong>
+          </div>
+          <div class="detail-kv">
+            <span>举报记录</span>
+            <strong>{{ relatedReports.length }}</strong>
+          </div>
+          <div class="detail-kv">
+            <span>正式调解</span>
+            <strong>{{ mediationSummary ? mediationStatusLabel(mediationSummary.status) : '未进入' }}</strong>
+          </div>
+        </div>
+        <p class="section-copy">{{ afterSalesSummary.userGuidance }}</p>
+      </section>
+
       <section ref="refundSection" class="detail-panel">
         <h3>退款与售后</h3>
         <p class="refund-rule">{{ detail.refundRuleText }}</p>
-        <div v-if="detail.refunds?.length">
-          <article v-for="refund in detail.refunds" :key="refund.id" class="line-item">
+        <div v-if="refunds.length">
+          <article v-for="refund in refunds" :key="refund.id" class="line-item line-item--stacked">
             <div class="line-item__copy">
               <strong>{{ refund.refundNo }}</strong>
-              <span>{{ refund.refundStatus }}</span>
+              <span>{{ refundStatusLabel(refund.refundStatus) }} / {{ formatCurrency(refund.refundAmount) }}</span>
+              <span>退款原因：{{ refund.refundReason || '未填写' }}</span>
+              <span>申请时间：{{ refund.appliedAt || '未记录' }}</span>
+              <span v-if="refund.processedAt">处理时间：{{ refund.processedAt }}</span>
+              <span v-if="refund.completedAt">完成时间：{{ refund.completedAt }}</span>
             </div>
-            <span>{{ formatCurrency(refund.refundAmount) }}</span>
           </article>
         </div>
         <p v-else class="text-muted">暂无退款记录</p>
@@ -390,6 +450,26 @@ watch(orderId, loadDetail, { immediate: true })
             申请退款
           </el-button>
         </div>
+      </section>
+
+      <section v-if="relatedReports.length || mediationSummary" class="detail-panel">
+        <h3>平台介入记录</h3>
+        <article v-if="mediationSummary" class="line-item line-item--stacked">
+          <div class="line-item__copy">
+            <strong>调解案件 {{ mediationSummary.caseNo }}</strong>
+            <span>{{ mediationStatusLabel(mediationSummary.status) }}</span>
+            <span v-if="mediationSummary.decisionCategory">裁决类型：{{ mediationSummary.decisionCategory }}</span>
+            <span>最近更新：{{ mediationSummary.updatedAt || '未记录' }}</span>
+          </div>
+        </article>
+        <article v-for="report in relatedReports" :key="report.id" class="line-item line-item--stacked">
+          <div class="line-item__copy">
+            <strong>举报 #{{ report.id }}</strong>
+            <span>{{ reportStatusLabel(report.status) }} / {{ report.reasonType || '未分类' }}</span>
+            <span>提交时间：{{ report.submittedAt || '未记录' }}</span>
+            <span>{{ report.content }}</span>
+          </div>
+        </article>
       </section>
 
       <section class="detail-panel">
@@ -569,6 +649,10 @@ watch(orderId, loadDetail, { immediate: true })
 .line-item {
   padding: 10px 0;
   border-bottom: 1px solid rgba(88, 62, 43, 0.08);
+}
+
+.line-item--stacked {
+  align-items: flex-start;
 }
 
 .line-item:last-child {

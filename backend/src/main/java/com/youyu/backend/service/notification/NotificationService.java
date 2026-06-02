@@ -12,6 +12,10 @@ public interface NotificationService {
 
     void createOrderStatusNotification(Map<String, Object> order, String statusText, boolean notifySeller);
 
+    void createSupportTicketNotification(Long userId, Map<String, Object> ticket, String title, String body);
+
+    void createMediationNotification(Long userId, Map<String, Object> mediationCase, String title, String body);
+
     void markRead(Long userId, Long notificationId);
 
     void markAllRead(Long userId);

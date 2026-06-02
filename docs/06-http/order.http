@@ -88,6 +88,7 @@ Content-Type: application/json
 ###
 
 ### Get order detail
+### Expected detail now includes refundRuleText, relatedReports, mediationSummary, and afterSalesSummary.
 GET {{baseUrl}}/api/orders/1
 Authorization: Bearer {{buyerToken}}
 
@@ -150,6 +151,7 @@ Authorization: Bearer {{adminToken}}
 ###
 
 ### Admin get order detail
+### Expected detail now includes the same after-sales visibility family, with admin seeing all relatedReports for the order.
 GET {{baseUrl}}/api/admin/orders/1
 Authorization: Bearer {{adminToken}}
 

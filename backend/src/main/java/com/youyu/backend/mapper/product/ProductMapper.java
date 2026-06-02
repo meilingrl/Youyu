@@ -26,11 +26,19 @@ public interface ProductMapper {
 
     List<Map<String, Object>> findByShopId(Long shopId);
 
+    List<Map<String, Object>> findFavoritesByUserId(Long userId);
+
     Optional<Map<String, Object>> findById(Long id);
 
     List<Map<String, Object>> findMediaByProductId(Long productId);
 
     List<Map<String, Object>> findDigitalAssetsByProductId(Long productId);
+
+    boolean isFavorite(Long userId, Long productId);
+
+    void addFavorite(Long userId, Long productId);
+
+    boolean removeFavorite(Long userId, Long productId);
 
     Long insert(Map<String, Object> product);
 
@@ -39,6 +47,8 @@ public interface ProductMapper {
     void update(Long productId, Map<String, Object> product);
 
     void updateStatus(Long productId, String status);
+
+    void updateFavoriteCount(Long productId, int delta);
 
     void updateReviewResult(Long productId, String reviewStatus, String status, String rejectReason);
 
