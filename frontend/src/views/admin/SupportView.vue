@@ -254,12 +254,12 @@ function normalizeWorkspace(value) {
 
 function normalizeTicketStatus(value) {
   const candidate = Array.isArray(value) ? value[0] : value
-  return ticketStatusOptions.some((item) => item.value === candidate) ? candidate : ''
+  return ticketStatuses.some((item) => item.value === candidate) ? candidate : ''
 }
 
 function normalizeTicketCategory(value) {
   const candidate = Array.isArray(value) ? value[0] : value
-  return ticketCategoryOptions.some((item) => item.value === candidate) ? candidate : ''
+  return ticketCategories.some((item) => item.value === candidate) ? candidate : ''
 }
 
 function normalizeQueryString(value) {

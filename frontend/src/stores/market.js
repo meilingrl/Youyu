@@ -7,6 +7,7 @@ import {
   getProductDetail,
   getProductList
 } from '@/api/modules/product'
+import { getOrderList } from '@/api/modules/order'
 import { addFavorite as addFavoriteApi, listFavorites, removeFavorite as removeFavoriteApi } from '@/api/modules/favorite'
 import {
   bindUserEmail,
@@ -112,6 +113,9 @@ export const useMarketStore = defineStore('market', () => {
   const shopInsightById = ref({})
   const loadingShopInsight = ref(false)
   const shopInsightError = ref('')
+  const spendAggregation = ref({ monthly: [], yearly: {}, source: 'none' })
+  const loadingSpendAggregation = ref(false)
+  const spendAggregationError = ref('')
 
   const favoriteProducts = computed(() =>
     products.value.filter((item) => favoriteIds.value.includes(String(item.id)))
@@ -730,6 +734,85 @@ export const useMarketStore = defineStore('market', () => {
    * @returns {object} 包含 realName、major、grade 等预填字段的认证草案对象
    * @sideEffects 无
    */
+  async function loadSpendAggregation() {
+    loadingSpendAggregation.value = true
+    spendAggregationError.value = ''
+    try {
+      const response = await getOrderList()
+      if (!response || response.success !== true) {
+        throw new Error(response?.message || '订单列表加载失败')
+      }
+
+      const orders = Array.isArray(response.data)
+        ? response.data
+        : response.data?.items || []
+
+      const paidStatuses = ['paid', 'shipped', 'completed', 'delivered', 'confirmed']
+      const paidOrders = orders.filter(
+        (o) => paidStatuses.includes(String(o.status || o.orderStatus || '').toLowerCase())
+      )
+
+      const buckets = {}
+      let totalSpend = 0
+      let totalItems = 0
+      const now = new Date()
+      const twelveMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+
+      for (const order of paidOrders) {
+        const dateStr = order.createdAt || order.created_at || order.orderTime || ''
+        const amount = Number(order.totalAmount || order.total_amount || order.amount || 0)
+        const itemCount = Number(order.itemCount || order.item_count || 1)
+        const d = dateStr ? new Date(dateStr) : null
+
+        if (d && !isNaN(d.getTime()) && d >= twelveMonthsAgo) {
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          if (!buckets[key]) buckets[key] = { amount: 0, count: 0, items: 0 }
+          buckets[key].amount += amount
+          buckets[key].count += 1
+          buckets[key].items += itemCount
+        }
+
+        totalSpend += amount
+        totalItems += itemCount
+      }
+
+      const monthly = []
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        const label = `${d.getMonth() + 1}月`
+        const bucket = buckets[key] || { amount: 0, count: 0, items: 0 }
+        monthly.push({ key, label, amount: bucket.amount, count: bucket.count, items: bucket.items })
+      }
+
+      const monthsWithSpend = monthly.filter((m) => m.amount > 0)
+      const peakMonth = monthsWithSpend.length
+        ? monthsWithSpend.reduce((a, b) => (a.amount >= b.amount ? a : b)).label
+        : ''
+
+      spendAggregation.value = {
+        monthly,
+        yearly: {
+          totalSpend,
+          avgMonthly: monthsWithSpend.length ? totalSpend / monthsWithSpend.length : 0,
+          orderCount: paidOrders.length,
+          itemCount: totalItems,
+          peakMonth,
+          avgPerOrder: paidOrders.length ? totalSpend / paidOrders.length : 0
+        },
+        source: 'orders'
+      }
+      return spendAggregation.value
+    } catch (error) {
+      spendAggregationError.value =
+        error?.response?.data?.message || error?.message || '支出统计加载失败'
+      spendAggregation.value = { monthly: [], yearly: {}, source: 'none' }
+      throw error
+    } finally {
+      loadingSpendAggregation.value = false
+    }
+  }
+
   function getVerificationDraft() {
     return {
       ...verificationTemplate,
@@ -769,6 +852,9 @@ export const useMarketStore = defineStore('market', () => {
     userInsightStatus,
     loadingShopInsight,
     shopInsightError,
+    spendAggregation,
+    loadingSpendAggregation,
+    spendAggregationError,
     favoriteProducts,
     isFavorite,
     toggleFavorite,
@@ -801,6 +887,7 @@ export const useMarketStore = defineStore('market', () => {
     updateUserPreference,
     loadUserInsightSnapshot,
     loadShopInsightSnapshot,
+    loadSpendAggregation,
     getVerificationDraft
   }
 })

@@ -670,7 +670,7 @@ watch(
 
         <EmptyState
           v-else
-          emoji="馃挰"
+          emoji="💬"
           :title="selectedCategory === 'support' ? '暂无客服会话' : '当前分类暂无会话'"
           :description="selectedCategory === 'support'
             ? '你可以先联系在线客服，也可以进入客服工单提交需要持续跟进的问题。'
@@ -688,7 +688,7 @@ watch(
 
         <EmptyState
           v-else-if="selectedCategory === 'support' && !activeConversation"
-          emoji="馃泿"
+          emoji="🛟"
           title="选择一种客服方式"
           description="在线客服适合即时咨询；客服工单适合提交材料并持续跟进处理进度。"
         >
@@ -858,7 +858,7 @@ watch(
 
         <EmptyState
           v-else
-          emoji="馃挰"
+          emoji="💬"
           title="选择一个会话开始查看"
           description="点击左侧会话列表，可以查看聊天记录和继续沟通。"
         />

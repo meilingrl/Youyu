@@ -2,6 +2,7 @@ package com.youyu.backend.service.notification.impl;
 
 import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.mapper.audit.AdminAuditLogMapper;
 import com.youyu.backend.mapper.notification.NotificationMapper;
 import com.youyu.backend.service.notification.NotificationService;
 import java.util.LinkedHashMap;
@@ -19,9 +20,12 @@ public class NotificationServiceImpl implements NotificationService {
     private static final int MAX_ACTION_URL_LENGTH = 512;
 
     private final NotificationMapper notificationMapper;
+    private final AdminAuditLogMapper adminAuditLogMapper;
 
-    public NotificationServiceImpl(NotificationMapper notificationMapper) {
+    public NotificationServiceImpl(NotificationMapper notificationMapper,
+                                   AdminAuditLogMapper adminAuditLogMapper) {
         this.notificationMapper = notificationMapper;
+        this.adminAuditLogMapper = adminAuditLogMapper;
     }
 
     @Override
@@ -60,6 +64,33 @@ public class NotificationServiceImpl implements NotificationService {
         Long id = notificationMapper.insert(notification);
         return notificationMapper.findById(id)
                 .orElseThrow(() -> new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "Notification creation failed"));
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> publishSystemNotification(Long adminUserId, String title, String body, String actionUrl) {
+        if (adminUserId == null) {
+            throw new BusinessException(ResultCode.UNAUTHORIZED, "Please log in first");
+        }
+        String safeTitle = requireText(title, "title", MAX_TITLE_LENGTH);
+        String safeBody = requireText(body, "body", 4000);
+        String safeActionUrl = trimToLength(actionUrl, MAX_ACTION_URL_LENGTH);
+        int recipientCount = notificationMapper.insertForActiveUsers("system", safeTitle, safeBody, safeActionUrl);
+        adminAuditLogMapper.insert(
+                adminUserId,
+                "ADMIN",
+                "SYSTEM_NOTIFICATION_PUBLISH",
+                "NOTIFICATION",
+                0L,
+                "title=" + safeTitle + "; recipientCount=" + recipientCount
+        );
+        return linkedMap(
+                "type", "system",
+                "title", safeTitle,
+                "body", safeBody,
+                "actionUrl", safeActionUrl,
+                "recipientCount", recipientCount
+        );
     }
 
     @Override

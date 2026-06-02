@@ -91,8 +91,8 @@ textarea {
   padding: 28px;
   border-radius: var(--cm-radius-xl);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(245, 247, 251, 0.86)),
-    linear-gradient(180deg, rgba(var(--cm-primary-rgb), 0.04), transparent);
+    linear-gradient(180deg, rgba(255, 253, 249, 0.96), rgba(255, 248, 240, 0.9)),
+    linear-gradient(180deg, rgba(var(--cm-primary-rgb), 0.03), transparent 70%);
 }
 
 .shell-hero--compact {
@@ -199,7 +199,7 @@ textarea {
   padding: 8px 12px;
   border-radius: 999px;
   border: 1px solid rgba(var(--cm-primary-rgb), 0.16);
-  background: linear-gradient(135deg, rgba(255, 250, 243, 0.9), rgba(var(--cm-accent-rgb), 0.08));
+  background: linear-gradient(180deg, rgba(255, 252, 247, 0.92), rgba(255, 246, 238, 0.84));
   color: var(--cm-primary);
   font-size: 12px;
   font-weight: 700;
@@ -230,7 +230,7 @@ textarea {
   display: grid;
   gap: 12px;
   padding: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.92));
+  background: linear-gradient(180deg, rgba(255, 254, 251, 0.98), rgba(255, 248, 241, 0.92));
   box-shadow: var(--cm-shadow-soft);
 }
 
@@ -882,7 +882,7 @@ textarea {
   place-items: center;
   border-radius: var(--cm-radius-lg);
   border: 1px dashed var(--cm-border-strong);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 247, 251, 0.88));
+  background: linear-gradient(180deg, rgba(255, 254, 251, 0.94), rgba(255, 247, 239, 0.88));
   color: var(--cm-text-tertiary);
 }
 
@@ -938,7 +938,7 @@ textarea {
   gap: 24px;
   padding: 32px;
   border-radius: var(--cm-radius-xl);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(245, 247, 250, 0.84));
+  background: linear-gradient(180deg, rgba(255, 253, 249, 0.96), rgba(255, 248, 241, 0.9));
 }
 
 .login-page__intro {
@@ -992,7 +992,7 @@ textarea {
   padding: 22px 14px;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 247, 250, 0.78));
+  background: linear-gradient(180deg, rgba(255, 252, 248, 0.94), rgba(255, 246, 238, 0.82));
   color: var(--cm-text);
   border-right: 1px solid var(--cm-border);
   backdrop-filter: blur(28px);
@@ -1104,13 +1104,13 @@ textarea {
   background-image: var(--cm-gradient-primary) !important;
   border: none !important;
   color: #fff !important;
-  box-shadow: 0 12px 28px rgba(var(--cm-primary-rgb), 0.28);
+  box-shadow: 0 10px 24px rgba(var(--cm-primary-rgb), 0.2);
 }
 
 .el-button--primary:hover,
 .el-button--primary:focus {
-  filter: brightness(1.05);
-  box-shadow: 0 14px 32px rgba(var(--cm-accent-rgb), 0.22);
+  filter: brightness(1.03);
+  box-shadow: 0 12px 28px rgba(var(--cm-primary-rgb), 0.22);
 }
 
 .el-button--primary.is-plain {
@@ -1344,10 +1344,13 @@ textarea {
   display: block;
 }
 
-.admin-sidebar__nav-icon svg,
-.admin-sidebar__nav-icon path {
-  fill: currentColor;
+.admin-sidebar__nav-icon svg {
   color: inherit;
+}
+
+.admin-sidebar__nav-icon--mediation {
+  width: 20px;
+  height: 20px;
 }
 
 .admin-sidebar .el-menu-item:hover {

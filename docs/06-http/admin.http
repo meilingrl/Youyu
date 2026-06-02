@@ -36,6 +36,7 @@ GET {{baseUrl}}/api/admin/dashboard
 ### - queueMetrics[] with stable id/source/target/available fields
 ### - governanceSignals[]
 ### - statusBreakdowns.orders[] and statusBreakdowns.mediation[]
+### - salesAnalytics.categorySales[] and salesAnalytics.shopRankings[]
 ### - unavailableMetrics[] for non-instrumented metrics
 GET {{baseUrl}}/api/admin/dashboard
 Authorization: Bearer {{adminToken}}

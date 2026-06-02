@@ -24,6 +24,8 @@ const unreadText = computed(() => {
 
 const typeMeta = {
   order_status: { label: '订单', tone: 'success', icon: '订单' },
+  support_ticket: { label: '客服', tone: 'warning', icon: '客服' },
+  mediation_update: { label: '调解', tone: 'warning', icon: '调解' },
   review_reminder: { label: '评价', tone: 'warning', icon: '评价' },
   system: { label: '系统', tone: 'info', icon: '系统' }
 }
@@ -110,7 +112,7 @@ async function changePage(nextPage) {
       v-else-if="store.notifications.length === 0"
       emoji="i"
       title="暂无通知"
-      description="订单状态、评价提醒和系统消息会显示在这里。"
+      description="订单状态、客服进度、调解结果、评价提醒和系统通知会显示在这里。"
     >
       <el-button type="primary" @click="$router.push('/app/orders')">查看订单</el-button>
     </EmptyState>

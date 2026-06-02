@@ -26,6 +26,7 @@ const ALL_PERMISSIONS = [
   'ADMIN_ORDERS_MANAGE',
   'ADMIN_MEDIATION_HANDLE',
   'ADMIN_MEDIATION_DECIDE',
+  'ADMIN_NOTIFICATIONS_PUBLISH',
   'ADMIN_AUDIT_VIEW'
 ]
 
@@ -79,6 +80,7 @@ export const ADMIN_PATH_PERMISSIONS = {
   '/admin/marketing': ['ADMIN_MARKETING_REVIEW'],
   '/admin/mediation': ['ADMIN_MEDIATION_HANDLE'],
   '/admin/hot-search': ['ADMIN_SEARCH_GOVERN'],
+  '/admin/notifications': ['ADMIN_NOTIFICATIONS_PUBLISH'],
   '/admin/support': ['ADMIN_SUPPORT_TICKETS_HANDLE']
 }
 

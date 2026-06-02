@@ -259,7 +259,7 @@ Return a public insight snapshot for a shop.
 |---|---|---|
 | `shopId` | number | Target shop ID |
 | `monthlySalesAmount` | number | Sum of completed paid order amount in the current month |
-| `monthlyOrderCount` | number | Distinct buyer count for completed paid orders in the current month |
+| `monthlyOrderCount` | number | Completed paid order count in the current month |
 | `hotProducts` | array | Top products ranked by sold count, favorite count, view count, and ID |
 | `viewCountSummary` | number | Sum of product view counts for the shop |
 | `favoriteCountSummary` | number | Sum of product favorite counts for the shop |
@@ -274,6 +274,7 @@ Return a public insight snapshot for a shop.
 | `productId` | number | Product ID |
 | `title` | string | Product title |
 | `soldCount` | number | Completed paid sold quantity in the current month |
+| `salesAmount` | number | Sum of item subtotals for completed paid orders in the current month |
 | `favoriteCount` | number | Product favorite count |
 | `viewCount` | number | Product view count |
 
