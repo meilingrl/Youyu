@@ -459,10 +459,24 @@ CREATE TABLE IF NOT EXISTS payment_records (
     succeeded_at TIMESTAMP,
     failed_reason VARCHAR(500),
     callback_summary VARCHAR(1000),
+    provider_trade_no VARCHAR(100),
     CONSTRAINT fk_payment_records_order FOREIGN KEY (order_id) REFERENCES orders(id)
 );
 
 CREATE INDEX idx_payment_records_order ON payment_records(order_id, initiated_at, id);
+
+CREATE TABLE IF NOT EXISTS payment_callback_events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    gateway_code VARCHAR(50) NOT NULL,
+    event_fingerprint VARCHAR(100) NOT NULL,
+    payment_no VARCHAR(40) NOT NULL,
+    callback_summary VARCHAR(1000),
+    received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_payment_callback_events_fingerprint UNIQUE (gateway_code, event_fingerprint),
+    CONSTRAINT fk_payment_callback_events_payment FOREIGN KEY (payment_no) REFERENCES payment_records(payment_no)
+);
+
+CREATE INDEX idx_payment_callback_events_payment ON payment_callback_events(payment_no, received_at, id);
 
 CREATE TABLE IF NOT EXISTS refund_records (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -475,6 +489,8 @@ CREATE TABLE IF NOT EXISTS refund_records (
     applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     processed_at TIMESTAMP,
     completed_at TIMESTAMP,
+    gateway_response_summary VARCHAR(1000),
+    failed_reason VARCHAR(500),
     CONSTRAINT fk_refund_records_order FOREIGN KEY (order_id) REFERENCES orders(id),
     CONSTRAINT fk_refund_records_payment FOREIGN KEY (payment_record_id) REFERENCES payment_records(id)
 );

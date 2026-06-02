@@ -8,6 +8,8 @@ import jakarta.annotation.PostConstruct;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -330,27 +332,19 @@ public class TransactionDataStore {
         return copy(getMutablePaymentByNo(paymentNo));
     }
 
+    public synchronized Map<String, Object> getMutablePayment(Long paymentId) {
+        return jdbcTemplate.query("""
+                        SELECT * FROM payment_records WHERE id = ?
+                        """,
+                (rs, rowNum) -> mutablePayment(rs.getLong("id"), rs),
+                paymentId).stream().findFirst().orElse(null);
+    }
+
     public synchronized Map<String, Object> getMutablePaymentByNo(String paymentNo) {
         return jdbcTemplate.query("""
                         SELECT * FROM payment_records WHERE payment_no = ?
                         """,
-                (rs, rowNum) -> {
-                    Long paymentId = rs.getLong("id");
-                    return persistentMap(
-                        (key, value) -> updatePaymentField(paymentId, key, value),
-                        "id", paymentId,
-                        "orderId", rs.getLong("order_id"),
-                        "paymentNo", rs.getString("payment_no"),
-                        "paymentMethod", rs.getString("payment_method"),
-                        "paymentChannel", rs.getString("payment_channel"),
-                        "paymentStatus", rs.getString("payment_status"),
-                        "paymentAmount", rs.getBigDecimal("amount"),
-                        "initiatedAt", toLocalDateTime(rs.getTimestamp("initiated_at")),
-                        "paidAt", toLocalDateTime(rs.getTimestamp("succeeded_at")),
-                        "failedReason", rs.getString("failed_reason"),
-                        "callbackSummary", rs.getString("callback_summary")
-                    );
-                },
+                (rs, rowNum) -> mutablePayment(rs.getLong("id"), rs),
                 paymentNo).stream().findFirst().orElse(null);
     }
 
@@ -368,7 +362,9 @@ public class TransactionDataStore {
                         rs.getString("refund_reason"),
                         toLocalDateTime(rs.getTimestamp("applied_at")),
                         toLocalDateTime(rs.getTimestamp("processed_at")),
-                        toLocalDateTime(rs.getTimestamp("completed_at"))
+                        toLocalDateTime(rs.getTimestamp("completed_at")),
+                        rs.getString("gateway_response_summary"),
+                        rs.getString("failed_reason")
                 ),
                 orderId);
     }
@@ -480,6 +476,11 @@ public class TransactionDataStore {
     }
 
     public synchronized Map<String, Object> createPayment(Long orderId, BigDecimal amount, String gatewayCode) {
+        return createPayment(orderId, amount, "mock", gatewayCode);
+    }
+
+    public synchronized Map<String, Object> createPayment(Long orderId, BigDecimal amount,
+                                                          String paymentMethod, String gatewayCode) {
         LocalDateTime now = LocalDateTime.now();
         String paymentNo = nextPaymentNo();
         Long id = insertAndReturnId("""
@@ -490,14 +491,14 @@ public class TransactionDataStore {
                         """,
                 orderId,
                 paymentNo,
-                "mock_gateway",
+                paymentMethod,
                 gatewayCode,
                 "initiated",
                 amount,
                 Timestamp.valueOf(now),
                 "",
                 "Reserved for future payment gateway callback payload");
-        return copy(paymentMap(id, orderId, paymentNo, "mock_gateway", gatewayCode, "initiated", amount, now, null, "", "Reserved for future payment gateway callback payload"));
+        return copy(paymentMap(id, orderId, paymentNo, paymentMethod, gatewayCode, "initiated", amount, now, null, "", "Reserved for future payment gateway callback payload"));
     }
 
     public synchronized Map<String, Object> createRefund(Long orderId, Long paymentRecordId, BigDecimal refundAmount, String refundReason) {
@@ -516,7 +517,7 @@ public class TransactionDataStore {
                 refundAmount,
                 refundReason,
                 Timestamp.valueOf(now));
-        return copy(refundMap(id, orderId, paymentRecordId, refundNo, "pending", refundAmount, refundReason, now, null, null));
+        return copy(refundMap(id, orderId, paymentRecordId, refundNo, "pending", refundAmount, refundReason, now, null, null, "", ""));
     }
 
     public synchronized Map<String, Object> getMutableRefund(Long refundId) {
@@ -534,7 +535,9 @@ public class TransactionDataStore {
                         "refundReason", rs.getString("refund_reason"),
                         "appliedAt", toLocalDateTime(rs.getTimestamp("applied_at")),
                         "processedAt", toLocalDateTime(rs.getTimestamp("processed_at")),
-                        "completedAt", toLocalDateTime(rs.getTimestamp("completed_at"))
+                        "completedAt", toLocalDateTime(rs.getTimestamp("completed_at")),
+                        "gatewayResponseSummary", rs.getString("gateway_response_summary"),
+                        "failedReason", rs.getString("failed_reason")
                 ),
                 refundId).stream().findFirst().orElse(null);
     }
@@ -600,11 +603,30 @@ public class TransactionDataStore {
         updateColumn("payment_records", column, value, paymentId);
     }
 
+    private Map<String, Object> mutablePayment(Long paymentId, ResultSet rs) throws SQLException {
+        return persistentMap(
+                (key, value) -> updatePaymentField(paymentId, key, value),
+                "id", paymentId,
+                "orderId", rs.getLong("order_id"),
+                "paymentNo", rs.getString("payment_no"),
+                "paymentMethod", rs.getString("payment_method"),
+                "paymentChannel", rs.getString("payment_channel"),
+                "paymentStatus", rs.getString("payment_status"),
+                "paymentAmount", rs.getBigDecimal("amount"),
+                "initiatedAt", toLocalDateTime(rs.getTimestamp("initiated_at")),
+                "paidAt", toLocalDateTime(rs.getTimestamp("succeeded_at")),
+                "failedReason", rs.getString("failed_reason"),
+                "callbackSummary", rs.getString("callback_summary")
+        );
+    }
+
     private void updateRefundField(Long refundId, String key, Object value) {
         String column = switch (key) {
             case "refundStatus" -> "refund_status";
             case "processedAt" -> "processed_at";
             case "completedAt" -> "completed_at";
+            case "gatewayResponseSummary" -> "gateway_response_summary";
+            case "failedReason" -> "failed_reason";
             default -> null;
         };
         updateColumn("refund_records", column, value, refundId);
@@ -704,7 +726,8 @@ public class TransactionDataStore {
 
     private Map<String, Object> refundMap(Long id, Long orderId, Long paymentRecordId, String refundNo,
                                           String refundStatus, BigDecimal refundAmount, String refundReason,
-                                          LocalDateTime appliedAt, LocalDateTime processedAt, LocalDateTime completedAt) {
+                                          LocalDateTime appliedAt, LocalDateTime processedAt, LocalDateTime completedAt,
+                                          String gatewayResponseSummary, String failedReason) {
         return linkedMap(
                 "id", id,
                 "orderId", orderId,
@@ -715,7 +738,9 @@ public class TransactionDataStore {
                 "refundReason", refundReason,
                 "appliedAt", appliedAt,
                 "processedAt", processedAt,
-                "completedAt", completedAt
+                "completedAt", completedAt,
+                "gatewayResponseSummary", gatewayResponseSummary,
+                "failedReason", failedReason
         );
     }
 

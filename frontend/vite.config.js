@@ -50,7 +50,7 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
-    exclude: ['e2e/**']
+    exclude: ['e2e/**', 'node_modules/**', 'dist/**']
   },
   server: {
     host: '0.0.0.0',

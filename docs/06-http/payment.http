@@ -33,6 +33,12 @@ Authorization: Bearer {{buyerToken}}
 
 ###
 
+### Initiate Alipay sandbox payment when sandbox variables are enabled
+POST {{baseUrl}}/api/payments/orders/{{orderId}}/initiate?paymentMethod=alipay_sandbox
+Authorization: Bearer {{buyerToken}}
+
+###
+
 ### Initiate payment as non-buyer - expect 403
 POST {{baseUrl}}/api/payments/orders/{{orderId}}/initiate
 Authorization: Bearer {{otherUserToken}}
@@ -44,8 +50,14 @@ POST {{baseUrl}}/api/payments/orders/{{orderId}}/initiate
 Authorization: Bearer {{buyerToken}}
 
 # ---------------------------------------------------------------------------
-# Mock success
+# Resume and mock success
 # ---------------------------------------------------------------------------
+
+###
+
+### Resume the current active payment entry without creating a duplicate attempt
+POST {{baseUrl}}/api/payments/{{paymentNo}}/resume
+Authorization: Bearer {{buyerToken}}
 
 ###
 
@@ -64,3 +76,16 @@ Authorization: Bearer {{otherUserToken}}
 ### Duplicate mock success - expect BUSINESS_ERROR
 POST {{baseUrl}}/api/payments/{{paymentNo}}/mock-success
 Authorization: Bearer {{buyerToken}}
+
+# ---------------------------------------------------------------------------
+# Alipay sandbox asynchronous callback
+# ---------------------------------------------------------------------------
+
+###
+
+### Provider callback shape reference only.
+### Use a real signed form body delivered by Alipay during sandbox verification.
+POST {{baseUrl}}/api/payments/callbacks/alipay-sandbox
+Content-Type: application/x-www-form-urlencoded
+
+out_trade_no={{paymentNo}}&trade_status=TRADE_SUCCESS&total_amount=0.01&sign_type=RSA2&sign=replace-with-real-provider-signature
