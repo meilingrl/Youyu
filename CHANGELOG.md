@@ -1,3 +1,18 @@
+## [2026-06-02] - Support Entry Routing And Copy Follow-Up
+
+### changed
+- Rebuilt the user message center support lane into a single clean implementation so `/app/messages` defaults back to trade conversations unless support is explicitly requested.
+- Restored a working handoff between `/app/messages` and `/app/support`, including clear support-ticket and online-customer-service entry actions.
+- Rewrote the support-facing user/admin copy and chat helper surfaces to remove garbled text and replace draft-stage wording with launch-ready product language.
+- `/app/support` now stays inside the shared shell spacing standard instead of hugging the viewport edges.
+
+### verify
+- Frontend `frontend\\npm run build` pass.
+- Repo text scan across the support/message surfaces found no remaining mojibake markers in the updated files.
+- `git diff --check` pass.
+
+---
+
 ## [2026-06-01] - Wave 1A Support And After-Sales Continuity
 
 ### added

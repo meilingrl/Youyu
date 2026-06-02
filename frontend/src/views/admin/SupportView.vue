@@ -121,6 +121,51 @@ const ticketReplyForm = reactive({
   messageType: 'public_reply',
   content: ''
 })
+
+const workspaceDisplayMeta = {
+  chat: {
+    title: '在线客服',
+    eyebrow: '实时接待',
+    description: '接待需要人工跟进的在线咨询，快速响应当前用户会话。'
+  },
+  tickets: {
+    title: '支持工单',
+    eyebrow: '持续跟进',
+    description: '处理用户提交的客服工单，统一跟进补充材料、进度更新和处理结论。'
+  }
+}
+
+const chatFilterOptions = [
+  { value: 'pending', label: '待接入' },
+  { value: 'active', label: '处理中' },
+  { value: 'mine', label: '我负责的' },
+  { value: 'closed', label: '已结束' }
+]
+
+const ticketStatusOptions = [
+  { value: '', label: '全部状态' },
+  { value: 'open', label: '待受理' },
+  { value: 'in_progress', label: '处理中' },
+  { value: 'waiting_user', label: '待用户补充' },
+  { value: 'resolved', label: '已解决' },
+  { value: 'closed', label: '已关闭' }
+]
+
+const ticketCategoryOptions = [
+  { value: '', label: '全部分类' },
+  { value: 'account', label: '账号' },
+  { value: 'order', label: '订单' },
+  { value: 'product', label: '商品' },
+  { value: 'shop', label: '店铺' },
+  { value: 'payment', label: '支付' },
+  { value: 'report', label: '举报' },
+  { value: 'other', label: '其他' }
+]
+
+const ticketMessageTypeOptions = [
+  { value: 'public_reply', label: '公开回复' },
+  { value: 'internal_note', label: '内部备注' }
+]
 const loadingTicketList = ref(false)
 const loadingTicketDetail = ref(false)
 const updatingTicketStatus = ref(false)
@@ -130,7 +175,7 @@ const ticketDetailError = ref('')
 
 const currentAdminId = computed(() => authStore.currentUser?.id ?? null)
 const currentWorkspaceMeta = computed(
-  () => workspaces.find((item) => item.key === workspace.value) || workspaces[0]
+  () => workspaceDisplayMeta[workspace.value] || workspaceDisplayMeta.chat
 )
 const selectedChatClosed = computed(() => conversationDetail.value?.supportStatus === 'closed')
 const assignedToOther = computed(() => {
@@ -154,7 +199,7 @@ const ticketStatusChoices = computed(() => {
     .filter(Boolean)
     .map((value) => ({
       value,
-      label: statusLabel(value)
+      label: displayStatusLabel(value)
     }))
 })
 const ticketContextLinks = computed(() => {
@@ -209,12 +254,12 @@ function normalizeWorkspace(value) {
 
 function normalizeTicketStatus(value) {
   const candidate = Array.isArray(value) ? value[0] : value
-  return ticketStatuses.some((item) => item.value === candidate) ? candidate : ''
+  return ticketStatusOptions.some((item) => item.value === candidate) ? candidate : ''
 }
 
 function normalizeTicketCategory(value) {
   const candidate = Array.isArray(value) ? value[0] : value
-  return ticketCategories.some((item) => item.value === candidate) ? candidate : ''
+  return ticketCategoryOptions.some((item) => item.value === candidate) ? candidate : ''
 }
 
 function normalizeQueryString(value) {
@@ -232,6 +277,23 @@ function statusLabel(status) {
 
 function statusTagType(status) {
   return statusMeta[status]?.type || 'info'
+}
+
+function displayStatusLabel(status) {
+  return {
+    ai: '智能客服',
+    pending: '待接入',
+    human: '处理中',
+    closed: '已结束',
+    open: '待受理',
+    in_progress: '处理中',
+    waiting_user: '待用户补充',
+    resolved: '已解决'
+  }[status] || status || '未知状态'
+}
+
+function displayTicketCategory(category) {
+  return ticketCategoryOptions.find((item) => item.value === category)?.label || category || '未分类'
 }
 
 function formatTime(value) {
@@ -600,8 +662,8 @@ onBeforeUnmount(stopPolling)
   <div class="page-stack admin-support">
     <section class="shell-hero shell-hero--compact admin-support__hero">
       <div>
-        <span class="eyebrow">Support Operations</span>
-        <h1>/admin/support</h1>
+        <span class="eyebrow">客服运营工作台</span>
+        <h1>客服接待与工单跟进</h1>
         <p>{{ currentWorkspaceMeta.description }}</p>
       </div>
       <div class="admin-support__hero-actions">
@@ -613,8 +675,8 @@ onBeforeUnmount(stopPolling)
           :class="{ 'is-active': workspace === item.key }"
           @click="switchWorkspace(item.key)"
         >
-          <strong>{{ item.title }}</strong>
-          <span>{{ item.eyebrow }}</span>
+          <strong>{{ workspaceDisplayMeta[item.key]?.title || item.title }}</strong>
+          <span>{{ workspaceDisplayMeta[item.key]?.eyebrow || item.eyebrow }}</span>
         </button>
       </div>
     </section>
@@ -623,7 +685,7 @@ onBeforeUnmount(stopPolling)
       <aside class="admin-cs__queue">
         <div class="admin-cs__filters">
           <button
-            v-for="item in chatFilters"
+            v-for="item in chatFilterOptions"
             :key="item.value"
             type="button"
             class="admin-cs__filter"
@@ -639,8 +701,8 @@ onBeforeUnmount(stopPolling)
         <SkeletonCard v-else-if="loadingChatList" :count="4" />
         <EmptyState
           v-else-if="!conversations.length"
-          title="暂无在线客服会话"
-          description="当前筛选条件下没有等待承接的在线客服对话。"
+              title="暂无在线客服会话"
+              description="当前筛选条件下没有需要接待的在线咨询。"
         />
         <div v-else class="admin-cs__list">
           <button
@@ -654,7 +716,7 @@ onBeforeUnmount(stopPolling)
             <span class="admin-cs__session-top">
               <strong>{{ requesterName(item) }}</strong>
               <el-tag :type="statusTagType(item.supportStatus)" size="small" effect="plain">
-                {{ statusLabel(item.supportStatus) }}
+                {{ displayStatusLabel(item.supportStatus) }}
               </el-tag>
             </span>
             <span class="admin-cs__session-preview">{{ item.lastMessagePreview || '开始对话' }}</span>
@@ -679,7 +741,7 @@ onBeforeUnmount(stopPolling)
             <div>
               <h2>{{ requesterName(conversationDetail) }}</h2>
               <el-tag :type="statusTagType(conversationDetail.supportStatus)" size="small" effect="plain">
-                {{ statusLabel(conversationDetail.supportStatus) }}
+                {{ displayStatusLabel(conversationDetail.supportStatus) }}
               </el-tag>
             </div>
           </header>
@@ -787,17 +849,17 @@ onBeforeUnmount(stopPolling)
           <header class="ticket-card__head">
             <div>
               <h2>支持工单队列</h2>
-              <p>这里承接用户在 `/app/support` 创建的异步客服工单。</p>
+              <p>处理用户提交的问题单，持续跟进材料补充、进度同步和处理结果。</p>
             </div>
             <strong>{{ ticketTotal }}</strong>
           </header>
 
           <div class="ticket-filter-grid">
             <el-select v-model="ticketFilters.status" placeholder="状态" @change="applyTicketFilters">
-              <el-option v-for="item in ticketStatuses" :key="item.value" :label="item.label" :value="item.value" />
+              <el-option v-for="item in ticketStatusOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
             <el-select v-model="ticketFilters.category" placeholder="分类" @change="applyTicketFilters">
-              <el-option v-for="item in ticketCategories" :key="item.value" :label="item.label" :value="item.value" />
+              <el-option v-for="item in ticketCategoryOptions" :key="item.value" :label="item.label" :value="item.value" />
             </el-select>
             <el-checkbox v-model="ticketFilters.assignedToMe" @change="applyTicketFilters">仅看指派给我</el-checkbox>
             <div class="ticket-filter-grid__keyword">
@@ -829,11 +891,11 @@ onBeforeUnmount(stopPolling)
               <span class="ticket-list__top">
                 <strong>{{ item.subject }}</strong>
                 <el-tag :type="statusTagType(item.status)" size="small" effect="plain">
-                  {{ statusLabel(item.status) }}
+                  {{ displayStatusLabel(item.status) }}
                 </el-tag>
               </span>
               <span class="ticket-list__meta">
-                {{ item.ticketNo || `#${item.id}` }} / {{ item.category }} / {{ item.requesterName || `用户 ${item.requesterUserId}` }}
+                {{ item.ticketNo || `#${item.id}` }} / {{ displayTicketCategory(item.category) }} / {{ item.requesterName || `用户 ${item.requesterUserId}` }}
               </span>
               <span class="ticket-list__time">更新于 {{ formatTime(item.updatedAt) }}</span>
             </button>
@@ -865,9 +927,9 @@ onBeforeUnmount(stopPolling)
             <div>
               <span class="eyebrow">工单 {{ ticketSummary.ticketNo || `#${ticketSummary.id}` }}</span>
               <h2>{{ ticketSummary.subject }}</h2>
-              <p>分类：{{ ticketSummary.category }} / 请求人：{{ ticketSummary.requesterName || ticketSummary.requesterUserId }}</p>
+              <p>分类：{{ displayTicketCategory(ticketSummary.category) }} / 请求人：{{ ticketSummary.requesterName || ticketSummary.requesterUserId }}</p>
             </div>
-            <el-tag :type="statusTagType(ticketSummary.status)" effect="plain">{{ statusLabel(ticketSummary.status) }}</el-tag>
+            <el-tag :type="statusTagType(ticketSummary.status)" effect="plain">{{ displayStatusLabel(ticketSummary.status) }}</el-tag>
           </header>
 
           <section class="ticket-detail__content">
@@ -934,9 +996,9 @@ onBeforeUnmount(stopPolling)
             />
             <template v-else>
               <el-radio-group v-model="ticketReplyForm.messageType">
-                <el-radio-button v-for="item in ticketMessageTypes" :key="item.value" :label="item.value">
-                  {{ item.label }}
-                </el-radio-button>
+              <el-radio-button v-for="item in ticketMessageTypeOptions" :key="item.value" :label="item.value">
+                {{ item.label }}
+              </el-radio-button>
               </el-radio-group>
               <el-input
                 v-model="ticketReplyForm.content"
@@ -944,7 +1006,7 @@ onBeforeUnmount(stopPolling)
                 :rows="4"
                 maxlength="2000"
                 show-word-limit
-                placeholder="公开回复会对用户可见，内部备注仅管理员可见。"
+                placeholder="公开回复会同步给用户；内部备注仅供平台处理团队查看。"
               />
               <el-button type="primary" :loading="submittingTicketMessage" @click="submitTicketMessage">
                 提交{{ ticketReplyForm.messageType === 'internal_note' ? '内部备注' : '公开回复' }}

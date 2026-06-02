@@ -1,13 +1,13 @@
 <script setup>
 const emit = defineEmits(['emoji', 'sticker'])
 
-const emojis = ['😀', '😂', '😊', '👍', '👌', '🙏', '🤝', '👏', '🎉', '📚', '💡', '✅', '⏰', '💬', '❤️', '🔥']
+const emojis = ['馃榾', '馃槀', '馃槉', '馃憤', '馃憣', '馃檹', '馃', '馃憦', '馃帀', '馃摎', '馃挕', '✔', '铃', '馃挰', '❤️', '馃敟']
 
 const stickers = [
-  { id: 'ok', label: '收到', icon: '👌', color: '#f97316' },
-  { id: 'thanks', label: '谢谢', icon: '🙏', color: '#0f766e' },
-  { id: 'checking', label: '我看看', icon: '🔎', color: '#475569' },
-  { id: 'deal', label: '成交', icon: '🤝', color: '#16a34a' }
+  { id: 'ok', label: '收到', icon: '馃憣', color: '#f97316' },
+  { id: 'thanks', label: '谢谢', icon: '馃檹', color: '#0f766e' },
+  { id: 'checking', label: '我看下', icon: '馃攷', color: '#475569' },
+  { id: 'deal', label: '成交', icon: '馃', color: '#16a34a' }
 ]
 </script>
 

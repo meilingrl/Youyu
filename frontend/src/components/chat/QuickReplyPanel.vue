@@ -18,25 +18,25 @@ const saving = ref(false)
 
 const defaults = {
   buyer: [
-    '你好，这个还在吗？',
-    '方便看一下实物照片吗？',
-    '可以校内自提吗？',
-    '价格还能商量吗？',
+    '你好，这件还在吗？',
+    '方便补几张实拍图吗？',
+    '可以校内当面交易吗？',
+    '价格还有商量空间吗？',
     '今天方便交易吗？'
   ],
   seller: [
-    '您好，这件目前还有现货。',
-    '可以校内自提，也能约时间当面验货。',
-    '确认的话我这边尽快安排发出。',
-    '商品细节我可以再补几张照片。',
-    '有任何问题都可以继续留言，我会及时回复。'
+    '你好，这件商品目前还可以正常下单。',
+    '支持校内当面交易，也可以继续沟通时间地点。',
+    '确认后我会尽快安排发货或交付。',
+    '如果需要，我可以再补几张细节图给你。',
+    '有其他问题也可以继续留言，我会尽快回复。'
   ],
   support: [
-    '请先提供订单号，我帮您核对一下。',
-    '这个问题我需要确认后再回复您。',
-    '我已经收到反馈，会继续跟进。',
-    '请补充截图或商品链接，方便定位问题。',
-    '处理结果会在当前会话同步给您。'
+    '请先提供订单号，我帮你核对一下。',
+    '这个问题我先为你记录，并继续跟进处理。',
+    '我已经收到你的反馈，会尽快同步进展。',
+    '请补充截图、链接或订单信息，方便我们定位问题。',
+    '处理结果会在当前会话里继续同步给你。'
   ]
 }
 
@@ -50,9 +50,9 @@ const customReplies = computed(() => {
 const presetCategory = computed(() => {
   const scenario = defaults[props.scenario] ? props.scenario : 'buyer'
   const labels = {
-    buyer: '买家预设',
-    seller: '卖家预设',
-    support: '客服预设'
+    buyer: '买家常用',
+    seller: '卖家常用',
+    support: '客服常用'
   }
   return {
     id: scenario,
@@ -140,7 +140,7 @@ function deleteCustomReply(reply) {
     </div>
 
     <form class="quick-reply-panel__form" @submit.prevent="createCustomReply">
-      <input v-model="newReply" type="text" maxlength="500" placeholder="添加自定义快捷回复" />
+      <input v-model="newReply" type="text" maxlength="500" placeholder="添加一条自定义快捷回复" />
       <button type="submit" :disabled="!newReply.trim() || saving">
         {{ saving ? '保存中' : '添加' }}
       </button>
@@ -175,9 +175,9 @@ function deleteCustomReply(reply) {
 
     <EmptyState
       v-if="!chatStore.quickRepliesLoading && activeReplies.length === 0"
-      emoji="💬"
+      emoji="馃挰"
       title="暂无快捷回复"
-      description="可以先创建一些常用话术。"
+      description="可以先创建几条常用话术。"
     />
   </div>
 </template>

@@ -29,7 +29,7 @@ function handleFileChange(event) {
   }
 
   if (file.size > MAX_IMAGE_SIZE) {
-    ElMessage.warning('图片不能超过 5MB')
+    ElMessage.warning('图片大小不能超过 5MB')
     resetInput(event)
     return
   }
@@ -83,10 +83,10 @@ function handleFileChange(event) {
 .image-uploader {
   width: 76px;
   min-height: 42px;
-  border: 1px solid #FED7AA;
+  border: 1px solid #fed7aa;
   border-radius: 18px;
-  background: #FFF7ED;
-  color: #EA580C;
+  background: #fff7ed;
+  color: #ea580c;
   display: inline-flex;
   align-items: center;
   justify-content: center;
