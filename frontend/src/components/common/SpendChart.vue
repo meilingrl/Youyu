@@ -129,9 +129,16 @@ const categoryOption = computed(() => {
 })
 
 const hasData = computed(() => {
-  if (props.mode === 'monthly') return props.monthlyData.length > 0
-  if (props.mode === 'yearly') return props.yearlyData.totalSpend > 0
-  if (props.mode === 'category') return props.categoryData.length > 0
+  if (props.mode === 'monthly') {
+    return props.monthlyData.some((d) => Number(d.amount || 0) > 0)
+  }
+  if (props.mode === 'yearly') {
+    const total = props.yearlyData.totalSpend ?? props.yearlyData.yearlyTotal ?? 0
+    return Number(total) > 0
+  }
+  if (props.mode === 'category') {
+    return props.categoryData.some((d) => Number(d.amount || 0) > 0)
+  }
   return false
 })
 </script>

@@ -1,3 +1,25 @@
+## [2026-06-02] - Analytics Visualization Enhancement (ECharts Upgrade)
+
+### added
+- Added ECharts-based chart visualization to admin dashboard: order status donut, mediation progress donut with preserved navigation links.
+- Created reusable chart wrapper components: `ChartPie.vue`, `ChartBar.vue` under `frontend/src/components/common/`.
+- Enhanced user profile spend visualization with tab switcher (月度/年度/分类) and ECharts charts.
+- Added `seed/seed-zhangsan-spend.sql` so demo user `zhangsan` has multi-month completed paid orders for spend chart acceptance.
+
+### changed
+- Admin dashboard "订单状态" and "调解进度" sections now use donut charts instead of breakdown row lists.
+- User profile "支出统计" section upgraded from InsightBarList-only to ECharts tab view with explicit data-source note.
+- Fixed profile spend aggregation to read `orderStatus`, `paymentStatus`, `payableAmount`, and `submittedAt` from `GET /api/orders`, and aligned yearly/category payloads with `SpendChart.vue` (`totalSpend`, `{ label, amount }`).
+
+### notes
+- Chart library: Apache ECharts + vue-echarts (already present on master; reused by new chart wrappers).
+- Monthly/yearly/category spend charts are frontend-derived from existing order list API; UI notes "基于近期订单统计".
+
+### verify
+- Frontend `npm run build` pass (exit 0).
+
+---
+
 ## [2026-06-02] - Admin Notification Publishing And Support Recovery
 
 ### added

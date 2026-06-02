@@ -5,6 +5,7 @@ import { ElMessage } from '@/plugins/element-plus-services'
 import { getAdminDashboard } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel } from '@/utils/admin-display-labels'
+import ChartPie from '@/components/common/ChartPie.vue'
 
 const loading = ref(false)
 const summary = ref({})
@@ -27,11 +28,17 @@ const visibleQueueMetrics = computed(() =>
 const visibleGovernanceSignals = computed(() =>
   governanceSignals.value.filter((metric) => metric.available && Number(metric.value || 0) > 0)
 )
-const visibleOrderBreakdowns = computed(() =>
-  (statusBreakdowns.value.orders || []).filter((item) => Number(item.value || 0) > 0)
+
+const orderChartData = computed(() =>
+  (statusBreakdowns.value.orders || [])
+    .filter((item) => Number(item.value || 0) > 0)
+    .map((item) => ({ name: adminLabel(item.status), value: Number(item.value || 0), raw: item }))
 )
-const visibleMediationBreakdowns = computed(() =>
-  (statusBreakdowns.value.mediation || []).filter((item) => Number(item.value || 0) > 0)
+
+const mediationChartData = computed(() =>
+  (statusBreakdowns.value.mediation || [])
+    .filter((item) => Number(item.value || 0) > 0)
+    .map((item) => ({ name: adminLabel(item.status), value: Number(item.value || 0), raw: item }))
 )
 const categorySalesBars = computed(() => {
   const items = salesAnalytics.value.categorySales || []
@@ -212,18 +219,26 @@ onMounted(loadDashboard)
           </div>
         </div>
 
-        <div class="breakdown-list">
+        <ChartPie
+          v-if="orderChartData.length"
+          :data="orderChartData"
+          :colors="['#c47a2c', '#b65f3b', '#d57a4a']"
+          height="280px"
+          inner-radius="46%"
+          outer-radius="70%"
+        />
+        <div class="chart-legend-links">
           <router-link
-            v-for="item in visibleOrderBreakdowns"
-            :key="item.status"
-            :to="item.target?.path || '/admin/orders'"
+            v-for="item in orderChartData"
+            :key="item.raw.status"
+            :to="item.raw.target?.path || '/admin/orders'"
             class="breakdown-row"
           >
-            <span>{{ adminLabel(item.status) }}</span>
+            <span>{{ item.name }}</span>
             <strong>{{ item.value }}</strong>
           </router-link>
-          <div v-if="!visibleOrderBreakdowns.length" class="admin-empty-line">暂无待跟进订单状态。</div>
         </div>
+        <div v-if="!orderChartData.length" class="admin-empty-line">暂无待跟进订单状态。</div>
       </div>
 
       <div class="breakdown-panel">
@@ -234,18 +249,26 @@ onMounted(loadDashboard)
           </div>
         </div>
 
-        <div class="breakdown-list">
+        <ChartPie
+          v-if="mediationChartData.length"
+          :data="mediationChartData"
+          :colors="['#b87972', '#69795f', '#8a6953']"
+          height="280px"
+          inner-radius="46%"
+          outer-radius="70%"
+        />
+        <div class="chart-legend-links">
           <router-link
-            v-for="item in visibleMediationBreakdowns"
-            :key="item.status"
-            :to="item.target?.path || '/admin/mediation'"
+            v-for="item in mediationChartData"
+            :key="item.raw.status"
+            :to="item.raw.target?.path || '/admin/mediation'"
             class="breakdown-row"
           >
-            <span>{{ adminLabel(item.status) }}</span>
+            <span>{{ item.name }}</span>
             <strong>{{ item.value }}</strong>
           </router-link>
-          <div v-if="!visibleMediationBreakdowns.length" class="admin-empty-line">暂无进行中的调解案件。</div>
         </div>
+        <div v-if="!mediationChartData.length" class="admin-empty-line">暂无进行中的调解案件。</div>
       </div>
     </section>
 
@@ -465,7 +488,8 @@ onMounted(loadDashboard)
 }
 
 .breakdown-list,
-.unavailable-list {
+.unavailable-list,
+.chart-legend-links {
   display: grid;
   gap: 10px;
 }

@@ -18,13 +18,33 @@ const avatarInitial = computed(() => (profile.value.nickname || '友').slice(0, 
 const avatarInputRef = ref(null)
 const maxAvatarSize = 10 * 1024 * 1024
 const spendTab = ref('monthly')
+const spendTabs = [
+  { key: 'monthly', label: '月度' },
+  { key: 'yearly', label: '年度' },
+  { key: 'category', label: '分类' }
+]
+const spendChartData = computed(() => {
+  const agg = marketStore.spendAggregation
+  if (!agg) return []
+  if (spendTab.value === 'monthly') return agg.monthly || []
+  if (spendTab.value === 'yearly') return agg.yearly || {}
+  return agg.category || []
+})
 const editForm = reactive({
   nickname: ''
 })
 
-const monthlyChartData = computed(() => spendAgg.value.monthly || [])
-const yearlyChartData = computed(() => spendAgg.value.yearly || {})
+const monthlyChartData = computed(() => spendAgg.value?.monthly || [])
+const yearlyChartData = computed(() => spendAgg.value?.yearly || {})
 const categoryChartData = computed(() => {
+  const fromOrders = spendAgg.value?.category || []
+  if (fromOrders.length) {
+    return fromOrders.map((item) => ({
+      label: item.label || item.name || '其他',
+      amount: Number(item.amount ?? item.value ?? 0)
+    }))
+  }
+
   const items = Array.isArray(userInsight.value.favoritePreferenceSummary)
     ? userInsight.value.favoritePreferenceSummary
     : []
@@ -248,26 +268,17 @@ onMounted(loadProfileData)
 
     <PageSection title="支出统计" description="按已完成且已支付订单统计支出结构。">
       <template #actions>
-        <span class="spend-source-note">{{ spendDataSource }}</span>
+        <div class="spend-tabs">
+          <button
+            v-for="tab in spendTabs"
+            :key="tab.key"
+            :class="['spend-tab', { 'spend-tab--active': spendTab === tab.key }]"
+            @click="spendTab = tab.key"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
       </template>
-
-      <div class="spend-tabs">
-        <button
-          class="spend-tab"
-          :class="{ 'spend-tab--active': spendTab === 'monthly' }"
-          @click="spendTab = 'monthly'"
-        >月度</button>
-        <button
-          class="spend-tab"
-          :class="{ 'spend-tab--active': spendTab === 'yearly' }"
-          @click="spendTab = 'yearly'"
-        >年度</button>
-        <button
-          class="spend-tab"
-          :class="{ 'spend-tab--active': spendTab === 'category' }"
-          @click="spendTab = 'category'"
-        >分类</button>
-      </div>
 
       <SpendChart
         v-if="spendTab === 'monthly'"
@@ -287,6 +298,7 @@ onMounted(loadProfileData)
         :category-data="categoryChartData"
         :loading="marketStore.loadingSpendAggregation"
       />
+      <p class="spend-note">* 数据基于近期订单统计，仅供参考</p>
 
       <div class="profile-insight-grid">
         <article class="shell-card profile-insight-panel">
@@ -464,10 +476,11 @@ onMounted(loadProfileData)
   color: var(--cm-text);
 }
 
-.spend-source-note {
+.spend-note {
+  margin-top: 12px;
   font-size: 12px;
-  color: var(--cm-text-tertiary);
-  font-style: italic;
+  color: #a09286;
+  text-align: right;
 }
 
 @media (max-width: 860px) {
