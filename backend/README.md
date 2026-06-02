@@ -64,11 +64,13 @@ mvnw.cmd clean package
 
 ## Seed data (profile `seed`)
 
-Loaded in order:
+Loaded in order (see `application-seed.yml`):
 1. `src/main/resources/schema.sql` — DDL (`CREATE TABLE IF NOT EXISTS`, idempotent)
 2. `src/main/resources/seed/data.sql` — demo users, shops, categories, products
 3. `src/main/resources/seed/seed-transactions.sql` — cart items, orders, fulfillments
-4. `src/main/resources/seed/data-perf-catalog.sql` — 4000 synthetic products (IDs 10000+)
+4. `src/main/resources/seed/seed-zhangsan-spend.sql` — completed paid buyer orders for `zhangsan` (profile spend charts)
+5. `src/main/resources/seed/data-realistic-products.sql` — additional product catalog samples
+6. `src/main/resources/seed/seed-chat-data.sql` — message-center and chat demo data
 
 Demo credentials (seed only):
 - Admin: `admin` / `admin123`
