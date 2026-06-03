@@ -40,7 +40,7 @@ function onSubmitted() {
 
 <template>
   <TradePageShell
-    eyebrow="Trade Center"
+    eyebrow="交易中心"
     title="待评价"
     description="你有以下已收货商品还没有评价，写评价帮助其他同学做选择。"
     current-key="reviews-pending"

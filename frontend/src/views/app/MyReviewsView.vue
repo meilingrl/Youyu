@@ -37,7 +37,7 @@ onMounted(() => {
 
 <template>
   <TradePageShell
-    eyebrow="Trade Center"
+    eyebrow="交易中心"
     title="我的评价"
     description="这里回看你已经提交过的商品和店铺评价，让交易完成后的反馈仍然留在交易中心范围内，而不是分散到别处。"
     current-key="reviews-mine"

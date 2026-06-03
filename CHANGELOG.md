@@ -1,3 +1,14 @@
+## [2026-06-03] - Review Copy Localization
+
+### changed
+- Localized remaining visible review form and review list copy, including rating labels, image upload actions, validation messages, submit/cancel buttons, and review page eyebrow text.
+
+### verify
+- `npm run build` in `frontend/` pass.
+- `npm test` in `frontend/` pass, 63 tests.
+
+---
+
 ## [2026-06-03] - Trade Center Copy Cleanup
 
 ### changed
