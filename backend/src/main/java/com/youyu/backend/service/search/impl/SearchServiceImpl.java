@@ -4,8 +4,12 @@ import static com.youyu.backend.mapper.common.MapperTypeConverters.toInt;
 
 import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.mapper.product.ProductMapper;
 import com.youyu.backend.mapper.search.SearchGovernanceMapper;
 import com.youyu.backend.mapper.search.SearchLogMapper;
+import com.youyu.backend.service.search.ProductSearchCriteria;
+import com.youyu.backend.service.search.ProductSearchIndex;
+import com.youyu.backend.service.search.ProductSearchResult;
 import com.youyu.backend.service.search.SearchService;
 import java.sql.Date;
 import java.time.LocalDate;
@@ -17,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,11 +45,17 @@ public class SearchServiceImpl implements SearchService {
 
     private final SearchLogMapper searchLogMapper;
     private final SearchGovernanceMapper searchGovernanceMapper;
+    private final ProductMapper productMapper;
+    private final ProductSearchIndex productSearchIndex;
 
     public SearchServiceImpl(SearchLogMapper searchLogMapper,
-                           SearchGovernanceMapper searchGovernanceMapper) {
+                             SearchGovernanceMapper searchGovernanceMapper,
+                             ProductMapper productMapper,
+                             ProductSearchIndex productSearchIndex) {
         this.searchLogMapper = searchLogMapper;
         this.searchGovernanceMapper = searchGovernanceMapper;
+        this.productMapper = productMapper;
+        this.productSearchIndex = productSearchIndex;
     }
 
     @Override
@@ -58,6 +69,26 @@ public class SearchServiceImpl implements SearchService {
         } catch (Exception e) {
             log.warn("Failed to record keyword search for keyword={}", normalizedKeyword, e);
         }
+    }
+
+    @Override
+    public Optional<ProductSearchResult> searchProducts(ProductSearchCriteria criteria) {
+        return productSearchIndex.search(criteria);
+    }
+
+    @Override
+    public void syncProductSearchDocument(Map<String, Object> productDocument) {
+        productSearchIndex.indexProduct(productDocument);
+    }
+
+    @Override
+    public void removeProductSearchDocument(Long productId) {
+        productSearchIndex.deleteProduct(productId);
+    }
+
+    @Override
+    public Map<String, Object> reindexProductSearch() {
+        return productSearchIndex.reindexProducts(productMapper.findPublicSearchIndexDocuments());
     }
 
     @Override

@@ -6,6 +6,9 @@ DELETE FROM order_items WHERE order_id BETWEEN 8001 AND 8010;
 DELETE FROM order_fulfillments WHERE order_id BETWEEN 8001 AND 8010;
 DELETE FROM orders WHERE id BETWEEN 8001 AND 8010;
 DELETE FROM cart_items WHERE id BETWEEN 9101 AND 9110;
+DELETE FROM order_items WHERE order_id BETWEEN 8021 AND 8023;
+DELETE FROM order_fulfillments WHERE order_id BETWEEN 8021 AND 8023;
+DELETE FROM orders WHERE id BETWEEN 8021 AND 8023;
 
 -- Carts for seed buyers (avoid user_id=1001; TransactionDataStore.seedCart owns that slot).
 INSERT INTO cart_items (id, user_id, product_id, quantity, selected, created_at, updated_at)
@@ -86,6 +89,40 @@ INSERT INTO order_fulfillments (
     '', '', NULL, '', '', FALSE, FALSE, 'Limited preview before purchase; full download after receipt confirmation', 'preview_only', NULL),
 (8510, 8010, 'logistics', 'pending_action', NULL, NULL, '', '',
     '', '', NULL, '', '', FALSE, FALSE, '', 'not_applicable', NULL);
+
+-- Logistics tracking smoke-test orders for Kdniao/Amap integration.
+INSERT INTO orders (
+    id, order_no, buyer_user_id, seller_user_id, shop_id, order_status, fulfillment_type, payment_status,
+    goods_amount, discount_amount, pay_amount, buyer_note, submitted_at, paid_at, completed_at, cancelled_at, closed_reason
+) VALUES
+(8021, 'SEED8021', 1001, 1010, 4010, 'pending_receipt', 'logistics', 'paid',
+    128.00, 0.00, 128.00, 'tracking seed: carrier and tracking number present', '2026-06-04 09:30:00', '2026-06-04 09:35:00', NULL, NULL, ''),
+(8022, 'SEED8022', 1001, 1012, 4011, 'pending_receipt', 'logistics', 'paid',
+    88.00, 0.00, 88.00, 'tracking seed: missing tracking number', '2026-06-04 09:40:00', '2026-06-04 09:45:00', NULL, NULL, ''),
+(8023, 'SEED8023', 1001, 1010, 4010, 'pending_receipt', 'logistics', 'paid',
+    58.00, 0.00, 58.00, 'tracking seed: unsupported carrier', '2026-06-04 09:50:00', '2026-06-04 09:55:00', NULL, NULL, '');
+
+INSERT INTO order_items (
+    id, order_id, product_id, title_snapshot, image_snapshot, price_snapshot, quantity, subtotal_amount, product_type_snapshot, created_at
+) VALUES
+(8121, 8021, 3021, 'MeiliSearch Typo Lab 机械键盘', 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80', 128.00, 1, 128.00, 'physical', '2026-06-04 09:30:00'),
+(8122, 8022, 3022, 'Youyu 模糊搜索 蓝牙耳机', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80', 88.00, 1, 88.00, 'physical', '2026-06-04 09:40:00'),
+(8123, 8023, 3023, '拼写容错 计算器套装', 'https://images.unsplash.com/photo-1587145820266-a5951ee786f4?auto=format&fit=crop&w=900&q=80', 58.00, 1, 58.00, 'physical', '2026-06-04 09:50:00');
+
+INSERT INTO order_fulfillments (
+    id, order_id, fulfillment_type, fulfillment_status, seller_confirmed_at, buyer_confirmed_at, buyer_note, address_snapshot,
+    logistics_no, logistics_company, shipped_at, offline_meeting_time, offline_meeting_place,
+    offline_seller_confirmed, offline_buyer_confirmed, preview_rule_snapshot, download_access_status, digital_access_opened_at
+) VALUES
+(8521, 8021, 'logistics', 'shipped', '2026-06-04 10:00:00', NULL, 'tracking seed: carrier and tracking number present',
+    '{"receiverName":"Zhang San","receiverPhone":"13800000001","province":"辽宁省","city":"沈阳市","district":"浑南区","campusName":"东北大学浑南校区","detailAddress":"宿舍1号楼"}',
+    'SF1234567890', '顺丰速运', '2026-06-04 10:00:00', '', '', FALSE, FALSE, '', 'not_applicable', NULL),
+(8522, 8022, 'logistics', 'shipped', '2026-06-04 10:10:00', NULL, 'tracking seed: missing tracking number',
+    '{"receiverName":"Zhang San","receiverPhone":"13800000001","province":"辽宁省","city":"沈阳市","district":"浑南区","campusName":"东北大学浑南校区","detailAddress":"宿舍1号楼"}',
+    '', '顺丰速运', '2026-06-04 10:10:00', '', '', FALSE, FALSE, '', 'not_applicable', NULL),
+(8523, 8023, 'logistics', 'shipped', '2026-06-04 10:20:00', NULL, 'tracking seed: unsupported carrier',
+    '{"receiverName":"Zhang San","receiverPhone":"13800000001","province":"辽宁省","city":"沈阳市","district":"浑南区","campusName":"东北大学浑南校区","detailAddress":"宿舍1号楼"}',
+    'TEST-CARRIER-8023', 'Unknown Carrier', '2026-06-04 10:20:00', '', '', FALSE, FALSE, '', 'not_applicable', NULL);
 
 INSERT INTO reports (
     id, reporter_user_id, reporter_name, target_type, target_id, target_label,

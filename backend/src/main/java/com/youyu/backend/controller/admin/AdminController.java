@@ -386,6 +386,12 @@ public class AdminController {
         return ApiResponse.success(adminService.listSearchLogs(page, pageSize), traceId(request));
     }
 
+    @PostMapping("/search/products/reindex")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_SEARCH_GOVERN})
+    public ApiResponse<Map<String, Object>> reindexProductSearch(HttpServletRequest request) {
+        return ApiResponse.success(adminService.reindexProductSearch(currentAdminUserId()), traceId(request));
+    }
+
     @GetMapping("/audit-logs")
     @LoginRequired(permissions = {AdminPermission.ADMIN_AUDIT_VIEW})
     public ApiResponse<Map<String, Object>> auditLogs(@RequestParam(defaultValue = "") String action,

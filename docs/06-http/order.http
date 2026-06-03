@@ -91,7 +91,10 @@ Content-Type: application/json
 ###
 
 ### Get order detail
-### Expected detail now includes refundRuleText, relatedReports, mediationSummary, and afterSalesSummary.
+### Expected detail now includes refundRuleText, relatedReports, mediationSummary,
+### afterSalesSummary, and for logistics orders logisticsTracking/logisticsMap.
+### With default local config, logisticsTracking.status is "disabled" and
+### logisticsMap.status is "map_provider_disabled"; no provider network call is made.
 GET {{baseUrl}}/api/orders/{{seedDetailOrderId}}
 Authorization: Bearer {{buyerToken}}
 
@@ -156,6 +159,7 @@ Authorization: Bearer {{adminToken}}
 
 ### Admin get order detail
 ### Expected detail now includes the same after-sales visibility family, with admin seeing all relatedReports for the order.
+### Logistics orders include logisticsTracking/logisticsMap payloads without requiring real provider credentials.
 GET {{baseUrl}}/api/admin/orders/{{seedDetailOrderId}}
 Authorization: Bearer {{adminToken}}
 

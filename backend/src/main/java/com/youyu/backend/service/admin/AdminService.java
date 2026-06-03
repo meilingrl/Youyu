@@ -63,6 +63,8 @@ public interface AdminService {
 
     Map<String, Object> listSearchLogs(int page, int pageSize);
 
+    Map<String, Object> reindexProductSearch(Long adminUserId);
+
     Map<String, Object> listAuditLogs(String action, String targetType, int page, int pageSize);
 
     AdminCsvExport exportDataset(String dataset);

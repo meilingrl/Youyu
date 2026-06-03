@@ -8,7 +8,7 @@
     - `backend/src/main/java/com/youyu/backend/controller/search/SearchController.java`
     - `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java`
   - request sample: `docs/06-http/search.http`
-- Last updated: 2026-05-16
+- Last updated: 2026-06-03
 
 ## Scope
 
@@ -32,6 +32,7 @@ It does not cover product list filtering itself. Product listing remains specifi
   - `PUT /api/admin/search/governance-rules/{ruleId}`
   - `DELETE /api/admin/search/governance-rules/{ruleId}`
   - `GET /api/admin/search/logs`
+  - `POST /api/admin/search/products/reindex`
 
 ## Response Envelope
 
@@ -195,6 +196,31 @@ Browse stored search logs in reverse chronological order.
 - `userId`
 - `resultCount`
 - `createdAt`
+
+### `POST /api/admin/search/products/reindex`
+
+#### Purpose
+
+Submit a full public-product reindex operation to the configured Meilisearch product index.
+
+#### Authentication
+
+- Admin only, with `ADMIN_SEARCH_GOVERN` permission.
+
+#### Response
+
+- `data.enabled`: whether Meilisearch product indexing is enabled
+- `data.index`: configured product index name
+- `data.documentCount`: number of public product documents read from MySQL
+- `data.status`: `disabled`, `submitted`, or `failed`
+- `data.task`: Meilisearch task metadata when an indexing request is submitted
+- `data.message`: failure detail when the adapter cannot submit the operation
+
+#### Notes
+
+- MySQL is the source of truth for the reindex source data.
+- The index stores only public search-safe product fields and never stores users, orders, addresses, payments, passwords, student IDs, or private fulfillment data.
+- If Meilisearch is disabled, the endpoint returns `status: disabled` and does not fail startup or normal product listing.
 
 ## Governance Semantics
 

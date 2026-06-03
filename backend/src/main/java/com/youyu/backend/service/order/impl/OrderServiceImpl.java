@@ -7,6 +7,7 @@ import com.youyu.backend.mapper.mediation.MediationMapper;
 import com.youyu.backend.mapper.order.DigitalAccessMapper;
 import com.youyu.backend.mapper.product.ProductMapper;
 import com.youyu.backend.mapper.report.ReportMapper;
+import com.youyu.backend.service.logistics.LogisticsTrackingService;
 import com.youyu.backend.service.marketing.MarketingService;
 import com.youyu.backend.service.notification.NotificationService;
 import com.youyu.backend.service.order.OrderService;
@@ -35,6 +36,7 @@ public class OrderServiceImpl implements OrderService {
     private final NotificationService notificationService;
     private final MarketingService marketingService;
     private final PaymentGatewayRouter paymentGatewayRouter;
+    private final LogisticsTrackingService logisticsTrackingService;
 
     public OrderServiceImpl(TransactionDataStore transactionDataStore,
                             ProductMapper productMapper,
@@ -43,7 +45,8 @@ public class OrderServiceImpl implements OrderService {
                             MediationMapper mediationMapper,
                             NotificationService notificationService,
                             MarketingService marketingService,
-                            PaymentGatewayRouter paymentGatewayRouter) {
+                            PaymentGatewayRouter paymentGatewayRouter,
+                            LogisticsTrackingService logisticsTrackingService) {
         this.transactionDataStore = transactionDataStore;
         this.productMapper = productMapper;
         this.digitalAccessMapper = digitalAccessMapper;
@@ -52,6 +55,7 @@ public class OrderServiceImpl implements OrderService {
         this.notificationService = notificationService;
         this.marketingService = marketingService;
         this.paymentGatewayRouter = paymentGatewayRouter;
+        this.logisticsTrackingService = logisticsTrackingService;
     }
 
     @Override
@@ -205,12 +209,33 @@ public class OrderServiceImpl implements OrderService {
         detail.put("digitalAccessLogs", digitalAccessMapper.findByOrderId(orderId));
         detail.put("refundSupported", !isDigitalOrder(order));
         detail.put("refundRuleText", buildRefundRuleText(order));
+        Map<String, Object> logisticsTracking = buildLogisticsTracking(order, fulfillment);
+        detail.put("logisticsTracking", logisticsTracking);
+        detail.put("logisticsMap", logisticsTrackingService.buildMapPayload(logisticsTracking, fulfillment));
         List<Map<String, Object>> relatedReports = filterVisibleReports(orderId, userId, adminView);
         Map<String, Object> mediationSummary = buildMediationSummary(orderId, relatedReports);
         detail.put("relatedReports", relatedReports);
         detail.put("mediationSummary", mediationSummary);
         detail.put("afterSalesSummary", buildAfterSalesSummary(order, refunds, relatedReports, mediationSummary));
         return detail;
+    }
+
+    private Map<String, Object> buildLogisticsTracking(Map<String, Object> order, Map<String, Object> fulfillment) {
+        if (fulfillment == null || !"logistics".equals(order.get("fulfillmentType"))) {
+            return null;
+        }
+        try {
+            return logisticsTrackingService.buildTrackingPayload(order, fulfillment);
+        } catch (RuntimeException exception) {
+            Map<String, Object> fallback = new LinkedHashMap<>();
+            fallback.put("provider", "unavailable");
+            fallback.put("status", "failed");
+            fallback.put("message", "Logistics tracking provider failed; order detail remains available.");
+            fallback.put("trackingNo", fulfillment.get("trackingNo"));
+            fallback.put("logisticsCompany", fulfillment.get("logisticsCompany"));
+            fallback.put("events", List.of());
+            return fallback;
+        }
     }
 
     @Override

@@ -9,9 +9,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.context.annotation.Primary;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Component;
 
@@ -20,9 +22,11 @@ import org.springframework.stereotype.Component;
 public class JdbcProductMapper implements ProductMapper {
 
     private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
-    public JdbcProductMapper(JdbcTemplate jdbcTemplate) {
+    public JdbcProductMapper(JdbcTemplate jdbcTemplate, NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
+        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
     @Override
@@ -158,6 +162,51 @@ public class JdbcProductMapper implements ProductMapper {
         buildFilterClauses(sql, args, keyword, categoryId, productType);
         Long count = jdbcTemplate.queryForObject(sql.toString(), Long.class, args.toArray());
         return count == null ? 0L : count;
+    }
+
+    @Override
+    public List<Map<String, Object>> findPublicByIds(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Integer> order = new LinkedHashMap<>();
+        for (int i = 0; i < productIds.size(); i++) {
+            order.putIfAbsent(productIds.get(i), i);
+        }
+        Map<String, Object> params = Map.of("ids", order.keySet());
+        List<Map<String, Object>> rows = namedParameterJdbcTemplate.queryForList(baseSql()
+                + " WHERE p.is_deleted = FALSE AND p.status = 'on_sale'"
+                + " AND (p.review_status = 'not_required' OR p.review_status = 'approved')"
+                + " AND p.id IN (:ids)", params);
+        return rows.stream()
+                .map(this::toApiMap)
+                .sorted((left, right) -> Integer.compare(
+                        order.getOrDefault(toLong(left.get("id")), Integer.MAX_VALUE),
+                        order.getOrDefault(toLong(right.get("id")), Integer.MAX_VALUE)))
+                .toList();
+    }
+
+    @Override
+    public List<Map<String, Object>> findPublicSearchIndexDocuments() {
+        return jdbcTemplate.queryForList(baseSql()
+                        + " WHERE p.is_deleted = FALSE AND p.status = 'on_sale'"
+                        + " AND (p.review_status = 'not_required' OR p.review_status = 'approved')"
+                        + " ORDER BY p.id")
+                .stream()
+                .map(this::toSearchIndexMap)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Optional<Map<String, Object>> findPublicSearchIndexDocumentById(Long productId) {
+        if (productId == null) {
+            return Optional.empty();
+        }
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(baseSql()
+                + " WHERE p.is_deleted = FALSE AND p.status = 'on_sale'"
+                + " AND (p.review_status = 'not_required' OR p.review_status = 'approved')"
+                + " AND p.id = ?", productId);
+        return rows.stream().findFirst().map(this::toSearchIndexMap);
     }
 
     private void buildFilterClauses(StringBuilder sql, List<Object> args, String keyword, Long categoryId, String productType) {
@@ -484,6 +533,26 @@ public class JdbcProductMapper implements ProductMapper {
         return map;
     }
 
+    private Map<String, Object> toSearchIndexMap(Map<String, Object> row) {
+        Map<String, Object> product = toApiMap(row);
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("productId", product.get("id"));
+        map.put("title", product.get("title"));
+        map.put("subtitle", product.get("subtitle"));
+        map.put("description", product.get("description"));
+        map.put("categoryId", product.get("categoryId"));
+        map.put("categoryName", product.get("categoryName"));
+        map.put("productType", product.get("productType"));
+        map.put("status", product.get("status"));
+        map.put("salePrice", product.get("salePrice"));
+        map.put("favoriteCount", product.get("favoriteCount"));
+        map.put("viewCount", product.get("viewCount"));
+        map.put("createdAt", product.get("createdAt"));
+        map.put("shopId", product.get("shopId"));
+        map.put("shopName", product.get("shopName"));
+        return map;
+    }
+
     private List<String> deliveryMethods(Map<String, Object> product) {
         java.util.ArrayList<String> methods = new java.util.ArrayList<>();
         if (bool(product.get("supportsLogistics"))) {
@@ -527,6 +596,13 @@ public class JdbcProductMapper implements ProductMapper {
             return decimal;
         }
         return new BigDecimal(String.valueOf(value));
+    }
+
+    private Long toLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return Long.parseLong(String.valueOf(value));
     }
 
 }

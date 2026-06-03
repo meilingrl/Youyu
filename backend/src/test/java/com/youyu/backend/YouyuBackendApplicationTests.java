@@ -533,7 +533,13 @@ class YouyuBackendApplicationTests {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.orderStatus").value("pending_receipt"));
+                .andExpect(jsonPath("$.data.orderStatus").value("pending_receipt"))
+                .andExpect(jsonPath("$.data.logisticsTracking.trackingNo").value("SF1234567890"))
+                .andExpect(jsonPath("$.data.logisticsTracking.logisticsCompany").value("SF Express"))
+                .andExpect(jsonPath("$.data.logisticsTracking.status").value("disabled"))
+                .andExpect(jsonPath("$.data.logisticsTracking.events.length()").value(0))
+                .andExpect(jsonPath("$.data.logisticsMap.provider").value("amap"))
+                .andExpect(jsonPath("$.data.logisticsMap.status").value("map_provider_disabled"));
 
         mockMvc.perform(post("/api/orders/%s/confirm-receipt".formatted(orderId))
                         .header("Authorization", "Bearer " + userToken))

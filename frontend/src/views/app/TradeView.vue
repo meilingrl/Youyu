@@ -163,18 +163,7 @@ const nextActions = computed(() => {
     })
   }
 
-  if (selectedCartCount.value) {
-    actions.push({
-      key: 'selected-cart',
-      tone: 'primary',
-      eyebrow: 'Cart',
-      title: `${selectedCartCount.value} 件商品已选中`,
-      description: `当前选中商品合计 ${formatCurrency(selectedCartAmount.value)}。`,
-      metric: formatCurrency(selectedCartAmount.value),
-      buttonText: '回到购物车',
-      route: '/app/cart'
-    })
-  } else if (cartItemCount.value) {
+  if (cartItemCount.value) {
     actions.push({
       key: 'cart',
       tone: 'muted',

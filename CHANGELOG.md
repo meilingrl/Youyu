@@ -1,3 +1,50 @@
+## [2026-06-04] - Search And Logistics Seed Samples
+
+### changed
+- Added three seed products with stable fuzzy-search keywords for Meilisearch/MySQL hydration validation.
+- Added three seed logistics orders covering provider lookup with tracking number, missing tracking number fallback, and unsupported carrier fallback.
+
+### verify
+- Backend `.\mvnw.cmd test` passed, 226 tests.
+- Seed profile backend started against local MySQL and loaded the new samples.
+- Product searches for `meilisearch` and `拼写容错` returned the new seed products.
+- Buyer order detail returned logistics/map payloads for orders `8021`, `8022`, and `8023`.
+
+---
+
+## [2026-06-03] - Meilisearch Product Search Upgrade
+
+### changed
+- Added optional Meilisearch-backed public product search for `GET /api/products`, with MySQL fallback when the search index is disabled or unavailable.
+- Hydrates full product-card responses from MySQL by ordered search-result product IDs so the public product-list response shape stays stable.
+- Added public-product indexing/reindex hooks for product publish, update, status/review changes, deletion, and favorite-count changes.
+- Documented Meilisearch configuration, product search semantics, and the admin product-search reindex smoke path.
+
+### verify
+- Backend `.\mvnw.cmd test -Dtest=ProductSearchIntegrationTest` passed.
+- Backend `.\mvnw.cmd test -Dtest=FavoritesIntegrationTest` passed.
+- Backend `.\mvnw.cmd test` passed, 226 tests.
+- Frontend `npm test` passed, 63 tests.
+- Frontend `npm run build` passed.
+
+---
+
+## [2026-06-03] - Logistics Tracking And Amap Boundary
+
+### changed
+- Added backend logistics provider boundaries with disabled default behavior and a Kdniao-ready adapter gated by environment credentials.
+- Extended logistics order detail with `logisticsTracking` and `logisticsMap` payloads that degrade without failing order detail.
+- Added an Amap-gated order detail map panel that renders only with frontend/backend map configuration and provider-derived coordinates.
+- Documented logistics tracking and Amap environment variables plus order API response fields.
+
+### verify
+- Backend focused logistics order flow test passed.
+- Frontend `npm run build` passed.
+- Backend `.\mvnw.cmd test` passed, 226 tests.
+- Frontend `npm test` passed, 63 tests.
+
+---
+
 ## [2026-06-03] - Review Copy Localization
 
 ### changed

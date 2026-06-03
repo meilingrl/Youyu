@@ -4,6 +4,7 @@
 @baseUrl = http://localhost:8080
 @userToken = mock-1001-USER
 @sellerToken = mock-1001-USER
+@adminToken = mock-9001-ADMIN
 
 # ─────────────────────────────────────────────
 # PUBLIC PRODUCT BROWSING
@@ -26,6 +27,11 @@ GET {{baseUrl}}/api/products?categoryId=1
 
 ### List products — fuzzy keyword + category
 GET {{baseUrl}}/api/products?keyword=Math&categoryId=1
+
+###
+
+### List products - typo/partial keyword smoke (Meilisearch if enabled, MySQL fallback if disabled)
+GET {{baseUrl}}/api/products?keyword=calclatr&page=1&pageSize=12
 
 ###
 
@@ -117,6 +123,12 @@ Content-Type: application/json
 {
   "status": "off_sale"
 }
+
+###
+
+### Reindex public product search index (admin, no-op when Meilisearch is disabled)
+POST {{baseUrl}}/api/admin/search/products/reindex
+Authorization: Bearer {{adminToken}}
 
 # ─────────────────────────────────────────────
 # FAVORITES

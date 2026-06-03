@@ -7,6 +7,14 @@ public interface SearchService {
 
     void recordKeywordSearch(String keyword, Long userId, int resultCount);
 
+    java.util.Optional<ProductSearchResult> searchProducts(ProductSearchCriteria criteria);
+
+    void syncProductSearchDocument(Map<String, Object> productDocument);
+
+    void removeProductSearchDocument(Long productId);
+
+    Map<String, Object> reindexProductSearch();
+
     List<Map<String, Object>> listHotKeywords();
 
     List<Map<String, Object>> suggestKeywords(String query, int limit);

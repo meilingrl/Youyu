@@ -95,7 +95,26 @@ VALUES
 (3011, 1010, 4010, 4, 'Seed Wireless Mouse', 'Logistics or campus meet', 'Lightweight mouse for laptop.', 'Lightweight mouse for laptop.', 'physical', 'on_sale', 'not_required', NULL, 'https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=900&q=80', 16.50, 32.00, 8, TRUE, TRUE, FALSE, FALSE, NULL, 3, 0, FALSE, '2026-05-10 08:35:00', CURRENT_TIMESTAMP),
 (3012, 1010, 4010, 2, 'Seed Scientific Calculator', 'TI-style for exams', 'Approved models only; battery included.', 'Approved models only; battery included.', 'physical', 'on_sale', 'not_required', NULL, 'https://images.unsplash.com/photo-1587145820266-a5951ee786f4?auto=format&fit=crop&w=900&q=80', 48.00, 89.00, 4, TRUE, TRUE, FALSE, FALSE, NULL, 11, 2, FALSE, '2026-05-10 08:40:00', CURRENT_TIMESTAMP),
 (3013, 1012, 4011, 4, 'Seed USB-C Cable 2m', 'Braided', 'High-speed charging cable.', 'High-speed charging cable.', 'physical', 'on_sale', 'not_required', NULL, 'https://images.unsplash.com/photo-1621478374422-35206faaed30?auto=format&fit=crop&w=900&q=80', 9.90, 25.00, 20, TRUE, TRUE, FALSE, FALSE, NULL, 7, 1, FALSE, '2026-05-10 08:45:00', CURRENT_TIMESTAMP),
-(3014, 1012, 4011, 2, 'Seed Multimeter Mini', 'For lab course', 'Compact multimeter for intro circuits.', 'Compact multimeter for intro circuits.', 'physical', 'on_sale', 'not_required', NULL, 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=900&q=80', 42.00, 79.00, 2, FALSE, TRUE, FALSE, FALSE, NULL, 4, 0, FALSE, '2026-05-10 08:48:00', CURRENT_TIMESTAMP);
+(3014, 1012, 4011, 2, 'Seed Multimeter Mini', 'For lab course', 'Compact multimeter for intro circuits.', 'Compact multimeter for intro circuits.', 'physical', 'on_sale', 'not_required', NULL, 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=900&q=80', 42.00, 79.00, 2, FALSE, TRUE, FALSE, FALSE, NULL, 4, 0, FALSE, '2026-05-10 08:48:00', CURRENT_TIMESTAMP),
+(3021, 1010, 4010, 4, 'MeiliSearch Typo Lab 机械键盘', 'meili typo keyboard campus test', 'Meilisearch fuzzy typo campus test seed for product search; supports typo-tolerant matching on keyboard keywords.', 'Meilisearch fuzzy typo campus test seed for product search; supports typo-tolerant matching on keyboard keywords.', 'physical', 'on_sale', 'not_required', NULL, 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80', 128.00, 199.00, 3, TRUE, TRUE, FALSE, FALSE, NULL, 19, 4, FALSE, '2026-06-04 09:00:00', CURRENT_TIMESTAMP),
+(3022, 1012, 4011, 4, 'Youyu 模糊搜索 蓝牙耳机', 'fuzzy-search seed bluetooth headset', 'Youyu fuzzy-search seed bluetooth headset for Meilisearch keyword, phrase, and typo query validation.', 'Youyu fuzzy-search seed bluetooth headset for Meilisearch keyword, phrase, and typo query validation.', 'physical', 'on_sale', 'not_required', NULL, 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80', 88.00, 159.00, 6, TRUE, TRUE, FALSE, FALSE, NULL, 23, 6, FALSE, '2026-06-04 09:05:00', CURRENT_TIMESTAMP),
+(3023, 1010, 4010, 2, '拼写容错 计算器套装', 'typo tolerant calculator bundle', 'Typo tolerant calculator bundle seed for 拼写容错, suanqi, calcuator, and learning tool fuzzy search validation.', 'Typo tolerant calculator bundle seed for 拼写容错, suanqi, calcuator, and learning tool fuzzy search validation.', 'physical', 'on_sale', 'not_required', NULL, 'https://images.unsplash.com/photo-1587145820266-a5951ee786f4?auto=format&fit=crop&w=900&q=80', 58.00, 99.00, 5, TRUE, TRUE, FALSE, FALSE, NULL, 17, 3, FALSE, '2026-06-04 09:10:00', CURRENT_TIMESTAMP)
+ON DUPLICATE KEY UPDATE
+    title = VALUES(title),
+    subtitle = VALUES(subtitle),
+    description = VALUES(description),
+    detail_content = VALUES(detail_content),
+    status = VALUES(status),
+    review_status = VALUES(review_status),
+    main_image_url = VALUES(main_image_url),
+    sale_price = VALUES(sale_price),
+    original_price = VALUES(original_price),
+    stock_quantity = VALUES(stock_quantity),
+    supports_logistics = VALUES(supports_logistics),
+    supports_offline_delivery = VALUES(supports_offline_delivery),
+    supports_digital_delivery = VALUES(supports_digital_delivery),
+    is_deleted = VALUES(is_deleted),
+    updated_at = VALUES(updated_at);
 
 INSERT INTO product_media (id, product_id, media_type, media_url, sort_order)
 VALUES
@@ -107,7 +126,15 @@ VALUES
 (3111, 3011, 'cover', 'https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=900&q=80', 1),
 (3112, 3012, 'cover', 'https://images.unsplash.com/photo-1587145820266-a5951ee786f4?auto=format&fit=crop&w=900&q=80', 1),
 (3113, 3013, 'cover', 'https://images.unsplash.com/photo-1621478374422-35206faaed30?auto=format&fit=crop&w=900&q=80', 1),
-(3114, 3014, 'cover', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=900&q=80', 1);
+(3114, 3014, 'cover', 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=900&q=80', 1),
+(3121, 3021, 'cover', 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80', 1),
+(3122, 3022, 'cover', 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80', 1),
+(3123, 3023, 'cover', 'https://images.unsplash.com/photo-1587145820266-a5951ee786f4?auto=format&fit=crop&w=900&q=80', 1)
+ON DUPLICATE KEY UPDATE
+    product_id = VALUES(product_id),
+    media_type = VALUES(media_type),
+    media_url = VALUES(media_url),
+    sort_order = VALUES(sort_order);
 
 INSERT INTO product_digital_assets (id, product_id, asset_type, asset_name, storage_path, is_preview, preview_rule, status, sort_order)
 VALUES
