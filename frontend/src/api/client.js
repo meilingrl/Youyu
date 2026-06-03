@@ -17,7 +17,20 @@ service.interceptors.request.use((config) => {
 })
 
 service.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    const payload = response.data
+
+    if (payload && typeof payload === 'object' && payload.success === false) {
+      const businessError = new Error(payload.message || 'Request failed')
+      businessError.response = {
+        ...response,
+        data: payload
+      }
+      return Promise.reject(businessError)
+    }
+
+    return payload
+  },
   (error) => Promise.reject(error)
 )
 

@@ -15,6 +15,8 @@ public class PaymentRecord extends BaseEntity {
     private LocalDateTime initiatedAt;
     private LocalDateTime succeededAt;
     private String failedReason;
+    private String callbackSummary;
+    private String providerTradeNo;
 
     public Long getOrderId() { return orderId; }
     public void setOrderId(Long orderId) { this.orderId = orderId; }
@@ -34,4 +36,8 @@ public class PaymentRecord extends BaseEntity {
     public void setSucceededAt(LocalDateTime succeededAt) { this.succeededAt = succeededAt; }
     public String getFailedReason() { return failedReason; }
     public void setFailedReason(String failedReason) { this.failedReason = failedReason; }
+    public String getCallbackSummary() { return callbackSummary; }
+    public void setCallbackSummary(String callbackSummary) { this.callbackSummary = callbackSummary; }
+    public String getProviderTradeNo() { return providerTradeNo; }
+    public void setProviderTradeNo(String providerTradeNo) { this.providerTradeNo = providerTradeNo; }
 }

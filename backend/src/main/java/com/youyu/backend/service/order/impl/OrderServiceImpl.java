@@ -10,6 +10,8 @@ import com.youyu.backend.mapper.report.ReportMapper;
 import com.youyu.backend.service.marketing.MarketingService;
 import com.youyu.backend.service.notification.NotificationService;
 import com.youyu.backend.service.order.OrderService;
+import com.youyu.backend.service.payment.PaymentGatewayRouter;
+import com.youyu.backend.service.payment.PaymentGatewayService;
 import com.youyu.backend.service.transaction.support.TransactionDataStore;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -32,6 +34,7 @@ public class OrderServiceImpl implements OrderService {
     private final MediationMapper mediationMapper;
     private final NotificationService notificationService;
     private final MarketingService marketingService;
+    private final PaymentGatewayRouter paymentGatewayRouter;
 
     public OrderServiceImpl(TransactionDataStore transactionDataStore,
                             ProductMapper productMapper,
@@ -39,7 +42,8 @@ public class OrderServiceImpl implements OrderService {
                             ReportMapper reportMapper,
                             MediationMapper mediationMapper,
                             NotificationService notificationService,
-                            MarketingService marketingService) {
+                            MarketingService marketingService,
+                            PaymentGatewayRouter paymentGatewayRouter) {
         this.transactionDataStore = transactionDataStore;
         this.productMapper = productMapper;
         this.digitalAccessMapper = digitalAccessMapper;
@@ -47,6 +51,7 @@ public class OrderServiceImpl implements OrderService {
         this.mediationMapper = mediationMapper;
         this.notificationService = notificationService;
         this.marketingService = marketingService;
+        this.paymentGatewayRouter = paymentGatewayRouter;
     }
 
     @Override
@@ -345,16 +350,13 @@ public class OrderServiceImpl implements OrderService {
         if (hasPendingRefund) {
             throw new BusinessException(ResultCode.BUSINESS_ERROR, "已存在处理中的退款申请，请勿重复提交");
         }
-        List<Map<String, Object>> payments = transactionDataStore.findPayments(orderId);
-        if (payments.isEmpty()) {
-            throw new BusinessException(ResultCode.BUSINESS_ERROR, "缺少支付记录，无法创建退款");
-        }
-        // 取最新支付记录退款（按 initiated_at 排序的最后一条），匹配支付网关惯例。
-        // 注意：如同一订单存在多次成功支付，此逻辑可能需要改为按 payment_id 精确定位。
-        Map<String, Object> latestPayment = payments.get(payments.size() - 1);
+        Map<String, Object> successfulPayment = transactionDataStore.findPayments(orderId).stream()
+                .filter(payment -> "success".equals(String.valueOf(payment.get("paymentStatus"))))
+                .reduce((first, second) -> second)
+                .orElseThrow(() -> new BusinessException(ResultCode.BUSINESS_ERROR, "Missing successful payment record"));
         transactionDataStore.createRefund(
                 orderId,
-                (Long) latestPayment.get("id"),
+                (Long) successfulPayment.get("id"),
                 (BigDecimal) order.get("payableAmount"),
                 requiredString(command, "refundReason")
         );
@@ -371,10 +373,41 @@ public class OrderServiceImpl implements OrderService {
         if (refund == null || !Objects.equals(refund.get("orderId"), orderId)) {
             throw new BusinessException(ResultCode.NOT_FOUND, "退款记录不存在");
         }
+        if ("completed".equals(String.valueOf(refund.get("refundStatus")))) {
+            return getOrderDetail((Long) order.get("buyerUserId"), orderId, true);
+        }
         OrderStatus.fromValue(String.valueOf(order.get("orderStatus"))).requireTransitionTo(OrderStatus.REFUNDED.getValue());
-        refund.put("refundStatus", "completed");
+        Map<String, Object> payment = transactionDataStore.getMutablePayment((Long) refund.get("paymentRecordId"));
+        if (payment == null || !Objects.equals(payment.get("orderId"), orderId)
+                || !"success".equals(String.valueOf(payment.get("paymentStatus")))) {
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "Successful payment record is required for refund");
+        }
+        refund.put("refundStatus", "processing");
         refund.put("processedAt", LocalDateTime.now());
+        Map<String, Object> gatewayResult;
+        try {
+            PaymentGatewayService gateway = paymentGatewayRouter.require(String.valueOf(payment.get("paymentMethod")));
+            gatewayResult = gateway.refund(new PaymentGatewayService.RefundRequest(
+                    String.valueOf(payment.get("paymentNo")),
+                    String.valueOf(refund.get("refundNo")),
+                    (BigDecimal) refund.get("refundAmount"),
+                    String.valueOf(refund.get("refundReason"))
+            ));
+        } catch (RuntimeException exception) {
+            refund.put("refundStatus", "failed");
+            refund.put("failedReason", exception.getMessage());
+            throw exception;
+        }
+        if (!"success".equals(String.valueOf(gatewayResult.get("status")))) {
+            refund.put("refundStatus", "failed");
+            refund.put("failedReason", "Payment gateway did not confirm refund completion");
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "Payment gateway did not confirm refund completion");
+        }
+        refund.put("refundStatus", "completed");
         refund.put("completedAt", LocalDateTime.now());
+        refund.put("gatewayResponseSummary", gatewayResult.toString());
+        refund.put("failedReason", "");
+        payment.put("paymentStatus", "refunded");
         order.put("orderStatus", OrderStatus.REFUNDED.getValue());
         order.put("paymentStatus", "refunded");
         notifyOrderStatus(order, "refunded", true);

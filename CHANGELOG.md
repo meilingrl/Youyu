@@ -1,3 +1,16 @@
+## [2026-06-03] - Payment Upgrade Verification Follow-Up
+
+### changed
+- Fixed the local `mock-success` failure on pre-existing MySQL databases by adding a startup-time `PaymentSchemaUpgrader` instead of relying on manual schema repair.
+- Removed the temporary `ALTER TABLE` fallback from `backend/src/main/resources/schema.sql` so the baseline schema stays compliant with repository DDL rules.
+- Clarified the Alipay sandbox verification boundary and documented that QR checkout must use the sandbox wallet / sandbox buyer flow rather than the regular production Alipay app.
+
+### verify
+- Backend `.\\mvnw.cmd test "-Dtest=PaymentGatewayFoundationTest,PaymentRefundConsistencyTest,PaymentServiceImplTest,YouyuBackendApplicationTests"` pass, 38 tests.
+- `git diff --check` pass.
+
+---
+
 ## [2026-06-02] - Analytics Visualization Enhancement (ECharts Upgrade)
 
 ### added
@@ -181,6 +194,27 @@
 - Backend `mvnw.cmd test` pass, 175 tests.
 - Frontend `npm test -- --run` pass, 39 tests.
 - Frontend `npm run build` pass.
+
+---
+
+## [2026-05-31] - Payment Gateway Upgrade Foundation
+
+### added
+- Introduced a replaceable payment gateway router with default local mock mode and opt-in Alipay sandbox QR payment via `alipay.trade.precreate`.
+- Added RSA2 asynchronous callback verification, amount checks, replay protection, payment attempt timeout/retry handling, and a resume endpoint that regenerates a lost QR entry without creating a duplicate payment record.
+- Added additive MySQL migration references `003_payment_gateway_foundation.sql` and `004_payment_refund_consistency.sql`, root `.env.example` placeholders, Compose variable forwarding, and `scripts/start-backend-local.ps1`.
+
+### changed
+- Routed admin refund completion through the selected successful payment gateway with idempotent completion and diagnostic failure state.
+- Updated the buyer payment page with backend-driven payment methods, failure/cancellation/timeout feedback, retry actions, mobile continuity, and local QR rendering without buyer-facing mock/test wording.
+- Restricted Vitest discovery to project sources so dependency test files are not collected after adding QR rendering.
+
+### verify
+- Payment/refund backend suite `mvnw.cmd test '-Dtest=PaymentGatewayFoundationTest,PaymentRefundConsistencyTest,AlipaySandboxGatewayServiceImplTest,PaymentServiceImplTest'` - 13 tests passed.
+- Frontend `npm test -- --run` - 44 tests passed; `npm run build` succeeds.
+- Full backend `mvnw.cmd test` - 184 tests passed after interrupted-delivery audit hardening. One earlier run reproduced the pre-existing transient `SupportChatTest` same-timestamp ordering failure; repeat full runs passed.
+- Real Alipay sandbox checkout/callback remains pending local credential and public HTTPS callback configuration.
+- Interrupted-delivery audit added synchronous Alipay API response-signature verification before provider payloads are accepted.
 
 ---
 

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -30,8 +31,15 @@ public class PaymentController {
     }
 
     @PostMapping("/orders/{orderId}/initiate")
-    public ApiResponse<Map<String, Object>> initiate(@PathVariable Long orderId, HttpServletRequest request) {
-        return ApiResponse.success(paymentService.initiatePayment(currentUserId(), orderId), traceId(request));
+    public ApiResponse<Map<String, Object>> initiate(@PathVariable Long orderId,
+                                                     @RequestParam(defaultValue = "mock") String paymentMethod,
+                                                     HttpServletRequest request) {
+        return ApiResponse.success(paymentService.initiatePayment(currentUserId(), orderId, paymentMethod), traceId(request));
+    }
+
+    @PostMapping("/{paymentNo}/resume")
+    public ApiResponse<Map<String, Object>> resume(@PathVariable String paymentNo, HttpServletRequest request) {
+        return ApiResponse.success(paymentService.resumePayment(currentUserId(), paymentNo), traceId(request));
     }
 
     @PostMapping("/{paymentNo}/mock-success")

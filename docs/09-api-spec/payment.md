@@ -4,223 +4,122 @@
 
 - Status: active
 - Source of truth:
-  - controller: `backend/src/main/java/com/youyu/backend/controller/payment/PaymentController.java`
+  - authenticated controller: `backend/src/main/java/com/youyu/backend/controller/payment/PaymentController.java`
+  - provider callback controller: `backend/src/main/java/com/youyu/backend/controller/payment/PaymentGatewayCallbackController.java`
   - service: `backend/src/main/java/com/youyu/backend/service/payment/impl/PaymentServiceImpl.java`
-  - gateway service: `backend/src/main/java/com/youyu/backend/service/payment/impl/MockPaymentGatewayServiceImpl.java`
   - request sample: `docs/06-http/payment.http`
-- Last updated: 2026-05-27
+- Last updated: 2026-05-31
 
 ## Scope
 
-This document covers the authenticated payment API:
+This document covers payment gateway discovery, payment initiation, active
+payment resumption, local mock completion, and the Alipay sandbox asynchronous
+callback. Refund request and admin completion remain order-domain endpoints and
+are documented in `order.md`.
 
-- payment gateway info
-- payment initiation for an order
-- mock payment success callback endpoint
+Mock payment remains the default for local development and automated tests.
+Alipay sandbox is an opt-in integration path configured through environment
+variables.
 
-It does not cover real third-party payment-provider integration, order creation, refund requests, or admin refund completion.
+## Authentication
 
-## Authentication And Roles
+Endpoints under `/api/payments` require `Authorization: Bearer <token>`.
+The buyer must own the target order.
 
-All endpoints under `/api/payments` require `Authorization: Bearer <token>`.
-
-`PaymentController` uses `@LoginRequired` with the default role set (`USER`, `ADMIN`). The payment contract is buyer-oriented. Payment initiation and mock completion both verify that the authenticated user owns the target order.
-
-## Response Envelope
-
-All endpoints in this module use the unified response envelope:
-
-```json
-{
-  "success": true,
-  "code": "SUCCESS",
-  "message": "Request succeeded",
-  "data": {},
-  "traceId": "..."
-}
-```
-
-Failures use the same envelope with `success=false` and the appropriate `code`.
-
-## Error Semantics
-
-| HTTP status | `ResultCode` | Meaning |
-|---|---|---|
-| `400` | `BAD_REQUEST` | Invalid path variable or request shape |
-| `401` | `UNAUTHORIZED` | Missing or invalid token |
-| `403` | `FORBIDDEN` | Current user does not own the order |
-| `404` | `NOT_FOUND` | Order or payment record does not exist |
-| `500` | `INTERNAL_SERVER_ERROR` | Unhandled server-side failure |
-| `200` | `BUSINESS_ERROR` | Domain-rule rejection, such as duplicate payment or invalid state transition |
-
-`BUSINESS_ERROR` responses return HTTP 200 with `success=false`. Callers must check `success` or `code`, not only HTTP status.
+`POST /api/payments/callbacks/alipay-sandbox` is intentionally public because
+Alipay delivers asynchronous notifications from outside the application. It
+performs RSA2 signature verification, payment-channel matching, amount
+validation, and callback replay protection before changing state.
 
 ## Endpoints
 
 ### `GET /api/payments/gateway`
 
-#### Purpose
+Returns the default method and currently enabled methods.
 
-Return the currently configured payment gateway information for the trade flow.
-
-#### Request
-
-- Header:
-  - `Authorization: Bearer <token>`
-
-#### Response
-
-- `data` shape:
+`data` fields:
 
 | Field | Type | Notes |
-|---|---|---|
-| `defaultGateway` | string | Current value is `MOCK` |
-| `message` | string | Human-readable note that mock payment is wired and future gateway fields are reserved |
-
-#### Error Cases
-
-- `401`: not logged in
+| --- | --- | --- |
+| `defaultGateway` | string | Current value is `MOCK`. |
+| `defaultPaymentMethod` | string | Current value is `mock`. |
+| `availableMethods` | array | Includes `mock`; includes `alipay_sandbox` only when sandbox configuration is complete and enabled. |
 
 ### `POST /api/payments/orders/{orderId}/initiate`
 
-#### Purpose
+Creates one payment attempt for an order in `pending_payment`.
 
-Create a payment record for an order that is waiting for payment.
+Query parameters:
 
-#### Request
+| Field | Required | Notes |
+| --- | --- | --- |
+| `paymentMethod` | no | Defaults to `mock`; sandbox value is `alipay_sandbox`. |
 
-- Header:
-  - `Authorization: Bearer <token>`
-
-##### Path
-
-| Field | Required | Type | Notes |
-|---|---|---|---|
-| `orderId` | yes | integer | Must belong to the current user |
-
-##### Body
-
-No request body is currently accepted or required.
-
-#### Response
-
-- `data` shape:
+`data` fields:
 
 | Field | Type | Notes |
-|---|---|---|
-| `payment` | object | Created payment record |
-| `gateway` | object | Mock gateway payload for the order |
+| --- | --- | --- |
+| `payment` | object | Created durable payment record. |
+| `gateway` | object | Provider-specific initiation result. |
 
-`payment` fields:
+For Alipay sandbox, `gateway.qrCode` is the value returned by
+`alipay.trade.precreate`. The buyer page renders it as a scannable QR image.
 
-| Field | Type | Notes |
-|---|---|---|
-| `id` | integer | Payment record ID |
-| `orderId` | integer | Target order ID |
-| `paymentNo` | string | Generated payment number, format starts with `PAY` |
-| `paymentMethod` | string | Current value is `mock_gateway` |
-| `paymentChannel` | string | Current value is `internal_mock` |
-| `paymentStatus` | string | Current initial value is `initiated` |
-| `paymentAmount` | number | Order payable amount |
-| `initiatedAt` | string | Format `yyyy-MM-dd HH:mm` |
-| `paidAt` | string/null | Null before mock success |
-| `failedReason` | string | Empty string on creation |
-| `callbackSummary` | string | Reserved callback summary text |
+Active `initiated` or `success` attempts block creation of another payment
+attempt. Failed, cancelled, or timed-out attempts can be retried. Old
+`initiated` attempts are marked `timed_out` after the configured timeout.
 
-`gateway` fields:
+### `POST /api/payments/{paymentNo}/resume`
 
-| Field | Type | Notes |
-|---|---|---|
-| `gateway` | string | Current value is `MOCK` |
-| `orderNo` | string | Order number |
-| `status` | string | Current value is `PENDING` |
-| `message` | string | Mock gateway placeholder message |
+Regenerates the provider payment entry for an existing `initiated` attempt
+without creating a second `payment_records` row. This supports browser refresh
+and returning to the payment page after an Alipay QR target was lost.
 
-#### Error Cases
-
-- `401`: not logged in
-- `403`: current user is not the order buyer
-- `404`: order does not exist
-- `BUSINESS_ERROR`: order is not in `pending_payment`, or the order already has an active non-failed payment record
+The endpoint rejects non-buyers, non-active attempts, and orders that are no
+longer in `pending_payment`.
 
 ### `POST /api/payments/{paymentNo}/mock-success`
 
-#### Purpose
+Completes a local `mock` attempt. This endpoint is retained for local
+development and deterministic automated tests. It rejects non-mock attempts.
 
-Complete a mock payment and advance the target order according to fulfillment type.
+On success, the payment record becomes `success`, the order payment status
+becomes `paid`, and the existing fulfillment transition rules run unchanged.
 
-#### Request
+### `POST /api/payments/callbacks/alipay-sandbox`
 
-- Header:
-  - `Authorization: Bearer <token>`
+Consumes the form-encoded Alipay sandbox asynchronous notification and returns
+plain text `success` after processing.
 
-##### Path
+Before mutation the backend verifies:
 
-| Field | Required | Type | Notes |
-|---|---|---|---|
-| `paymentNo` | yes | string | Payment number returned by payment initiation |
+- RSA2 signature using `ALIPAY_SANDBOX_PUBLIC_KEY`
+- payment record existence and expected channel
+- callback amount against the server-side payment record
+- callback replay fingerprint
 
-##### Body
+Successful callbacks complete the payment. Non-success callbacks update the
+attempt status so the buyer can retry when appropriate. Replayed callbacks are
+idempotent.
 
-No request body is currently accepted or required.
+## Shared Types
 
-#### Response
+Payment record statuses used by this flow:
 
-- `data` shape:
+- `initiated`
+- `success`
+- `failed`
+- `cancelled`
+- `timed_out`
+- `refunded`
 
-| Field | Type | Notes |
-|---|---|---|
-| `orderId` | integer | Target order ID |
-| `orderNo` | string | Target order number |
-| `paymentNo` | string | Completed payment number |
-| `orderStatus` | string | Updated order status |
-| `paymentStatus` | string | Updated order-level payment status, currently `paid` |
-| `fulfillmentType` | string | `logistics`, `offline`, or `digital` |
-| `nextAction` | string | Caller-facing next action hint |
+Payment methods:
 
-Mock success side effects:
+- `mock`
+- `alipay_sandbox`
 
-- payment record `paymentStatus` becomes `success`
-- payment record `paidAt` is set
-- order `paymentStatus` becomes `paid`
-- order `paidAt` is set
-- digital orders move to `pending_receipt`
-- logistics and offline orders move to `pending_fulfillment`
+## Configuration
 
-#### Error Cases
-
-- `401`: not logged in
-- `403`: current user is not the order buyer
-- `404`: payment record or order does not exist
-- `BUSINESS_ERROR`: payment is already successful or the order state cannot transition to the next mock-payment state
-
-## Shared Types / Enumerations
-
-- `paymentStatus` on payment records: current flow creates `initiated`, then mock success changes it to `success`. Failed-payment retry behavior is reserved in service logic but no failure endpoint currently exists.
-- Order-level `paymentStatus`: `unpaid`, `paid`, `refunding`, `refunded`.
-- `nextAction` values currently returned:
-  - `buyer_confirm_receipt_to_unlock_full_download`
-  - `seller_fill_tracking_info`
-  - `buyer_confirm_offline_delivery`
-  - `wait_for_offline_appointment_and_double_confirmation`
-  - `none`
-
-## Mock Payment Semantics
-
-The current implementation is an internal mock gateway, not a real payment-provider integration.
-
-- `/api/payments/gateway` reports `defaultGateway=MOCK`.
-- `/api/payments/orders/{orderId}/initiate` creates a local `payment_records` row and returns a mock gateway payload.
-- `/api/payments/{paymentNo}/mock-success` is an authenticated local endpoint that simulates the payment-provider success callback and mutates both payment and order state.
-- The mock success endpoint still enforces buyer ownership.
-
-## HTTP Asset Mapping
-
-- Primary validation file: `docs/06-http/payment.http`
-- Related files:
-  - `docs/06-http/order.http` covers order creation and post-payment order operations
-
-## Known Drift Or Follow-Up Notes
-
-- No known payment endpoint drift after the 2026-05-27 smoke-file split.
-- There is no real gateway callback signature, failure callback, payment-method selection, or refund-provider integration yet.
+See `docs/04-standards/payment-sandbox-configuration.md`. Sandbox credentials
+must remain outside the repository. Missing sandbox variables must not break
+mock mode or automated tests.

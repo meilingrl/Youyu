@@ -7,7 +7,7 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/order/OrderController.java`
   - controller: `backend/src/main/java/com/youyu/backend/controller/order/AdminOrderController.java`
   - request sample: `docs/06-http/order.http`
-- Last updated: 2026-06-01
+- Last updated: 2026-06-03
 
 ## Scope
 
@@ -326,13 +326,19 @@ Seller/admin confirms offline handoff from the seller side.
 
 #### Purpose
 
-Mark a refund as completed from the admin side.
+Execute the refund through the successful payment record's gateway and mark it
+completed from the admin side only after gateway confirmation.
 
 #### Error Cases
 
 - `404`: refund does not exist
 - `403`: current role lacks order manage permission
 - business error: refund or order state does not allow completion
+
+Completion is idempotent. A repeated request for an already completed refund
+returns the current refund detail. If gateway execution fails, the order stays
+`refunding`, the refund record becomes `failed`, and `failedReason` records a
+diagnostic summary instead of falsely marking the order refunded.
 
 ## Shared Types / Enumerations
 

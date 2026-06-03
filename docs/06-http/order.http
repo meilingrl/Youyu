@@ -179,6 +179,12 @@ Authorization: Bearer {{adminToken}}
 POST {{baseUrl}}/api/admin/orders/1/refunds/1/complete
 Authorization: Bearer {{adminToken}}
 
+###
+
+### Repeat admin refund completion - expect the same completed detail
+POST {{baseUrl}}/api/admin/orders/1/refunds/1/complete
+Authorization: Bearer {{adminToken}}
+
 # ---------------------------------------------------------------------------
 # Digital asset access
 # ---------------------------------------------------------------------------

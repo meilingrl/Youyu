@@ -58,6 +58,11 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Repair Rollup optional dependency on Linux
+        if: runner.os == 'Linux'
+        working-directory: frontend
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu
+
       - name: Run Vitest unit tests
         working-directory: frontend
         run: npm test
@@ -109,6 +114,11 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Repair Rollup optional dependency on Linux
+        if: runner.os == 'Linux'
+        working-directory: frontend
+        run: npm install --no-save @rollup/rollup-linux-x64-gnu
 
       - name: Install Playwright Chromium with system deps
         working-directory: frontend

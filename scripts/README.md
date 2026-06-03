@@ -1,9 +1,19 @@
 # Scripts
 
-本目录用于存放开发辅助脚本，例如：
+Useful local scripts:
 
-- `generate-perf-catalog-sql.mjs`：生成 `backend/src/main/resources/seed/data-perf-catalog.sql`（性能测试用大量商品 `INSERT`）。用法：`node scripts/generate-perf-catalog-sql.mjs 4000`（数量可选，默认 **3500**，上限 9000）
-- 数据导入导出脚本
-- 数据清洗脚本
-- 测试辅助脚本
-- 报表生成脚本
+- `start-backend-local.ps1`
+  - Load the current worktree root `.env` and run the backend on `127.0.0.1:8080`.
+- `start-frontend-local.ps1`
+  - Load the current worktree root `.env` and run the frontend dev server on `127.0.0.1:5173` by default.
+- `open-local-dev.cmd`
+  - Double-click on Windows to open two terminals automatically: one backend, one frontend.
+- `start-cloudflared-tunnel.ps1`
+  - Start a `cloudflared` tunnel to the local backend and refresh `.env` with the new callback URL.
+- `stop-cloudflared-tunnel.ps1`
+  - Stop the last `cloudflared` tunnel started by the script.
+- `start-local-dev.ps1`
+  - Print the exact backend/frontend startup commands for the current worktree.
+- `generate-perf-catalog-sql.mjs`
+  - Generate `backend/src/main/resources/seed/data-perf-catalog.sql`.
+  - Example: `node scripts/generate-perf-catalog-sql.mjs 4000`
