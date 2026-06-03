@@ -1,3 +1,14 @@
+## [2026-06-03] - PR Security Scan Runtime Fix
+
+### changed
+- Skipped the OWASP backend dependency report on pull-request runs so PR checks no longer cold-sync the full NVD dataset without an API key.
+- Kept the backend dependency report available for manual workflow runs and pushes to `master`.
+
+### verify
+- `git diff --check`
+
+---
+
 ## [2026-06-03] - Feature Polish Closeout
 
 ### changed
