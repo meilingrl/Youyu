@@ -6,6 +6,9 @@
 @buyerToken = mock-1001-USER
 @otherUserToken = mock-1004-USER
 @adminToken = mock-9001-ADMIN
+@seedDetailOrderId = 8812
+@seedRefundOrderId = 8808
+@seedRefundId = 1
 
 # ---------------------------------------------------------------------------
 # Buyer orders
@@ -89,37 +92,38 @@ Content-Type: application/json
 
 ### Get order detail
 ### Expected detail now includes refundRuleText, relatedReports, mediationSummary, and afterSalesSummary.
-GET {{baseUrl}}/api/orders/1
+GET {{baseUrl}}/api/orders/{{seedDetailOrderId}}
 Authorization: Bearer {{buyerToken}}
 
 ###
 
 ### Get another user's order detail - expect 403
-GET {{baseUrl}}/api/orders/1
+GET {{baseUrl}}/api/orders/{{seedDetailOrderId}}
 Authorization: Bearer {{otherUserToken}}
 
 ###
 
 ### Cancel order
-POST {{baseUrl}}/api/orders/1/cancel
+POST {{baseUrl}}/api/orders/8821/cancel
 Authorization: Bearer {{buyerToken}}
 
 ###
 
 ### Confirm receipt (logistics or digital)
-POST {{baseUrl}}/api/orders/1/confirm-receipt
+POST {{baseUrl}}/api/orders/8823/confirm-receipt
 Authorization: Bearer {{buyerToken}}
 
 ###
 
 ### Buyer confirm offline delivery
-POST {{baseUrl}}/api/orders/1/offline/buyer-confirm
+POST {{baseUrl}}/api/orders/8815/offline/buyer-confirm
 Authorization: Bearer {{buyerToken}}
 
 ###
 
 ### Request refund
-POST {{baseUrl}}/api/orders/1/refunds
+### Uses a seeded paid logistics order with persisted payment_records + order_fulfillments.
+POST {{baseUrl}}/api/orders/{{seedRefundOrderId}}/refunds
 Authorization: Bearer {{buyerToken}}
 Content-Type: application/json
 
@@ -130,7 +134,7 @@ Content-Type: application/json
 ###
 
 ### Duplicate refund for order already refunding - expect BUSINESS_ERROR
-POST {{baseUrl}}/api/orders/1/refunds
+POST {{baseUrl}}/api/orders/{{seedRefundOrderId}}/refunds
 Authorization: Bearer {{buyerToken}}
 Content-Type: application/json
 
@@ -152,13 +156,14 @@ Authorization: Bearer {{adminToken}}
 
 ### Admin get order detail
 ### Expected detail now includes the same after-sales visibility family, with admin seeing all relatedReports for the order.
-GET {{baseUrl}}/api/admin/orders/1
+GET {{baseUrl}}/api/admin/orders/{{seedDetailOrderId}}
 Authorization: Bearer {{adminToken}}
 
 ###
 
 ### Admin ship logistics order
-POST {{baseUrl}}/api/admin/orders/1/ship
+### Precondition: use a logistics order that has already been paid and is still pending fulfillment.
+POST {{baseUrl}}/api/admin/orders/8001/ship
 Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
@@ -170,19 +175,21 @@ Content-Type: application/json
 ###
 
 ### Admin confirm offline seller delivery
-POST {{baseUrl}}/api/admin/orders/1/offline/seller-confirm
+### Precondition: use an offline order that has already been paid and is waiting for seller-side confirmation.
+POST {{baseUrl}}/api/admin/orders/8003/offline/seller-confirm
 Authorization: Bearer {{adminToken}}
 
 ###
 
 ### Admin complete refund
-POST {{baseUrl}}/api/admin/orders/1/refunds/1/complete
+### Run after the refund request above and replace seedRefundId when a different refund record is created.
+POST {{baseUrl}}/api/admin/orders/{{seedRefundOrderId}}/refunds/{{seedRefundId}}/complete
 Authorization: Bearer {{adminToken}}
 
 ###
 
 ### Repeat admin refund completion - expect the same completed detail
-POST {{baseUrl}}/api/admin/orders/1/refunds/1/complete
+POST {{baseUrl}}/api/admin/orders/{{seedRefundOrderId}}/refunds/{{seedRefundId}}/complete
 Authorization: Bearer {{adminToken}}
 
 # ---------------------------------------------------------------------------
@@ -192,17 +199,17 @@ Authorization: Bearer {{adminToken}}
 ###
 
 ### Access full digital asset (requires confirmed receipt)
-GET {{baseUrl}}/api/orders/1/assets/3203/access
+GET {{baseUrl}}/api/orders/8813/assets/3203/access
 Authorization: Bearer {{buyerToken}}
 
 ###
 
 ### Access full asset without receipt - expect BUSINESS_ERROR
-GET {{baseUrl}}/api/orders/1/assets/3203/access
+GET {{baseUrl}}/api/orders/8823/assets/3203/access
 Authorization: Bearer mock-1002-USER
 
 ###
 
 ### Non-buyer cannot access full asset - expect 403
-GET {{baseUrl}}/api/orders/1/assets/3203/access
+GET {{baseUrl}}/api/orders/8813/assets/3203/access
 Authorization: Bearer {{otherUserToken}}

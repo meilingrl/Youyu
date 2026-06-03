@@ -50,6 +50,24 @@ const refunds = computed(() => detail.value?.refunds || [])
 const relatedReports = computed(() => detail.value?.relatedReports || [])
 const mediationSummary = computed(() => detail.value?.mediationSummary || null)
 const afterSalesSummary = computed(() => detail.value?.afterSalesSummary || null)
+const logisticsAddressText = computed(() => {
+  const address = detail.value?.fulfillment?.addressSnapshot
+  if (!address) return ''
+  return [address.campusName, address.detailAddress].filter(Boolean).join(' / ')
+})
+const mapProviderConfigured = computed(() => Boolean(import.meta.env.VITE_MAP_PROVIDER_KEY))
+const logisticsMapFallbackText = computed(() => {
+  if (detail.value?.fulfillmentType !== 'logistics') {
+    return ''
+  }
+  if (!logisticsAddressText.value) {
+    return 'No structured delivery address is available yet. Use the tracking number and order status for now.'
+  }
+  if (mapProviderConfigured.value) {
+    return 'A map provider key is configured. This version still shows address and logistics details first, with map rendering reserved behind this boundary.'
+  }
+  return 'No map provider key is configured. The page shows address and logistics details only, without pretending there is a live map.'
+})
 const hasPrimaryActions = computed(() =>
   ['pay', 'cancel', 'confirm_receipt', 'offline_buyer_confirm', 'apply_refund'].some((action) =>
     availableActions.value.includes(action)
@@ -330,31 +348,42 @@ watch(orderId, loadDetail, { immediate: true })
       </section>
 
       <section class="detail-panel">
-        <h3>履约信息</h3>
-        <div class="detail-grid">
+        <h3>Fulfillment</h3>
+        <p v-if="!detail.fulfillment" class="section-copy">
+          No structured fulfillment record is available for this sample order yet. Use the main order and payment status for now.
+        </p>
+        <div v-else class="detail-grid">
           <div class="detail-kv">
-            <span>履约状态</span>
-            <strong>{{ detail.fulfillment?.fulfillmentStatus || '未开始' }}</strong>
+            <span>Fulfillment status</span>
+            <strong>{{ detail.fulfillment?.fulfillmentStatus || 'Not started' }}</strong>
           </div>
           <div class="detail-kv" v-if="detail.fulfillment?.addressSnapshot">
-            <span>收货地址</span>
+            <span>Delivery address</span>
             <strong>
               {{ detail.fulfillment.addressSnapshot.campusName }} /
               {{ detail.fulfillment.addressSnapshot.detailAddress }}
             </strong>
           </div>
           <div class="detail-kv" v-if="detail.fulfillment?.logisticsCompany">
-            <span>物流信息</span>
+            <span>Logistics</span>
             <strong>{{ detail.fulfillment.logisticsCompany }} / {{ detail.fulfillment.trackingNo }}</strong>
           </div>
           <div class="detail-kv" v-if="detail.fulfillment?.offlineMeetTime">
-            <span>线下约定</span>
+            <span>Offline handoff</span>
             <strong>{{ detail.fulfillment.offlineMeetTime }} / {{ detail.fulfillment.offlineMeetLocation }}</strong>
           </div>
           <div class="detail-kv" v-if="detail.fulfillment?.downloadAccessStatus !== 'not_applicable'">
-            <span>下载权限</span>
+            <span>Download access</span>
             <strong>{{ detail.fulfillment?.downloadAccessStatus }}</strong>
           </div>
+        </div>
+        <div v-if="detail.fulfillmentType === 'logistics'" class="detail-map-fallback">
+          <div class="detail-kv">
+            <span>Map / delivery view</span>
+            <strong>{{ mapProviderConfigured ? 'Map boundary configured' : 'Map key missing' }}</strong>
+          </div>
+          <p class="section-copy">{{ logisticsMapFallbackText }}</p>
+          <p v-if="logisticsAddressText" class="section-copy">Delivery address: {{ logisticsAddressText }}</p>
         </div>
       </section>
 
@@ -620,6 +649,14 @@ watch(orderId, loadDetail, { immediate: true })
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
+}
+
+.detail-map-fallback {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(50, 91, 63, 0.08);
+  display: grid;
+  gap: 8px;
 }
 
 .detail-kv,
