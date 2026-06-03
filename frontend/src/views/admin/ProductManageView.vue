@@ -1,12 +1,17 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
-import { batchUpdateAdminProductStatus, getAdminProducts, updateAdminProductStatus } from '@/api/modules/admin'
+import { batchUpdateAdminProductStatus, exportAdminDataset, getAdminProducts, updateAdminProductStatus } from '@/api/modules/admin'
+import { useAuthStore } from '@/stores/auth'
+import { hasAnyAdminPermission } from '@/utils/admin-permissions'
+import { downloadBlobResponse } from '@/utils/download-utils'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
 
+const authStore = useAuthStore()
 const loading = ref(false)
+const exportLoading = ref(false)
 const error = ref('')
 const rows = ref([])
 const total = ref(0)
@@ -20,6 +25,7 @@ const filters = reactive({
   reviewStatus: '',
   productType: ''
 })
+const canExport = computed(() => hasAnyAdminPermission(authStore.currentRole, ['ADMIN_DATA_EXPORT']))
 async function loadProducts() {
   loading.value = true
   error.value = ''
@@ -99,6 +105,23 @@ async function batchChangeStatus(status) {
   }
 }
 
+async function downloadProductsExport() {
+  if (!canExport.value) {
+    return
+  }
+
+  exportLoading.value = true
+  try {
+    const response = await exportAdminDataset('products')
+    downloadBlobResponse(response, 'admin-products-summary.csv')
+    ElMessage.success('商品导出已开始')
+  } catch (err) {
+    ElMessage.error(resolveErrorMessage(err))
+  } finally {
+    exportLoading.value = false
+  }
+}
+
 onMounted(loadProducts)
 </script>
 
@@ -114,6 +137,10 @@ onMounted(loadProducts)
     empty-description="当前没有符合条件的商品。"
     @retry="loadProducts"
   >
+    <template #toolbar>
+      <el-button v-if="canExport" plain :loading="exportLoading" @click="downloadProductsExport">导出商品摘要</el-button>
+    </template>
+
     <template #filters>
       <div class="filter-row">
         <el-input v-model="filters.keyword" placeholder="搜索商品标题 / 卖家 / 分类" clearable @keyup.enter="onSearch" />

@@ -15,11 +15,16 @@ const loading = ref(false)
 const loadError = ref('')
 const cart = ref({ items: [], summary: {} })
 const pendingKeys = ref([])
+const bulkSelectionPending = ref(false)
 
 const selectedItems = computed(() => cart.value.items.filter((item) => item.selected))
 const hasSelectedItems = computed(() => selectedItems.value.length > 0)
 const selectedCount = computed(() => Number(cart.value.summary.selectedCount || selectedItems.value.length || 0))
 const selectedAmount = computed(() => Number(cart.value.summary.selectedAmount || 0))
+const allItemsSelected = computed(
+  () => cart.value.items.length > 0 && cart.value.items.every((item) => item.selected)
+)
+const selectionControlsDisabled = computed(() => loading.value || bulkSelectionPending.value || cart.value.items.length === 0)
 const mobileActionHelper = computed(() =>
   hasSelectedItems.value ? `已选 ${selectedCount.value} 件，可进入结算` : '先勾选商品再结算'
 )
@@ -69,6 +74,7 @@ async function loadCart() {
 }
 
 async function updateItem(item, payload) {
+  if (bulkSelectionPending.value) return
   const actionKey = `update:${item.id}`
   if (isPending(actionKey)) return
 
@@ -81,6 +87,48 @@ async function updateItem(item, payload) {
   } finally {
     markPending(actionKey, false)
   }
+}
+
+async function updateSelectionBatch(items, resolveSelected, successMessage) {
+  const updates = items
+    .map((item) => ({
+      item,
+      selected: Boolean(resolveSelected(item))
+    }))
+    .filter(({ item, selected }) => item.selected !== selected)
+
+  if (updates.length === 0) {
+    ElMessage.info('Selection is already up to date')
+    return
+  }
+
+  bulkSelectionPending.value = true
+  try {
+    let latestCart = null
+    for (const { item, selected } of updates) {
+      const response = await updateCartItem(item.id, { selected })
+      latestCart = response.data || latestCart
+    }
+    if (latestCart) {
+      cart.value = latestCart
+    } else {
+      await loadCart()
+    }
+    ElMessage.success(successMessage)
+  } catch (error) {
+    ElMessage.error(error?.response?.data?.message || 'Selection update failed')
+    await loadCart()
+  } finally {
+    bulkSelectionPending.value = false
+  }
+}
+
+function selectAllItems() {
+  updateSelectionBatch(cart.value.items, () => true, 'All cart items selected')
+}
+
+function invertSelection() {
+  updateSelectionBatch(cart.value.items, (item) => !item.selected, 'Cart selection inverted')
 }
 
 async function handleRemove(item) {
@@ -151,6 +199,24 @@ onMounted(loadCart)
             <span>已选 {{ cart.summary.selectedCount || 0 }} 件</span>
             <strong>{{ formatCurrency(cart.summary.selectedAmount || 0) }}</strong>
           </div>
+          <div class="cart-stage-card__controls" aria-label="Cart selection controls">
+            <el-button
+              plain
+              :loading="bulkSelectionPending"
+              :disabled="selectionControlsDisabled || allItemsSelected"
+              @click="selectAllItems"
+            >
+              Select all
+            </el-button>
+            <el-button
+              plain
+              :loading="bulkSelectionPending"
+              :disabled="selectionControlsDisabled"
+              @click="invertSelection"
+            >
+              Invert selection
+            </el-button>
+          </div>
         </section>
 
         <section class="cart-grid">
@@ -175,7 +241,7 @@ onMounted(loadCart)
                 </div>
                 <el-checkbox
                   :model-value="item.selected"
-                  :disabled="isPending(`update:${item.id}`)"
+                  :disabled="bulkSelectionPending || isPending(`update:${item.id}`)"
                   @change="(value) => updateItem(item, { selected: value })"
                 >
                   本次购买
@@ -188,7 +254,7 @@ onMounted(loadCart)
                   <el-input-number
                     :model-value="item.quantity"
                     :min="1"
-                    :disabled="isPending(`update:${item.id}`)"
+                    :disabled="bulkSelectionPending || isPending(`update:${item.id}`)"
                     @change="(value) => updateItem(item, { quantity: value })"
                   />
                 </div>
@@ -258,7 +324,8 @@ onMounted(loadCart)
 }
 
 .cart-stage-card__summary,
-.cart-summary-card__actions {
+.cart-summary-card__actions,
+.cart-stage-card__controls {
   display: flex;
   align-items: center;
   gap: 18px;
@@ -356,6 +423,7 @@ onMounted(loadCart)
   .cart-item__top,
   .cart-item__controls,
   .cart-item__actions,
+  .cart-stage-card__controls,
   .cart-summary-card__actions {
     grid-template-columns: 1fr;
     flex-direction: column;

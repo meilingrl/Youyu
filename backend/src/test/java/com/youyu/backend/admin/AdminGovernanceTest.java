@@ -25,7 +25,7 @@ class AdminGovernanceTest extends BackendTestBase {
 
     @Test
     void adminDashboardReturnsAggregatedMetrics() throws Exception {
-        mockMvc.perform(get("/api/admin/dashboard")
+        String response = mockMvc.perform(get("/api/admin/dashboard")
                         .header("Authorization", "Bearer " + ADMIN))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -42,9 +42,23 @@ class AdminGovernanceTest extends BackendTestBase {
                 .andExpect(jsonPath("$.data.governanceSignals").isArray())
                 .andExpect(jsonPath("$.data.statusBreakdowns.orders").isArray())
                 .andExpect(jsonPath("$.data.statusBreakdowns.mediation").isArray())
+                .andExpect(jsonPath("$.data.summary.totalSalesAmount").exists())
+                .andExpect(jsonPath("$.data.summary.todayOrderCount").exists())
+                .andExpect(jsonPath("$.data.summary.todaySalesAmount").exists())
+                .andExpect(jsonPath("$.data.salesAnalytics.trend").isArray())
+                .andExpect(jsonPath("$.data.salesAnalytics.hotProducts").isArray())
                 .andExpect(jsonPath("$.data.salesAnalytics.categorySales").isArray())
                 .andExpect(jsonPath("$.data.salesAnalytics.shopRankings").isArray())
-                .andExpect(jsonPath("$.data.unavailableMetrics[0].available").value(false));
+                .andExpect(jsonPath("$.data.unavailableMetrics[0].available").value(false))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        List<Object> hotProducts = JsonPath.read(response, "$.data.salesAnalytics.hotProducts");
+        if (!hotProducts.isEmpty()) {
+            assertFalse("Unknown product".equals(JsonPath.read(hotProducts.get(0), "$.productTitle")),
+                    "Expected dashboard hot products to use order item snapshots");
+        }
     }
 
     @Test
@@ -75,6 +89,8 @@ class AdminGovernanceTest extends BackendTestBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.items.length()", greaterThan(0)))
+                .andExpect(jsonPath("$.data.items[0].password").doesNotExist())
+                .andExpect(jsonPath("$.data.items[0].passwordHash").doesNotExist())
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -124,8 +140,80 @@ class AdminGovernanceTest extends BackendTestBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.user.username").value("zhangsan"))
+                .andExpect(jsonPath("$.data.user.password").doesNotExist())
+                .andExpect(jsonPath("$.data.user.passwordHash").doesNotExist())
                 .andExpect(jsonPath("$.data.user.nickname").exists())
                 .andExpect(jsonPath("$.data.verifications").isArray());
+    }
+
+    @Test
+    void assignUserRoleUpdatesTargetRole() throws Exception {
+        mockMvc.perform(put("/api/admin/users/1012/role")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "role": "OPERATOR",
+                                  "reason": "feature polish verification"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.user.role").value("OPERATOR"))
+                .andExpect(jsonPath("$.data.previousRole").value("USER"))
+                .andExpect(jsonPath("$.data.currentRole").value("OPERATOR"));
+
+        mockMvc.perform(put("/api/admin/users/1012/role")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "role": "USER",
+                                  "reason": "cleanup"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.user.role").value("USER"));
+    }
+
+    @Test
+    void assignUserRoleRejectsSelfRoleChange() throws Exception {
+        mockMvc.perform(put("/api/admin/users/9001/role")
+                        .header("Authorization", "Bearer " + ADMIN)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "role": "REVIEWER",
+                                  "reason": "not allowed"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
+    @Test
+    void exportUsersReturnsCsvWithoutSensitiveFields() throws Exception {
+        String csv = mockMvc.perform(get("/api/admin/exports/users")
+                        .header("Authorization", "Bearer " + ADMIN))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        org.junit.jupiter.api.Assertions.assertTrue(csv.contains("userId,username,nickname,status,role"));
+        org.junit.jupiter.api.Assertions.assertFalse(csv.contains("passwordHash"));
+        org.junit.jupiter.api.Assertions.assertFalse(csv.contains("password,"));
+    }
+
+    @Test
+    void exportOrdersIncludesOrderSummaryColumns() throws Exception {
+        String csv = mockMvc.perform(get("/api/admin/exports/orders")
+                        .header("Authorization", "Bearer " + ADMIN))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        org.junit.jupiter.api.Assertions.assertTrue(csv.contains("orderId,orderNo,buyerUserId,sellerUserId,shopId,productTitle,itemCount"));
     }
 
     @Test

@@ -451,4 +451,50 @@ class ReviewIntegrationTest {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("BUSINESS_ERROR"));
     }
+
+    @Test
+    @Order(15)
+    void submitProductReviewWithImagesPersistsInMineAndPublicLists() throws Exception {
+        String token = "mock-1004-USER";
+        String orderResp = completeOfflineOrder(token, 3003);
+        Number orderId = JsonPath.read(orderResp, "$.data.id");
+        Number itemId = firstOrderItemId(token, orderId);
+        String imageUrl = "data:image/png;base64,iVBORw0KGgo=";
+
+        mockMvc.perform(post("/api/reviews/products")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orderItemId": %d,
+                                  "score": 5,
+                                  "content": "Image review",
+                                  "images": [
+                                    {
+                                      "mediaUrl": "%s",
+                                      "fileName": "review.png",
+                                      "mimeType": "image/png"
+                                    }
+                                  ]
+                                }
+                                """.formatted(itemId.longValue(), imageUrl)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.images[0].mediaUrl").value(imageUrl))
+                .andExpect(jsonPath("$.data.images[0].fileName").value("review.png"))
+                .andExpect(jsonPath("$.data.images[0].mimeType").value("image/png"));
+
+        mockMvc.perform(get("/api/reviews/mine")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.productReviews[?(@.content == 'Image review')].images[0].mediaUrl")
+                        .value(imageUrl));
+
+        mockMvc.perform(get("/api/products/3003/reviews?page=1&pageSize=10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.items[?(@.content == 'Image review')].images[0].mediaUrl")
+                        .value(imageUrl));
+    }
 }

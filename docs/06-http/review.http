@@ -26,7 +26,14 @@ Content-Type: application/json
 {
   "orderItemId": {{seedReviewOrderItemId}},
   "score": 5,
-  "content": "Excellent quality, exactly as described."
+  "content": "Excellent quality, exactly as described.",
+  "images": [
+    {
+      "mediaUrl": "data:image/png;base64,iVBORw0KGgo=",
+      "fileName": "review.png",
+      "mimeType": "image/png"
+    }
+  ]
 }
 
 ### Submit product review - expect 401 (no token)
@@ -58,7 +65,14 @@ Content-Type: application/json
 {
   "shopId": 4001,
   "score": 4,
-  "content": "Good shop, fast shipping."
+  "content": "Good shop, fast shipping.",
+  "images": [
+    {
+      "mediaUrl": "data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAQAcJaQAA3AA/vuUAAA=",
+      "fileName": "shop-review.webp",
+      "mimeType": "image/webp"
+    }
+  ]
 }
 
 ### Submit shop review - expect BUSINESS_ERROR (no completed order from shop)

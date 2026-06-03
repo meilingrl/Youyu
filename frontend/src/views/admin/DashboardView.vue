@@ -1,25 +1,36 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import InsightBarList from '@/components/common/InsightBarList.vue'
+import ChartBar from '@/components/common/ChartBar.vue'
+import ChartPie from '@/components/common/ChartPie.vue'
 import { ElMessage } from '@/plugins/element-plus-services'
-import { getAdminDashboard } from '@/api/modules/admin'
+import { getAdminDashboard, exportAdminDataset } from '@/api/modules/admin'
+import { useAuthStore } from '@/stores/auth'
+import { hasAnyAdminPermission } from '@/utils/admin-permissions'
+import { downloadBlobResponse } from '@/utils/download-utils'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel } from '@/utils/admin-display-labels'
-import ChartPie from '@/components/common/ChartPie.vue'
 
+const authStore = useAuthStore()
 const loading = ref(false)
+const exportLoading = ref('')
 const summary = ref({})
 const queueMetrics = ref([])
 const governanceSignals = ref([])
 const statusBreakdowns = ref({ orders: [], mediation: [] })
-const salesAnalytics = ref({ categorySales: [], shopRankings: [] })
+const salesAnalytics = ref({ trend: [], hotProducts: [], categorySales: [], shopRankings: [] })
 const unavailableMetrics = ref([])
 
+const canExport = computed(() =>
+  hasAnyAdminPermission(authStore.currentRole, ['ADMIN_DATA_EXPORT'])
+)
+
 const heroStats = computed(() => [
-  { label: '用户', value: summary.value.userCount || 0, hint: '账号总量' },
-  { label: '商品', value: summary.value.productCount || 0, hint: '商品池' },
-  { label: '店铺', value: summary.value.shopCount || 0, hint: '入驻主体' },
-  { label: '订单', value: summary.value.orderCount || 0, hint: '交易记录' }
+  { label: '用户总量', value: summary.value.userCount || 0, hint: '平台账号总数' },
+  { label: '订单总量', value: summary.value.orderCount || 0, hint: '累计订单记录' },
+  { label: '销售总额', value: `¥${formatMoney(summary.value.totalSalesAmount)}`, hint: '已支付且未退款订单' },
+  { label: '今日订单', value: summary.value.todayOrderCount || 0, hint: '按提交日期统计' },
+  { label: '今日销售', value: `¥${formatMoney(summary.value.todaySalesAmount)}`, hint: '今日已支付订单金额' }
 ])
 
 const visibleQueueMetrics = computed(() =>
@@ -40,6 +51,25 @@ const mediationChartData = computed(() =>
     .filter((item) => Number(item.value || 0) > 0)
     .map((item) => ({ name: adminLabel(item.status), value: Number(item.value || 0), raw: item }))
 )
+
+const trendChartData = computed(() =>
+  (salesAnalytics.value.trend || []).map((item) => ({
+    name: String(item.date || '').slice(5) || item.date,
+    value: Number(item.salesAmount || 0)
+  }))
+)
+
+const hotProductBars = computed(() =>
+  (salesAnalytics.value.hotProducts || []).map((item, index) => ({
+    id: `hot-product-${index}`,
+    label: `${index + 1}. ${item.productTitle || '未命名商品'}`,
+    value: Number(item.soldCount || 0),
+    displayValue: `${Number(item.soldCount || 0)} 件`,
+    helper: `成交额 ¥${formatMoney(item.salesAmount)} · ${Number(item.orderCount || 0)} 笔订单`,
+    tone: index === 0 ? 'warning' : 'primary'
+  }))
+)
+
 const categorySalesBars = computed(() => {
   const items = salesAnalytics.value.categorySales || []
   const total = items.reduce((sum, item) => sum + Number(item.salesAmount || 0), 0)
@@ -57,6 +87,7 @@ const categorySalesBars = computed(() => {
     }
   })
 })
+
 const shopRankingBars = computed(() =>
   (salesAnalytics.value.shopRankings || []).map((item, index) => ({
     id: `shop-${item.shopId || index}`,
@@ -107,12 +138,29 @@ async function loadDashboard() {
     queueMetrics.value = data.queueMetrics || []
     governanceSignals.value = data.governanceSignals || []
     statusBreakdowns.value = data.statusBreakdowns || { orders: [], mediation: [] }
-    salesAnalytics.value = data.salesAnalytics || { categorySales: [], shopRankings: [] }
+    salesAnalytics.value = data.salesAnalytics || { trend: [], hotProducts: [], categorySales: [], shopRankings: [] }
     unavailableMetrics.value = data.unavailableMetrics || []
   } catch (err) {
     ElMessage.error(resolveErrorMessage(err))
   } finally {
     loading.value = false
+  }
+}
+
+async function downloadDataset(dataset) {
+  if (!canExport.value) {
+    return
+  }
+
+  exportLoading.value = dataset
+  try {
+    const response = await exportAdminDataset(dataset)
+    downloadBlobResponse(response, `admin-${dataset}-summary.csv`)
+    ElMessage.success('导出已开始')
+  } catch (err) {
+    ElMessage.error(resolveErrorMessage(err))
+  } finally {
+    exportLoading.value = ''
   }
 }
 
@@ -125,14 +173,22 @@ onMounted(loadDashboard)
       <div>
         <span class="eyebrow">治理工作台</span>
         <h1>治理总览</h1>
-        <p>集中查看待办队列、治理信号和调解进度，帮助管理员优先处理有明确归属的工作。</p>
+        <p>集中查看待办队列、核心经营指标和调解进度，帮助管理员优先处理有明确归属的工作。</p>
       </div>
 
-      <div class="dashboard-hero__stats" aria-label="后台核心数据">
-        <div v-for="item in heroStats" :key="item.label" class="dashboard-hero__stat">
-          <span class="dashboard-hero__stat-label">{{ item.label }}</span>
-          <strong>{{ item.value }}</strong>
-          <small>{{ item.hint }}</small>
+      <div class="dashboard-hero__meta">
+        <div class="dashboard-hero__stats" aria-label="后台核心数据">
+          <div v-for="item in heroStats" :key="item.label" class="dashboard-hero__stat">
+            <span class="dashboard-hero__stat-label">{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+            <small>{{ item.hint }}</small>
+          </div>
+        </div>
+
+        <div v-if="canExport" class="dashboard-export-actions">
+          <el-button plain :loading="exportLoading === 'users'" @click="downloadDataset('users')">导出用户</el-button>
+          <el-button plain :loading="exportLoading === 'orders'" @click="downloadDataset('orders')">导出订单</el-button>
+          <el-button plain :loading="exportLoading === 'products'" @click="downloadDataset('products')">导出商品</el-button>
         </div>
       </div>
     </section>
@@ -169,7 +225,7 @@ onMounted(loadDashboard)
       <div class="dashboard-section__header">
         <div>
           <h2>治理信号</h2>
-          <p>用于发现需要复核或持续关注的后台状态，辅助各业务列表处理。</p>
+          <p>用于发现需要复核或持续关注的后台状态，辅助业务列表处理。</p>
         </div>
       </div>
 
@@ -188,6 +244,28 @@ onMounted(loadDashboard)
         </component>
       </div>
       <div v-else class="admin-empty-line">当前没有需要额外关注的治理信号。</div>
+    </section>
+
+    <section class="dashboard-section dashboard-section--split">
+      <article class="breakdown-panel">
+        <div class="dashboard-section__header">
+          <div>
+            <h2>近 7 天销售趋势</h2>
+            <p>按订单提交日期统计已支付且未退款的销售金额。</p>
+          </div>
+        </div>
+        <ChartBar :data="trendChartData" :horizontal="false" color="#a85c3d" height="280px" unit=" 元" />
+      </article>
+
+      <article class="breakdown-panel">
+        <div class="dashboard-section__header">
+          <div>
+            <h2>热销商品</h2>
+            <p>按已支付订单的售出件数排序，金额作为辅助参考。</p>
+          </div>
+        </div>
+        <InsightBarList :items="hotProductBars" empty-text="暂无热销商品数据" />
+      </article>
     </section>
 
     <section class="dashboard-section">
@@ -214,15 +292,15 @@ onMounted(loadDashboard)
       <div class="breakdown-panel">
         <div class="dashboard-section__header">
           <div>
-            <h2>订单状态</h2>
-            <p>订单履约页负责处理发货、线下确认和退款完成动作。</p>
+            <h2>订单状态统计</h2>
+            <p>用于跟踪支付、履约、收货、退款等关键订单状态。</p>
           </div>
         </div>
 
         <ChartPie
           v-if="orderChartData.length"
           :data="orderChartData"
-          :colors="['#c47a2c', '#b65f3b', '#d57a4a']"
+          :colors="['#d57a4a', '#c47a2c', '#8d9a6b', '#6d8a62', '#b65f3b', '#8a6953', '#9d8f84']"
           height="280px"
           inner-radius="46%"
           outer-radius="70%"
@@ -238,7 +316,7 @@ onMounted(loadDashboard)
             <strong>{{ item.value }}</strong>
           </router-link>
         </div>
-        <div v-if="!orderChartData.length" class="admin-empty-line">暂无待跟进订单状态。</div>
+        <div v-if="!orderChartData.length" class="admin-empty-line">暂无可展示的订单状态数据。</div>
       </div>
 
       <div class="breakdown-panel">
@@ -306,11 +384,23 @@ onMounted(loadDashboard)
   box-shadow: 0 20px 48px rgba(88, 62, 43, 0.08);
 }
 
+.dashboard-hero__meta {
+  display: grid;
+  gap: 12px;
+  min-width: min(720px, 100%);
+}
+
 .dashboard-hero__stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(72px, 1fr));
+  grid-template-columns: repeat(5, minmax(96px, 1fr));
   gap: 10px;
-  min-width: 360px;
+}
+
+.dashboard-export-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .dashboard-hero__stat,
@@ -332,7 +422,7 @@ onMounted(loadDashboard)
 }
 
 .dashboard-hero__stat strong {
-  font-size: 30px;
+  font-size: 26px;
   line-height: 1;
 }
 
@@ -487,7 +577,6 @@ onMounted(loadDashboard)
   border-radius: 18px;
 }
 
-.breakdown-list,
 .unavailable-list,
 .chart-legend-links {
   display: grid;
@@ -505,8 +594,14 @@ onMounted(loadDashboard)
   gap: 4px;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1280px) {
   .dashboard-hero__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .dashboard-hero__meta {
     min-width: 0;
     width: 100%;
   }
@@ -526,6 +621,10 @@ onMounted(loadDashboard)
   .unavailable-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .dashboard-export-actions {
+    justify-content: stretch;
   }
 }
 </style>

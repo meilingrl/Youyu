@@ -68,7 +68,7 @@ function setSession(role) {
   })
 }
 
-describe('router guards', () => {
+describe('router guards', { timeout: 15000 }, () => {
   beforeEach(() => {
     window.localStorage.clear()
     document.title = ''

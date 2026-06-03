@@ -26,6 +26,8 @@ public interface UserMapper {
 
     void updateStatus(Long id, String status);
 
+    void updateRole(Long id, String role);
+
     void updateNickname(Long id, String nickname);
 
     void updateAvatar(Long id, String avatarUrl);
@@ -74,6 +76,8 @@ public interface UserMapper {
     void updatePasswordHash(Long userId, String newHash);
 
     Optional<Map<String, Object>> findPreferenceByUserId(Long userId);
+
+    long countByRoles(List<String> roles);
 
     void upsertPreference(Long userId, Map<String, Object> preference);
 

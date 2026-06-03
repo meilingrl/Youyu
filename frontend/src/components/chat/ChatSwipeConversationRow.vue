@@ -142,6 +142,7 @@ function choose(action) {
 <style scoped>
 .chat-swipe-row {
   position: relative;
+  flex: 0 0 auto;
   overflow: hidden;
   border-radius: 12px;
   background: #f5f5f4;
@@ -195,6 +196,7 @@ function choose(action) {
   position: relative;
   z-index: 1;
   width: 100%;
+  box-sizing: border-box;
   display: flex;
   gap: 12px;
   align-items: center;
@@ -253,7 +255,7 @@ function choose(action) {
   min-width: 0;
   display: grid;
   gap: 5px;
-  flex: 1;
+  flex: 1 1 auto;
 }
 
 .chat-swipe-row__top,
@@ -275,6 +277,7 @@ function choose(action) {
 }
 
 .chat-swipe-row__top strong {
+  min-width: 0;
   font-size: 15px;
 }
 
@@ -282,6 +285,11 @@ function choose(action) {
 .chat-swipe-row__preview {
   color: #78716c;
   font-size: 13px;
+}
+
+.chat-swipe-row__top time,
+.chat-swipe-row__unread {
+  flex-shrink: 0;
 }
 
 .chat-swipe-row__meta {

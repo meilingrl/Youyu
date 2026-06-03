@@ -22,6 +22,16 @@ const emit = defineEmits(['update:page'])
           <el-rate :model-value="review.score" disabled show-score size="small" />
         </div>
         <p v-if="review.content" class="review-list__content">{{ review.content }}</p>
+        <div v-if="review.images?.length" class="review-list__images">
+          <button
+            v-for="image in review.images"
+            :key="image.id || image.mediaUrl"
+            type="button"
+            class="review-list__image"
+          >
+            <img :src="image.mediaUrl" :alt="image.fileName || 'Review image'" loading="lazy" decoding="async" />
+          </button>
+        </div>
         <span class="review-list__time">{{ review.createdAt }}</span>
       </div>
       <el-pagination
@@ -64,6 +74,27 @@ const emit = defineEmits(['update:page'])
 .review-list__time {
   font-size: 12px;
   color: var(--el-text-color-placeholder);
+}
+.review-list__images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 96px));
+  gap: 8px;
+  margin: 8px 0;
+}
+.review-list__image {
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  aspect-ratio: 1 / 1;
+  background: var(--el-fill-color-light);
+  cursor: default;
+}
+.review-list__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 .review-list__empty {
   text-align: center;

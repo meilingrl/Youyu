@@ -63,8 +63,8 @@ describe('review store', () => {
       getMyReviews.mockResolvedValue({
         success: true,
         data: {
-          productReviews: [{ id: 1, score: 5 }],
-          shopReviews: [{ id: 2, score: 4 }]
+          productReviews: [{ id: 1, score: 5, images: [{ media_url: 'data:image/png;base64,abc' }] }],
+          shopReviews: [{ id: 2, score: 4, images: [{ mediaUrl: 'data:image/webp;base64,def' }] }]
         }
       })
       const store = setupStore()
@@ -72,6 +72,8 @@ describe('review store', () => {
 
       expect(store.myProductReviews).toHaveLength(1)
       expect(store.myShopReviews).toHaveLength(1)
+      expect(store.myProductReviews[0].images[0].mediaUrl).toBe('data:image/png;base64,abc')
+      expect(store.myShopReviews[0].images[0].mediaUrl).toBe('data:image/webp;base64,def')
       expect(store.myReviewsError).toBe('')
     })
   })
@@ -80,13 +82,17 @@ describe('review store', () => {
     it('loads product reviews with pagination', async () => {
       getProductReviewList.mockResolvedValue({
         success: true,
-        data: { items: [{ id: 1, score: 5, content: 'Great' }], total: 1 }
+        data: { items: [{ id: 1, score: 5, content: 'Great', images: [{ file_name: 'review.png', media_url: 'data:image/png;base64,abc' }] }], total: 1 }
       })
       const store = setupStore()
       await store.loadProductReviews(100, 1, 10)
 
       expect(getProductReviewList).toHaveBeenCalledWith(100, { page: 1, pageSize: 10 })
       expect(store.productReviews).toHaveLength(1)
+      expect(store.productReviews[0].images[0]).toMatchObject({
+        fileName: 'review.png',
+        mediaUrl: 'data:image/png;base64,abc'
+      })
       expect(store.productReviewTotal).toBe(1)
     })
   })

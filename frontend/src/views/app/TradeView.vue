@@ -63,7 +63,7 @@ const orderCounts = computed(() => countOrdersByStatus(orders.value))
 const pendingPaymentOrders = computed(() => orders.value.filter((order) => order.orderStatus === 'pending_payment'))
 const pendingReceiptOrders = computed(() => orders.value.filter((order) => order.orderStatus === 'pending_receipt'))
 const refundInProgressOrders = computed(() =>
-  orders.value.filter((order) => order.orderStatus === 'refund_in_progress')
+  orders.value.filter((order) => ['refunding', 'refund_in_progress'].includes(order.orderStatus))
 )
 const pendingReviewCount = computed(() => pendingReviews.value.length)
 
@@ -90,7 +90,7 @@ const metrics = computed(() => [
   },
   {
     label: '退款处理中',
-    value: String(orderCounts.value.refund_in_progress),
+    value: String(orderCounts.value.refunding),
     helper: '正在跟进退款或售后处理的订单'
   },
   {
@@ -205,7 +205,7 @@ const quickEntries = computed(() => [
     key: 'orders',
     eyebrow: 'Orders',
     title: '订单与售后',
-    description: `${orders.value.length} 个订单，其中 ${orderCounts.value.pending_payment + orderCounts.value.pending_receipt + orderCounts.value.refund_in_progress} 个需要关注。`,
+    description: `${orders.value.length} 个订单，其中 ${orderCounts.value.pending_payment + orderCounts.value.pending_receipt + orderCounts.value.refunding} 个需要关注。`,
     buttonText: '查看订单',
     route: '/app/orders'
   },

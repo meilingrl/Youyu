@@ -20,8 +20,16 @@ export function updateAdminUserStatus(id, payload) {
   return service.put(`/admin/users/${id}/status`, payload)
 }
 
+export function updateAdminUserRole(id, payload) {
+  return service.put(`/admin/users/${id}/role`, payload)
+}
+
 export function batchUpdateAdminUserStatus(payload) {
   return service.put('/admin/users/batch-status', payload)
+}
+
+export function exportAdminDataset(dataset) {
+  return service.get(`/admin/exports/${dataset}`, { responseType: 'blob' })
 }
 
 export function getAdminVerifications(params) {

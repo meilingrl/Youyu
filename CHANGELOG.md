@@ -22,6 +22,36 @@
 
 ---
 
+## [2026-06-03] - PR Security Scan Runtime Fix
+
+### changed
+- Skipped the OWASP backend dependency report on pull-request runs so PR checks no longer cold-sync the full NVD dataset without an API key.
+- Kept the backend dependency report available for manual workflow runs and pushes to `master`.
+
+### verify
+- `git diff --check`
+
+---
+
+## [2026-06-03] - Feature Polish Closeout
+
+### changed
+- Stabilized the user messages route with a fixed-height conversation workspace and internal message-thread scrolling so long chats no longer stretch the page.
+- Completed explore polish with working category filtering, fuzzy keyword search, route-persisted allowlisted sorting (`price_asc`, `price_desc`, `sales_desc`, `newest`), and a stable non-shaking search shell.
+- Added cart bulk selection controls, persisted review-image attachments, usable refund recovery, and logistics/map fallback messaging on order detail instead of pretending a provider-backed map is configured.
+- Added admin role assignment with explicit `ADMIN_ROLE_ASSIGN` protection, self-change and last-full-access-admin safeguards, and audited actor/target role transitions.
+- Expanded the admin dashboard with paid-not-refunded sales metrics, today totals, seven-day sales trend data, hot-product ranking from real order-item snapshots, fuller order-status breakdowns, and CSV export entry points.
+- Added admin CSV exports for `users`, `orders`, and `products` with `ADMIN_DATA_EXPORT` protection and allowlisted fields that exclude passwords, password hashes, tokens, verification codes, and similar sensitive values.
+
+### verify
+- Backend `.\\mvnw.cmd test`
+- Frontend `npm test`
+- Frontend `npm run build`
+- `git diff --check`
+- Browser/manual checks for `/app/messages`, `/app/explore`, `/app/cart`, `/app/orders/8812`, `/admin/dashboard`, and `/admin/users`
+
+---
+
 ## [2026-06-03] - Invalid Entity ID Guard
 
 ### fixed

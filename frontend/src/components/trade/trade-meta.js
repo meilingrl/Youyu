@@ -71,12 +71,17 @@ const ORDER_STATUS_META = {
   completed: {
     label: '已完成',
     tone: 'success',
-    description: '交易已完成，可继续评价。'
+    description: '交易已完成，可以继续评价。'
   },
   cancelled: {
     label: '已取消',
     tone: 'muted',
     description: '订单已关闭，不再继续流转。'
+  },
+  refunding: {
+    label: '退款中',
+    tone: 'danger',
+    description: '退款申请处理中，请关注平台反馈。'
   },
   refund_in_progress: {
     label: '退款中',
@@ -102,6 +107,10 @@ const PAYMENT_STATUS_META = {
   refunded: {
     label: '已退款',
     tone: 'muted'
+  },
+  refunding: {
+    label: '退款中',
+    tone: 'danger'
   }
 }
 
@@ -118,9 +127,10 @@ const FULFILLMENT_TYPE_META = {
 }
 
 export function getOrderStatusMeta(status) {
+  const normalizedStatus = status === 'refund_in_progress' ? 'refunding' : status
   return (
-    ORDER_STATUS_META[status] || {
-      label: status || '未知状态',
+    ORDER_STATUS_META[normalizedStatus] || {
+      label: normalizedStatus || '未知状态',
       tone: 'muted',
       description: '当前交易状态暂未收录。'
     }
@@ -155,14 +165,18 @@ export function countOrdersByStatus(orders = []) {
     pending_fulfillment: 0,
     pending_receipt: 0,
     completed: 0,
+    refunding: 0,
     refund_in_progress: 0,
     refunded: 0
   }
 
   for (const order of orders) {
-    const status = order?.orderStatus
+    const status = order?.orderStatus === 'refund_in_progress' ? 'refunding' : order?.orderStatus
     if (status && counters[status] !== undefined) {
       counters[status] += 1
+      if (status === 'refunding') {
+        counters.refund_in_progress += 1
+      }
     }
   }
 
