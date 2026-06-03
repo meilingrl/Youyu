@@ -56,12 +56,10 @@ Planning documents with distinct responsibilities:
 
 - `current/stage-roadmap.md`
   - current phase and stage progression
-- `current/feature-roadmap.md`
-  - feature expansion order and status
-- `current/open-questions.md`
-  - unresolved items that are not yet formal decisions
+- `current/launch-preparation-roadmap.md`
+  - launch-preparation sequencing and acceptance work
 - `archived/`
-  - historical roadmap and MVP planning artifacts
+  - historical roadmap, completed feature-planning artifacts, and resolved planning records
 
 ### `06-http/`
 
@@ -114,7 +112,7 @@ Formal API specification documents.
 3. `README.md`
 4. `04-standards/development-process.md`
 5. `05-roadmap/current/stage-roadmap.md`
-6. `05-roadmap/current/feature-roadmap.md`
+6. `05-roadmap/current/launch-preparation-roadmap.md`
 7. Relevant module docs and task docs
 
 ### For product/background understanding

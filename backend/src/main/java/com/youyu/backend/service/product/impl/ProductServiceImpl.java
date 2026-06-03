@@ -24,6 +24,7 @@ public class ProductServiceImpl implements ProductService {
 
     private static final String DEFAULT_COVER =
             "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80";
+    private static final List<String> PRODUCT_LIST_SORTS = List.of("price_asc", "price_desc", "sales_desc", "newest");
 
     private final ProductMapper productMapper;
     private final ProductReviewTaskMapper productReviewTaskMapper;
@@ -44,12 +45,13 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Map<String, Object> listProducts(String keyword, Long categoryId, String productType, Long viewerUserId, int page, int pageSize) {
+    public Map<String, Object> listProducts(String keyword, Long categoryId, String productType, String sort, Long viewerUserId, int page, int pageSize) {
         page = Math.max(1, page);
         pageSize = Math.min(50, Math.max(1, pageSize));
+        String effectiveSort = normalizeListSort(sort);
         int offset = (page - 1) * pageSize;
 
-        List<Map<String, Object>> items = productMapper.findPublicByFiltersPaged(keyword, categoryId, productType, offset, pageSize)
+        List<Map<String, Object>> items = productMapper.findPublicByFiltersPaged(keyword, categoryId, productType, effectiveSort, offset, pageSize)
                 .stream()
                 .map(this::listItem)
                 .toList();
@@ -62,6 +64,7 @@ public class ProductServiceImpl implements ProductService {
         result.put("total", total);
         result.put("page", page);
         result.put("pageSize", pageSize);
+        result.put("sort", effectiveSort);
         return result;
     }
 
@@ -268,6 +271,17 @@ public class ProductServiceImpl implements ProductService {
         }
         item.put("deliveryMethods", resolveAllowedFulfillmentTypes(product));
         return item;
+    }
+
+    private String normalizeListSort(String sort) {
+        if (sort == null || sort.isBlank()) {
+            return "newest";
+        }
+        String normalized = sort.trim();
+        if (!PRODUCT_LIST_SORTS.contains(normalized)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Unsupported product sort: " + normalized);
+        }
+        return normalized;
     }
 
     private List<String> resolveAllowedFulfillmentTypes(Map<String, Object> product) {

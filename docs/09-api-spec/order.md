@@ -139,6 +139,12 @@ Return order detail for the current buyer.
   - `mediationSummary`
   - `afterSalesSummary`
 
+For seeded logistics orders, `fulfillment` now includes persisted address and
+tracking fields when that data exists, including `addressSnapshot`,
+`trackingNo`, `logisticsCompany`, and `shippedAt`. The frontend may render an
+honest map fallback from those fields when no map-provider key is configured;
+there is no separate map payload in the API contract yet.
+
 #### After-sales visibility fields
 
 `GET /api/orders/{orderId}` and `GET /api/admin/orders/{orderId}` now return a shared after-sales visibility family:
@@ -174,6 +180,11 @@ Return order detail for the current buyer.
 | `hasMediation` | boolean | Whether a mediation case exists for the order. |
 | `currentStage` | string | Current aggregate after-sales stage, such as `normal`, `report_submitted`, `refund_in_progress`, `refund_completed`, or `mediation_in_progress`. |
 | `userGuidance` | string | Current-phase guidance text for the viewer. |
+
+Current order statuses used by the refund flow are:
+
+- `refunding`
+- `refunded`
 
 #### Error Cases
 
@@ -247,7 +258,7 @@ Apply for a refund.
   - digital goods do not support refund
   - cancelled/refunded orders cannot re-apply
   - unpaid order cannot request refund
-  - payment record missing
+  - payment record missing in malformed or incomplete dev data
 
 ### `GET /api/orders/{orderId}/assets/{assetId}/access`
 

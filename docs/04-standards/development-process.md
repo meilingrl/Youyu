@@ -5,7 +5,7 @@ This document defines the repository's delivery process, task flow, and document
 It is a process standard, not a stage roadmap.
 
 For stage progression, use `../05-roadmap/current/stage-roadmap.md`.
-For feature sequencing, use `../05-roadmap/current/feature-roadmap.md`.
+For launch-preparation sequencing, use `../05-roadmap/current/launch-preparation-roadmap.md`.
 
 ## 1. Purpose
 
@@ -23,7 +23,7 @@ The process is designed to prevent:
 Each implementation item should move through the following lifecycle:
 
 1. Clarify the need
-   - If the item is still exploratory, capture it in `docs/05-roadmap/current/open-questions.md` or as a draft task.
+   - If the item is still exploratory, capture it in a draft task or a current roadmap document that still owns unresolved planning for that area.
 2. Create or update a task document
    - Use `docs/08-tasks/TASK_TEMPLATE.md`.
    - Place the task in `docs/08-tasks/drafts/` until scope is stable.
@@ -81,4 +81,4 @@ A task is not complete until all relevant artifacts are aligned:
 - `CLAUDE.md` stays in place.
 - Completed task docs are archived, not deleted.
 - Process rules belong here, not in roadmap docs.
-- Stage and feature sequencing belong in roadmap docs, not here.
+- Stage status and launch-preparation sequencing belong in roadmap docs, not here.

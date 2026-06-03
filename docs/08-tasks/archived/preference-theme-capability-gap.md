@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: preference-theme-capability-gap
-- Status: blocked
+- Status: archived
 - Owner: unassigned
 - Track: feature
 - Depends on: current settings/preferences frontend baseline
 - Priority: medium
 - Planned date: 2026-05-20
-- Completed date:
+- Completed date: 2026-06-03
 
 ## Objective
 
@@ -82,8 +82,9 @@ The issue backlog reports that dark mode appears unimplemented and theme-color c
 - [x] `CHANGELOG.md`
 - [ ] relevant files in `docs/06-http/`
 - [ ] roadmap or standards docs if applicable
-- [ ] task status and archive move
+- [x] task status and archive move
 
 ## Completion Notes
 
 - 2026-06-02: Parked by user decision. Theme switching is not part of the current feature-closeout priority. Follow-up, if any, should happen only after higher-priority functional work is completed.
+- 2026-06-03: Archived by user decision. Theme preference/theme-switching work is not part of the current repository closeout scope and is no longer kept as an active execution item.

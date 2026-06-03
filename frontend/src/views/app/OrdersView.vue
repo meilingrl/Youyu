@@ -27,6 +27,9 @@ const filteredOrders = computed(() => {
   if (activeFilter.value === 'all') {
     return orders.value
   }
+  if (activeFilter.value === 'refunding') {
+    return orders.value.filter((order) => ['refunding', 'refund_in_progress'].includes(order.orderStatus))
+  }
   return orders.value.filter((order) => order.orderStatus === activeFilter.value)
 })
 
@@ -36,7 +39,7 @@ const filterOptions = computed(() => [
   { key: 'pending_fulfillment', label: '已支付', count: orderCounts.value.pending_fulfillment },
   { key: 'pending_receipt', label: '待收货', count: orderCounts.value.pending_receipt },
   { key: 'completed', label: '已完成', count: orderCounts.value.completed },
-  { key: 'refund_in_progress', label: '退款中', count: orderCounts.value.refund_in_progress },
+  { key: 'refunding', label: '退款中', count: orderCounts.value.refunding },
   { key: 'refunded', label: '退款完成', count: orderCounts.value.refunded }
 ])
 
@@ -52,7 +55,7 @@ const metrics = computed(() => [
       orderCounts.value.pending_payment +
         orderCounts.value.pending_fulfillment +
         orderCounts.value.pending_receipt +
-        orderCounts.value.refund_in_progress
+        orderCounts.value.refunding
     ),
     helper: '需要你操作或关注进度的订单'
   },

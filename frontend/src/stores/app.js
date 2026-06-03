@@ -1,6 +1,9 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
+const HEADER_CONDENSE_SCROLL_Y = 180
+const HEADER_EXPAND_SCROLL_Y = 40
+
 export const useAppStore = defineStore('app', () => {
   const keyword = ref('')
   const collapsed = ref(false)
@@ -19,10 +22,10 @@ export const useAppStore = defineStore('app', () => {
 
   function setScrollY(value) {
     scrollY.value = value
-    // 滞后：超过 120px 才收起，低于 72px 才展开，消除临界点抽搐
-    if (!isHeaderCondensed.value && value > 120) {
+    // Keep a wide dead zone so condensed layout transitions cannot retrigger at the boundary.
+    if (!isHeaderCondensed.value && value > HEADER_CONDENSE_SCROLL_Y) {
       isHeaderCondensed.value = true
-    } else if (isHeaderCondensed.value && value < 72) {
+    } else if (isHeaderCondensed.value && value < HEADER_EXPAND_SCROLL_Y) {
       isHeaderCondensed.value = false
     }
   }

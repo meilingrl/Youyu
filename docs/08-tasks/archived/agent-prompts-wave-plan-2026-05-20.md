@@ -113,7 +113,7 @@ Run the checks listed in the task doc, then update the task record and archive i
 ### `preference-theme-capability-gap.md`
 
 ```text
-Read AGENTS.md, CLAUDE.md, docs/README.md, frontend/README.md, settings/preferences/theme-related frontend files, and docs/08-tasks/active/preference-theme-capability-gap.md.
+Read AGENTS.md, CLAUDE.md, docs/README.md, frontend/README.md, settings/preferences/theme-related frontend files, and docs/08-tasks/archived/preference-theme-capability-gap.md.
 
 Goal: audit the current preference/theme capability gap and land the smallest honest improvement. Either implement the missing supported capability cleanly or downgrade the UI so it no longer overpromises unsupported behavior.
 

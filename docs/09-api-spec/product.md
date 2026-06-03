@@ -8,6 +8,7 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/product/FavoriteController.java`
   - request sample: `docs/06-http/product.http`
 - Last updated: 2026-06-01
+- Last contract change: 2026-06-03, added allowlisted product-list `sort`
 
 ## Scope
 
@@ -56,6 +57,7 @@ List public products with basic filtering and pagination.
   - `keyword`: optional
   - `categoryId`: optional
   - `productType`: optional, typically `physical` or `digital`
+  - `sort`: optional, default `newest`; supported values are `newest`, `price_asc`, `price_desc`, `sales_desc`
   - `page`: optional, default `1`
   - `pageSize`: optional, default `12`
 
@@ -65,10 +67,22 @@ List public products with basic filtering and pagination.
 - `data.total`: total matched records
 - `data.page`: current page number
 - `data.pageSize`: current page size
+- `data.sort`: effective allowlisted sort key
+
+#### Search and Sort Semantics
+
+- `keyword` uses fuzzy substring matching across product title, subtitle, description, and category name.
+- `categoryId` applies an exact category match.
+- `productType` applies an exact product-type match.
+- `sort` is allowlisted and never interpolated directly into SQL:
+  - `newest`: newest products first, using `created_at DESC, id DESC`
+  - `price_asc`: lowest sale price first
+  - `price_desc`: highest sale price first
+  - `sales_desc`: engagement-backed sales proxy, currently `favorite_count DESC`, then `view_count DESC`
 
 #### Error Cases
 
-- `400`: invalid pagination or invalid query values
+- `400`: invalid pagination, invalid query values, or unsupported `sort`
 
 ### `GET /api/products/{productId}`
 

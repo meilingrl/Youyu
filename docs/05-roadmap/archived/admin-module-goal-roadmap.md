@@ -1,5 +1,8 @@
 # Admin Module Goal Roadmap
 
+> Archived on 2026-06-03 after the admin module sequence completed and stopped
+> serving as a current execution roadmap.
+
 ## Purpose
 
 This roadmap guides the next long-running head Agent for the Youyu admin module.

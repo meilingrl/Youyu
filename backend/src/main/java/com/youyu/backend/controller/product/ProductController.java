@@ -36,11 +36,12 @@ public class ProductController {
     public ApiResponse<Map<String, Object>> list(@RequestParam(required = false) String keyword,
                                                   @RequestParam(required = false) Long categoryId,
                                                   @RequestParam(required = false) String productType,
+                                                  @RequestParam(defaultValue = "newest") String sort,
                                                   @RequestParam(defaultValue = "1") int page,
                                                   @RequestParam(defaultValue = "12") int pageSize,
                                                   HttpServletRequest request) {
         return ApiResponse.success(
-                productService.listProducts(keyword, categoryId, productType, currentUserId(), page, pageSize),
+                productService.listProducts(keyword, categoryId, productType, sort, currentUserId(), page, pageSize),
                 traceId(request));
     }
 

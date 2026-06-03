@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: messages-ux-redesign
-- Status: draft
+- Status: archived
 - Owner: unassigned
 - Track: feature
 - Depends on: `ui-redesign-messages-support` (archived)
 - Priority: high
 - Planned date: 2026-05-25
-- Completed date:
+- Completed date: 2026-06-03
 
 ## Objective
 
@@ -18,6 +18,12 @@
 2. 界面缺乏呼吸感、留白不足、视觉层级不清晰,不符合 Youyu 的温暖校园气质
 
 本次重构**仅涉及前端 UI/UX**,不触及后端逻辑,保持占位数据和禁用状态。
+
+## Archive Note
+
+- 2026-06-03: Archived by user decision. This redesign direction is not part of
+  the current repository closeout scope and is not kept as an execution-ready
+  follow-up at this time.
 
 ## Background
 

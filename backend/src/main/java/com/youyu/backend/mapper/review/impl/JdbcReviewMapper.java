@@ -20,6 +20,8 @@ import org.springframework.stereotype.Component;
 public class JdbcReviewMapper implements ReviewMapper {
 
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final String PRODUCT_REVIEW_TYPE = "product";
+    private static final String SHOP_REVIEW_TYPE = "shop";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -49,6 +51,29 @@ public class JdbcReviewMapper implements ReviewMapper {
         }, keyHolder);
         Number key = keyHolder.getKey();
         return key == null ? null : key.longValue();
+    }
+
+    @Override
+    public void insertReviewImages(String reviewType, Long reviewId, List<Map<String, Object>> images) {
+        if (reviewId == null || images == null || images.isEmpty()) {
+            return;
+        }
+        for (int i = 0; i < images.size(); i++) {
+            Map<String, Object> image = images.get(i);
+            jdbcTemplate.update(
+                    """
+                            INSERT INTO review_images
+                                (review_type, review_id, media_url, file_name, mime_type, sort_order)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                            """,
+                    reviewType,
+                    reviewId,
+                    defaultString(image.get("mediaUrl")),
+                    defaultString(image.get("fileName")),
+                    defaultString(image.get("mimeType")),
+                    i
+            );
+        }
     }
 
     @Override
@@ -325,6 +350,7 @@ public class JdbcReviewMapper implements ReviewMapper {
         result.put("productId", toLong(row.get("product_id")));
         result.put("score", toInt(row.get("score")));
         result.put("content", defaultString(row.get("content")));
+        result.put("images", findReviewImages(PRODUCT_REVIEW_TYPE, toLong(row.get("id"))));
         result.put("createdAt", format(row.get("created_at")));
         result.put("updatedAt", format(row.get("updated_at")));
         return result;
@@ -344,9 +370,30 @@ public class JdbcReviewMapper implements ReviewMapper {
         result.put("buyerUserId", toLong(row.get("buyer_user_id")));
         result.put("score", toInt(row.get("score")));
         result.put("content", defaultString(row.get("content")));
+        result.put("images", findReviewImages(SHOP_REVIEW_TYPE, toLong(row.get("id"))));
         result.put("createdAt", format(row.get("created_at")));
         result.put("updatedAt", format(row.get("updated_at")));
         return result;
+    }
+
+    private List<Map<String, Object>> findReviewImages(String reviewType, Long reviewId) {
+        return jdbcTemplate.queryForList(
+                """
+                        SELECT id, media_url, file_name, mime_type, sort_order
+                        FROM review_images
+                        WHERE review_type = ? AND review_id = ?
+                        ORDER BY sort_order ASC, id ASC
+                        """,
+                reviewType, reviewId
+        ).stream().map(row -> {
+            Map<String, Object> image = new LinkedHashMap<>();
+            image.put("id", toLong(row.get("id")));
+            image.put("mediaUrl", defaultString(row.get("media_url")));
+            image.put("fileName", defaultString(row.get("file_name")));
+            image.put("mimeType", defaultString(row.get("mime_type")));
+            image.put("sortOrder", toInt(row.get("sort_order")));
+            return image;
+        }).toList();
     }
 
     private Map<String, Object> normalizeShopReviewWithUser(Map<String, Object> row) {

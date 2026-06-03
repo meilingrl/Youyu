@@ -34,7 +34,7 @@ Make supported preference defaults affect real user flows before implementing th
 
 ## Files to Read
 
-- `docs/08-tasks/active/preference-theme-capability-gap.md`
+- `docs/08-tasks/archived/preference-theme-capability-gap.md`
 - `frontend/src/views/app/PreferenceSettingsView.vue`
 - `frontend/src/views/app/ProductListView.vue`
 - `frontend/src/views/app/CheckoutView.vue`

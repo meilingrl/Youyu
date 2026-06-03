@@ -46,7 +46,7 @@ describe('market store', () => {
     vi.clearAllMocks()
   })
 
-  it('loads products and derives categories from loaded data', async () => {
+  it('loads products without replacing the stable category options from page results', async () => {
     getProductList.mockResolvedValue({
       success: true,
       data: [
@@ -72,10 +72,32 @@ describe('market store', () => {
       categoryName: 'Learning Materials'
     })
     expect(store.categories).toEqual([
-      { id: 1, name: 'Learning Materials' }
+      { id: 1, name: '学习资料' },
+      { id: 2, name: '学习工具' },
+      { id: 3, name: '宿舍生活' },
+      { id: 4, name: '数字配件' }
     ])
     expect(store.productError).toBe('')
     expect(store.loadingProducts).toBe(false)
+  })
+
+  it('passes product list sort params through the store boundary', async () => {
+    getProductList.mockResolvedValue({
+      success: true,
+      data: {
+        items: [],
+        total: 0,
+        page: 1,
+        pageSize: 12,
+        sort: 'price_asc'
+      }
+    })
+
+    const store = setupStore()
+    await store.loadProducts({ keyword: 'notes', sort: 'price_asc' })
+
+    expect(getProductList).toHaveBeenCalledWith({ keyword: 'notes', sort: 'price_asc' })
+    expect(store.searchTotal).toBe(0)
   })
 
   it('sets productError and stops loading when product loading fails', async () => {

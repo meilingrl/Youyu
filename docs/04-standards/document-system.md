@@ -23,8 +23,8 @@ These describe current facts or stable rules and are expected to stay useful acr
 These describe what the team intends to do next, but not the exact step-by-step implementation details:
 
 - `05-roadmap/current/stage-roadmap.md`
-- `05-roadmap/current/feature-roadmap.md`
-- `05-roadmap/current/open-questions.md`
+- `05-roadmap/current/launch-preparation-roadmap.md`
+- module-specific current roadmaps that still guide unfinished planning
 - `05-roadmap/archived/*`
 
 ### Task execution documents

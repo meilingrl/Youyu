@@ -1,4 +1,16 @@
 import service from '@/api/client'
+import { isValidEntityId } from '@/utils/id-utils'
+
+function rejectInvalidOrderId(orderId) {
+  if (!isValidEntityId(orderId)) {
+    return Promise.reject(new Error('无效的订单 ID'))
+  }
+  return null
+}
+
+function normalizeOrderId(orderId) {
+  return String(orderId).trim()
+}
 
 export function getCart() {
   return service.get('/cart')
@@ -29,23 +41,33 @@ export function getOrderList() {
 }
 
 export function getOrderDetail(orderId) {
-  return service.get(`/orders/${orderId}`)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  return service.get(`/orders/${normalizeOrderId(orderId)}`)
 }
 
 export function cancelOrder(orderId) {
-  return service.post(`/orders/${orderId}/cancel`)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  return service.post(`/orders/${normalizeOrderId(orderId)}/cancel`)
 }
 
 export function confirmReceipt(orderId) {
-  return service.post(`/orders/${orderId}/confirm-receipt`)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  return service.post(`/orders/${normalizeOrderId(orderId)}/confirm-receipt`)
 }
 
 export function buyerConfirmOffline(orderId) {
-  return service.post(`/orders/${orderId}/offline/buyer-confirm`)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  return service.post(`/orders/${normalizeOrderId(orderId)}/offline/buyer-confirm`)
 }
 
 export function applyRefund(orderId, payload) {
-  return service.post(`/orders/${orderId}/refunds`, payload)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  return service.post(`/orders/${normalizeOrderId(orderId)}/refunds`, payload)
 }
 
 export function getAdminOrderList() {
@@ -53,21 +75,39 @@ export function getAdminOrderList() {
 }
 
 export function getAdminOrderDetail(orderId) {
-  return service.get(`/admin/orders/${orderId}`)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  return service.get(`/admin/orders/${normalizeOrderId(orderId)}`)
 }
 
 export function shipOrder(orderId, payload) {
-  return service.post(`/admin/orders/${orderId}/ship`, payload)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  return service.post(`/admin/orders/${normalizeOrderId(orderId)}/ship`, payload)
 }
 
 export function sellerConfirmOffline(orderId) {
-  return service.post(`/admin/orders/${orderId}/offline/seller-confirm`)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  return service.post(`/admin/orders/${normalizeOrderId(orderId)}/offline/seller-confirm`)
 }
 
 export function completeRefund(orderId, refundId) {
-  return service.post(`/admin/orders/${orderId}/refunds/${refundId}/complete`)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  if (!isValidEntityId(refundId)) {
+    return Promise.reject(new Error('无效的退款 ID'))
+  }
+  return service.post(
+    `/admin/orders/${normalizeOrderId(orderId)}/refunds/${String(refundId).trim()}/complete`
+  )
 }
 
 export function accessDigitalAsset(orderId, assetId) {
-  return service.get(`/orders/${orderId}/assets/${assetId}/access`)
+  const invalid = rejectInvalidOrderId(orderId)
+  if (invalid) return invalid
+  if (!isValidEntityId(assetId)) {
+    return Promise.reject(new Error('无效的数字资产 ID'))
+  }
+  return service.get(`/orders/${normalizeOrderId(orderId)}/assets/${String(assetId).trim()}/access`)
 }

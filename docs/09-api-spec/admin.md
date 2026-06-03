@@ -6,14 +6,18 @@
 - Source of truth:
   - controller: `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java`
   - request DTO: `backend/src/main/java/com/youyu/backend/controller/admin/dto/UpdateUserStatusRequest.java`
+  - request DTO: `backend/src/main/java/com/youyu/backend/controller/admin/dto/UpdateUserRoleRequest.java`
   - request DTO: `backend/src/main/java/com/youyu/backend/controller/admin/dto/ReviewVerificationRequest.java`
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/common/api/ApiResponse.java`
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - audit mapper: `backend/src/main/java/com/youyu/backend/mapper/audit/AdminAuditLogMapper.java`
   - request sample: `docs/06-http/admin.http`
   - support-ticket spec: `docs/09-api-spec/support.md`
-  - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
-- Last updated: 2026-05-30
+  - related tasks:
+    - `docs/08-tasks/active/feature-polish-admin-permission-assignment.md`
+    - `docs/08-tasks/active/feature-polish-admin-dashboard-metrics.md`
+    - `docs/08-tasks/active/feature-polish-admin-data-export.md`
+- Last updated: 2026-06-03
 
 ## Scope
 
@@ -31,6 +35,8 @@ This document covers governance and operational endpoints under `/api/admin`:
 - marketing coupon/activity review endpoints
 - search governance rules and search logs
 - admin audit logs
+- admin user-role assignment
+- admin CSV export
 - selected batch operations and product review-task detail
 
 It does not cover admin login under `/api/admin/auth` or admin order operations under `/api/admin/orders`.
@@ -65,7 +71,7 @@ Support-ticket endpoint permissions are defined in `docs/09-api-spec/support.md`
 
 ## Response Envelope
 
-All endpoints in this module use the unified response envelope:
+JSON endpoints in this module use the unified response envelope:
 
 ```json
 {
@@ -76,6 +82,9 @@ All endpoints in this module use the unified response envelope:
   "traceId": "..."
 }
 ```
+
+`GET /api/admin/exports/{dataset}` is the current download exception: it returns raw
+`text/csv; charset=UTF-8` with `Content-Disposition: attachment`.
 
 ## Error Semantics
 
@@ -113,11 +122,13 @@ No query parameters, path parameters, or body.
 
 | Field | Type | Notes |
 |---|---|---|
-| `data.summary` | object | High-level totals for users, products, shops, reports, orders, and mediation cases |
+| `data.summary` | object | High-level totals for users, products, shops, reports, orders, mediation cases, paid-not-refunded sales, and today's order/sales counters |
 | `data.queueMetrics` | array | Stable pending-work metrics. Each item has `id`, `label`, `value`, `severity`, `available`, `source`, `description`, and `target.path` |
 | `data.governanceSignals` | array | Stable non-primary queue signals with the same metric item shape as `queueMetrics` |
 | `data.statusBreakdowns.orders` | array | Real order counts by selected `orders.order_status` values |
 | `data.statusBreakdowns.mediation` | array | Real mediation counts by selected `mediation_cases.status` values |
+| `data.salesAnalytics.trend` | array | Seven-day trend of paid-not-refunded sales by `submittedAt`; each item has `date`, `salesAmount`, and `orderCount` |
+| `data.salesAnalytics.hotProducts` | array | Paid-not-refunded order-item aggregation ranked by `soldCount`; each item has `productTitle`, `soldCount`, `orderCount`, and `salesAmount` |
 | `data.salesAnalytics.categorySales` | array | Completed paid sales grouped by product category, with `categoryId`, `categoryName`, `salesAmount`, `soldCount`, and `orderCount` |
 | `data.salesAnalytics.shopRankings` | array | Completed paid sales ranked by shop, with `shopId`, `shopName`, `salesAmount`, `soldCount`, and `orderCount` |
 | `data.unavailableMetrics` | array | Metrics intentionally not shown as live data because no reliable source exists yet |
@@ -149,6 +160,14 @@ Current live queue metrics:
 | `pending_order_fulfillment` | `orders.order_status = pending_fulfillment` | `/admin/orders` |
 | `refunding_orders` | `orders.order_status = refunding` | `/admin/orders` |
 | `active_mediation_cases` | `mediation_cases.status IN (opened, evidence_review, decision_pending)` | `/admin/mediation` |
+
+#### Dashboard Sales Semantics
+
+- `summary.totalSalesAmount`, `summary.todaySalesAmount`, `salesAnalytics.trend`, and
+  `salesAnalytics.hotProducts` currently count orders where:
+  - `paymentStatus = paid`
+  - `orderStatus` is not `refunding`, `refunded`, or `cancelled`
+- `summary.todayOrderCount` uses the order `submittedAt` date boundary in backend local runtime time.
 
 #### Error Cases
 
@@ -245,6 +264,46 @@ This endpoint uses `UpdateUserStatusRequest` with `@Valid`.
 - `400`: validation failure or unsupported status
 - `401`: missing token or invalid token
 - `403`: current user is not an admin
+- `404`: user does not exist
+
+### `PUT /api/admin/users/{userId}/role`
+
+#### Purpose
+
+Assign or remove admin/staff authority for a specific user while preserving the current
+static role-to-permission model.
+
+#### Request
+
+This endpoint uses `UpdateUserRoleRequest` with `@Valid`.
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `role` | yes | string | One of `USER`, `SUPPORT_AGENT`, `REVIEWER`, `OPERATOR`, `ORDER_ADMIN`, `ADMIN`, `SUPER_ADMIN` |
+| `reason` | no | string | Optional audit note, max 255 |
+
+#### Enforcement Rules
+
+- Requires backend permission `ADMIN_ROLE_ASSIGN`.
+- Service-level guard currently allows only full-access roles `ADMIN` and `SUPER_ADMIN`
+  to assign roles.
+- Admins cannot change their own role through this endpoint.
+- The last full-access admin (`ADMIN` / `SUPER_ADMIN`) cannot be demoted away from full access.
+- Every successful change writes an audit record with action `USER_ROLE_ASSIGNMENT`.
+
+#### Response
+
+| Field | Type | Notes |
+|---|---|---|
+| `data.user` | object | Updated sanitized user record |
+| `data.previousRole` | string | Normalized previous role |
+| `data.currentRole` | string | Normalized current role |
+
+#### Error Cases
+
+- `400`: unsupported role, self-role change, or last-full-access-admin demotion attempt
+- `401`: missing token or invalid token
+- `403`: current user lacks `ADMIN_ROLE_ASSIGN`
 - `404`: user does not exist
 
 ### `GET /api/admin/verifications`
@@ -798,11 +857,51 @@ Current v1 audited actions:
 | `SEARCH_GOVERNANCE_RULE_CREATE` | `SEARCH_GOVERNANCE_RULE` | `POST /api/admin/search/governance-rules` |
 | `SEARCH_GOVERNANCE_RULE_UPDATE` | `SEARCH_GOVERNANCE_RULE` | `PUT /api/admin/search/governance-rules/{ruleId}` |
 | `SEARCH_GOVERNANCE_RULE_DELETE` | `SEARCH_GOVERNANCE_RULE` | `DELETE /api/admin/search/governance-rules/{ruleId}` |
+| `USER_ROLE_ASSIGNMENT` | `USER` | `PUT /api/admin/users/{userId}/role` |
 
 #### Error Cases
 
 - `401`: missing token or invalid token
 - `403`: current user is not an admin
+
+### `GET /api/admin/exports/{dataset}`
+
+#### Purpose
+
+Download an allowlisted CSV export for an approved admin dataset.
+
+#### Request
+
+##### Path
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `dataset` | yes | string | Currently `users`, `orders`, or `products` |
+
+#### Response
+
+- Content type: `text/csv; charset=UTF-8`
+- Headers:
+  - `Content-Disposition: attachment; filename="admin-<dataset>-summary-<timestamp>.csv"`
+  - `Cache-Control: no-store`
+- Body: UTF-8 CSV with BOM for spreadsheet compatibility
+
+#### Dataset Field Allowlists
+
+| Dataset | Exported fields |
+|---|---|
+| `users` | `userId`, `username`, `nickname`, `status`, `role`, `verificationStatus`, `privilegeLabel`, `creditLevel`, `isRestricted`, `registeredAt`, `lastLoginAt` |
+| `orders` | `orderId`, `orderNo`, `buyerUserId`, `sellerUserId`, `shopId`, `productTitle`, `itemCount`, `orderStatus`, `paymentStatus`, `fulfillmentType`, `payableAmount`, `submittedAt`, `completedAt` |
+| `products` | `productId`, `title`, `categoryName`, `sellerUserId`, `sellerName`, `shopId`, `shopName`, `productType`, `status`, `reviewStatus`, `price`, `stock`, `viewCount`, `favoriteCount`, `createdAt`, `updatedAt` |
+
+Sensitive values such as plaintext passwords, password hashes, JWTs, verification codes,
+SMTP config, and similar secrets are intentionally excluded.
+
+#### Error Cases
+
+- `400`: unsupported dataset
+- `401`: missing token or invalid token
+- `403`: current user lacks `ADMIN_DATA_EXPORT`
 
 ## Batch Operations And Review Detail
 

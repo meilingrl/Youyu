@@ -1,3 +1,68 @@
+## [2026-06-03] - PR Security Scan Runtime Fix
+
+### changed
+- Skipped the OWASP backend dependency report on pull-request runs so PR checks no longer cold-sync the full NVD dataset without an API key.
+- Kept the backend dependency report available for manual workflow runs and pushes to `master`.
+
+### verify
+- `git diff --check`
+
+---
+
+## [2026-06-03] - Feature Polish Closeout
+
+### changed
+- Stabilized the user messages route with a fixed-height conversation workspace and internal message-thread scrolling so long chats no longer stretch the page.
+- Completed explore polish with working category filtering, fuzzy keyword search, route-persisted allowlisted sorting (`price_asc`, `price_desc`, `sales_desc`, `newest`), and a stable non-shaking search shell.
+- Added cart bulk selection controls, persisted review-image attachments, usable refund recovery, and logistics/map fallback messaging on order detail instead of pretending a provider-backed map is configured.
+- Added admin role assignment with explicit `ADMIN_ROLE_ASSIGN` protection, self-change and last-full-access-admin safeguards, and audited actor/target role transitions.
+- Expanded the admin dashboard with paid-not-refunded sales metrics, today totals, seven-day sales trend data, hot-product ranking from real order-item snapshots, fuller order-status breakdowns, and CSV export entry points.
+- Added admin CSV exports for `users`, `orders`, and `products` with `ADMIN_DATA_EXPORT` protection and allowlisted fields that exclude passwords, password hashes, tokens, verification codes, and similar sensitive values.
+
+### verify
+- Backend `.\\mvnw.cmd test`
+- Frontend `npm test`
+- Frontend `npm run build`
+- `git diff --check`
+- Browser/manual checks for `/app/messages`, `/app/explore`, `/app/cart`, `/app/orders/8812`, `/admin/dashboard`, and `/admin/users`
+
+---
+
+## [2026-06-03] - Invalid Entity ID Guard
+
+### fixed
+- Prevented frontend requests with path segments such as `NaN`, `undefined`, or non-numeric ids from reaching Spring `Long` bindings by adding shared entity-id validation, route `beforeEnter` guards, API-module early rejection, and Axios query-param sanitization (notably explore `categoryId`).
+- Mapped backend `MethodArgumentTypeMismatchException` to HTTP 400 instead of logging an unhandled 500 when invalid query/path values still slip through.
+
+### verify
+- `npm test` in `frontend/` (includes new `id-utils` unit tests).
+
+---
+
+## [2026-06-03] - Roadmap Archive Cleanup
+
+### changed
+- Archived `docs/05-roadmap/current/feature-roadmap.md`, `docs/05-roadmap/current/open-questions.md`, and `docs/05-roadmap/current/admin-module-goal-roadmap.md` after they stopped defining current work.
+- Archived `docs/08-tasks/drafts/messages-ux-redesign.md` by user decision.
+- Updated `AGENTS.md`, `docs/README.md`, `docs/05-roadmap/README.md`, and standards docs so the current reading order now points to `stage-roadmap.md` plus `launch-preparation-roadmap.md` instead of the archived feature/question documents.
+
+---
+
+## [2026-06-03] - Roadmap And Task Closeout Sync
+
+### changed
+- Archived `payment-upgrade.md`, `payment-upgrade-verification-and-docs.md`, `payment-upgrade-main-agent-prompt.md`, and `preference-theme-capability-gap.md` after user-confirmed payment sandbox acceptance and theme-work cancellation.
+- Updated the current stage and feature roadmaps to reflect that the present F0-F6 functional roadmap has been completed and that the repository is now focused on launch preparation plus future expansion planning.
+
+---
+
+## [2026-06-03] - Task Lifecycle Metadata Sync
+
+### changed
+- Corrected archived task metadata for `execution-wave-plan-2026-05-20.md` and `seller-publish-loading-diagnosis.md` so their status now matches the archived lifecycle state.
+
+---
+
 ## [2026-06-03] - Payment Upgrade Verification Follow-Up
 
 ### changed

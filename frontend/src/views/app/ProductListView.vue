@@ -13,6 +13,7 @@ import ExploreSearchShell from '@/components/explore/ExploreSearchShell.vue'
 import ExploreProductCard from '@/components/explore/ExploreProductCard.vue'
 import FeaturedShopsSection from '@/components/explore/FeaturedShopsSection.vue'
 import { buildFeaturedShops } from '@/components/explore/featured-shop-helpers'
+import { isValidEntityId, parseOptionalEntityId } from '@/utils/id-utils'
 
 const BOOKMARK_STORAGE_KEY = 'youyu-explore-bookmark-v2'
 const BOOKMARK_TOGGLE_THRESHOLD = 0.03
@@ -33,6 +34,7 @@ const loadMoreError = ref('')
 const keyword = ref('')
 const selectedCategoryId = ref('')
 const selectedProductType = ref('')
+const selectedSort = ref('newest')
 const currentPage = ref(0)
 const pageSize = ref(12)
 const cards = ref([])
@@ -59,8 +61,18 @@ const productTypeFilters = [
   { id: 'service', name: '服务' }
 ]
 
+const sortOptions = [
+  { id: 'newest', name: '最新发布' },
+  { id: 'price_asc', name: '价格从低到高' },
+  { id: 'price_desc', name: '价格从高到低' },
+  { id: 'sales_desc', name: '销量优先' }
+]
+
 const hasActiveFilters = computed(() =>
-  !!keyword.value.trim() || !!selectedCategoryId.value || !!selectedProductType.value
+  !!keyword.value.trim() ||
+  !!selectedCategoryId.value ||
+  !!selectedProductType.value ||
+  selectedSort.value !== 'newest'
 )
 const hasMore = computed(() => cards.value.length < total.value)
 const activeQuery = computed(() => buildFilterQuery())
@@ -138,11 +150,28 @@ function routeProductType() {
   return typeof route.query.productType === 'string' ? route.query.productType : ''
 }
 
+function normalizeSort(value) {
+  return sortOptions.some((option) => option.id === value) ? value : 'newest'
+}
+
+function routeSort() {
+  return typeof route.query.sort === 'string' ? normalizeSort(route.query.sort) : ''
+}
+
+function preferenceSort() {
+  const sortType = marketStore.userPreference.defaultSortType
+  if (sortType === 'price') return 'price_asc'
+  if (sortType === 'favorite') return 'sales_desc'
+  if (sortType === 'latest') return 'newest'
+  return 'newest'
+}
+
 function buildFilterQuery() {
   return {
     keyword: keyword.value.trim() || '',
     category: selectedCategoryId.value || '',
-    productType: selectedProductType.value || ''
+    productType: selectedProductType.value || '',
+    sort: selectedSort.value || 'newest'
   }
 }
 
@@ -150,7 +179,8 @@ function buildQuery() {
   return {
     keyword: keyword.value.trim() || undefined,
     category: selectedCategoryId.value || undefined,
-    productType: selectedProductType.value || undefined
+    productType: selectedProductType.value || undefined,
+    sort: selectedSort.value && selectedSort.value !== 'newest' ? selectedSort.value : undefined
   }
 }
 
@@ -158,7 +188,8 @@ function buildQueryKey(query) {
   return JSON.stringify({
     keyword: query.keyword || '',
     category: query.category || '',
-    productType: query.productType || ''
+    productType: query.productType || '',
+    sort: query.sort || 'newest'
   })
 }
 
@@ -170,21 +201,6 @@ function dedupeProducts(list) {
     seen.add(id)
     return true
   })
-}
-
-function sortProductsByPreference(list) {
-  const sortType = marketStore.userPreference.defaultSortType
-  const items = [...list]
-  if (sortType === 'latest') {
-    return items.sort((left, right) => String(right.publishedAt || '').localeCompare(String(left.publishedAt || '')))
-  }
-  if (sortType === 'price') {
-    return items.sort((left, right) => Number(left.salePrice || 0) - Number(right.salePrice || 0))
-  }
-  if (sortType === 'favorite') {
-    return items.sort((left, right) => Number(right.favoriteCount || 0) - Number(left.favoriteCount || 0))
-  }
-  return items
 }
 
 async function fetchProductsPage(page, { append = false } = {}) {
@@ -199,13 +215,14 @@ async function fetchProductsPage(page, { append = false } = {}) {
   try {
     const items = await marketStore.loadProducts({
       keyword: keyword.value || undefined,
-      categoryId: selectedCategoryId.value ? Number(selectedCategoryId.value) : undefined,
+      categoryId: parseOptionalEntityId(selectedCategoryId.value),
       productType: selectedProductType.value || undefined,
+      sort: selectedSort.value,
       page,
       pageSize: pageSize.value
     })
 
-    const normalizedItems = sortProductsByPreference(Array.isArray(items) ? items : [])
+    const normalizedItems = Array.isArray(items) ? items : []
     total.value = Number(marketStore.searchTotal || normalizedItems.length || 0)
     currentPage.value = page
     cards.value = append
@@ -240,8 +257,11 @@ async function fetchProductsPage(page, { append = false } = {}) {
 async function loadProductsByRoute() {
   syncingRoute = true
   keyword.value = routeKeyword()
-  selectedCategoryId.value = routeCategory()
+  const routeCategoryValue = routeCategory()
+  selectedCategoryId.value =
+    routeCategoryValue && isValidEntityId(routeCategoryValue) ? routeCategoryValue : ''
   selectedProductType.value = routeProductType()
+  selectedSort.value = route.query.sort ? routeSort() : preferenceSort()
   cards.value = []
   total.value = 0
   currentPage.value = 0
@@ -290,7 +310,8 @@ function applyFilters() {
   if (
     routeKeyword() === (nextQuery.keyword || '') &&
     routeCategory() === (nextQuery.category || '') &&
-    routeProductType() === (nextQuery.productType || '')
+    routeProductType() === (nextQuery.productType || '') &&
+    routeSort() === (nextQuery.sort || 'newest')
   ) {
     loadProductsByRoute()
     return
@@ -309,10 +330,16 @@ function setProductType(id) {
   applyFilters()
 }
 
+function setSort(id) {
+  selectedSort.value = normalizeSort(id)
+  applyFilters()
+}
+
 function clearFilters() {
   keyword.value = ''
   selectedCategoryId.value = ''
   selectedProductType.value = ''
+  selectedSort.value = 'newest'
   searchStore.clearSuggestions()
   router.replace({ query: {} })
 }
@@ -549,7 +576,7 @@ onBeforeUnmount(() => {
 })
 
 watch(
-  [() => route.query.keyword, () => route.query.category, () => route.query.productType],
+  [() => route.query.keyword, () => route.query.category, () => route.query.productType, () => route.query.sort],
   () => {
     if (!syncingRoute) {
       loadProductsByRoute()
@@ -580,8 +607,10 @@ watch(sentinelRef, () => {
         :class="{ 'is-condensed': isSearchShellCondensed }"
         :categories="categoryFilters"
         :product-types="productTypeFilters"
+        :sort-options="sortOptions"
         :selected-category-id="selectedCategoryId"
         :selected-product-type="selectedProductType"
+        :selected-sort="selectedSort"
         :suggestions="searchStore.suggestions"
         :loading-suggestions="searchStore.loadingSuggestions"
         :suggestion-error="searchStore.suggestionError"
@@ -593,6 +622,7 @@ watch(sentinelRef, () => {
         @select-suggestion="handleSuggestionSelect"
         @select-category="setCategory"
         @select-product-type="setProductType"
+        @select-sort="setSort"
         @apply-history="applyHistoryKeyword"
         @apply-hot="handleKeywordSubmit"
         @clear="clearFilters"
@@ -655,6 +685,9 @@ watch(sentinelRef, () => {
             </span>
             <span v-if="selectedProductType" class="explore-results-bar__tag">
               {{ productTypeFilters.find((type) => type.id === selectedProductType)?.name }}
+            </span>
+            <span v-if="selectedSort !== 'newest'" class="explore-results-bar__tag">
+              {{ sortOptions.find((sort) => sort.id === selectedSort)?.name }}
             </span>
           </div>
         </div>
@@ -724,7 +757,9 @@ watch(sentinelRef, () => {
   display: flex;
   justify-content: center;
   padding-top: 4px;
-  transition: padding var(--cm-transition-feature);
+  transition:
+    padding var(--cm-transition-feature),
+    top var(--cm-transition-feature);
 }
 
 .explore-search-shell-sticky::before {

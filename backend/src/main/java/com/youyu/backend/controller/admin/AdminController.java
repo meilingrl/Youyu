@@ -7,14 +7,20 @@ import com.youyu.backend.common.auth.LoginRequired;
 import com.youyu.backend.common.auth.UserRole;
 import com.youyu.backend.common.support.RequestContext;
 import com.youyu.backend.controller.admin.dto.ReviewVerificationRequest;
+import com.youyu.backend.controller.admin.dto.UpdateUserRoleRequest;
 import com.youyu.backend.controller.admin.dto.UpdateUserStatusRequest;
+import com.youyu.backend.service.admin.AdminCsvExport;
 import com.youyu.backend.service.admin.AdminService;
 import com.youyu.backend.service.marketing.MarketingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -77,6 +83,22 @@ public class AdminController {
                         userId,
                         payload.getStatus(),
                         payload.getRestrictionReason(),
+                        currentAdminUserId()
+                ),
+                traceId(request)
+        );
+    }
+
+    @PutMapping("/users/{userId}/role")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_ROLE_ASSIGN})
+    public ApiResponse<Map<String, Object>> assignUserRole(@PathVariable Long userId,
+                                                           @Valid @RequestBody UpdateUserRoleRequest payload,
+                                                           HttpServletRequest request) {
+        return ApiResponse.success(
+                adminService.assignUserRole(
+                        userId,
+                        payload.getRole(),
+                        payload.getReason(),
                         currentAdminUserId()
                 ),
                 traceId(request)
@@ -372,6 +394,17 @@ public class AdminController {
                                                       @RequestParam(defaultValue = "10") int pageSize,
                                                       HttpServletRequest request) {
         return ApiResponse.success(adminService.listAuditLogs(action, targetType, page, pageSize), traceId(request));
+    }
+
+    @GetMapping("/exports/{dataset}")
+    @LoginRequired(permissions = {AdminPermission.ADMIN_DATA_EXPORT})
+    public ResponseEntity<String> exportDataset(@PathVariable String dataset) {
+        AdminCsvExport export = adminService.exportDataset(dataset);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + export.fileName() + "\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(export.content());
     }
 
     @GetMapping("/marketing/coupons")

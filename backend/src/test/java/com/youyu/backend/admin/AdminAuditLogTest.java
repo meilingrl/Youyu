@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminAuditLogTest extends BackendTestBase {
 
     private static final String ADMIN = "mock-9001-ADMIN";
+    private static final String SUPER_ADMIN = "mock-9101-SUPER_ADMIN";
     private static final String USER = "mock-1001-USER";
 
     @Test
@@ -91,6 +92,46 @@ class AdminAuditLogTest extends BackendTestBase {
                         && "PRODUCT".equals(item.get("targetType"))
                         && numberValue(item.get("targetId")) == 3011L
                         && String.valueOf(item.get("summary")).contains("status=off_sale")
+        ));
+    }
+
+    @Test
+    void roleAssignmentWritesAuditLogWithActorRole() throws Exception {
+        long before = countAuditLogs("USER_ROLE_ASSIGNMENT", "USER", 1013L);
+
+        mockMvc.perform(put("/api/admin/users/1013/role")
+                        .header("Authorization", "Bearer " + SUPER_ADMIN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "OPERATOR",
+                                  "reason": "role audit"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        assertEquals(before + 1, countAuditLogs("USER_ROLE_ASSIGNMENT", "USER", 1013L));
+
+        String response = mockMvc.perform(get("/api/admin/audit-logs")
+                        .header("Authorization", "Bearer " + SUPER_ADMIN)
+                        .param("action", "USER_ROLE_ASSIGNMENT")
+                        .param("targetType", "USER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        List<Map<String, Object>> items = JsonPath.read(response, "$.data.items");
+        assertTrue(items.stream().anyMatch(item ->
+                numberValue(item.get("operatorUserId")) == 9101L
+                        && "SUPER_ADMIN".equals(item.get("operatorRole"))
+                        && "USER_ROLE_ASSIGNMENT".equals(item.get("action"))
+                        && "USER".equals(item.get("targetType"))
+                        && numberValue(item.get("targetId")) == 1013L
+                        && String.valueOf(item.get("summary")).contains("previousRole=USER")
+                        && String.valueOf(item.get("summary")).contains("currentRole=OPERATOR")
         ));
     }
 

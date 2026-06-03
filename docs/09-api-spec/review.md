@@ -9,7 +9,7 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/shop/ShopController.java`
   - service: `backend/src/main/java/com/youyu/backend/service/review/impl/ReviewServiceImpl.java`
   - request sample: `docs/06-http/review.http`
-- Last updated: 2026-06-01
+- Last updated: 2026-06-03
 
 ## Scope
 
@@ -77,6 +77,7 @@ Request body:
 | `orderItemId` | yes | integer | Must belong to a completed order owned by the caller |
 | `score` | yes | integer | 1-5 |
 | `content` | no | string | Max 1000 characters, defaults to empty string |
+| `images` | no | array | Up to 3 image metadata objects. Each object requires a base64 data URL `mediaUrl`; supported MIME types are `image/jpeg`, `image/png`, `image/gif`, `image/webp`; frontend limit is 5MB per image. |
 
 Response `data`:
 
@@ -88,6 +89,7 @@ Response `data`:
 | `productId` | integer |
 | `score` | integer |
 | `content` | string |
+| `images` | array |
 | `createdAt` | string |
 | `updatedAt` | string |
 
@@ -110,6 +112,7 @@ Request body:
 | `shopId` | yes | integer | Target shop |
 | `score` | yes | integer | 1-5 |
 | `content` | no | string | Max 1000 characters, defaults to empty string |
+| `images` | no | array | Same review image metadata contract as product reviews |
 
 Response `data`:
 
@@ -120,6 +123,7 @@ Response `data`:
 | `buyerUserId` | integer |
 | `score` | integer |
 | `content` | string |
+| `images` | array |
 | `createdAt` | string |
 | `updatedAt` | string |
 
@@ -192,6 +196,7 @@ Each review item includes reviewer display fields:
 |---|---|
 | `reviewerNickname` | string |
 | `reviewerAvatar` | string |
+| `images` | array |
 
 ### `GET /api/products/{id}/review-summary`
 
@@ -240,6 +245,7 @@ Each review item includes:
 | `updatedAt` | string |
 | `reviewerNickname` | string |
 | `reviewerAvatar` | string |
+| `images` | array |
 
 ### `GET /api/shops/{shopId}/review-summary`
 
@@ -253,6 +259,7 @@ Response `data` has the same structure as product review summary: `avgScore`, `r
 
 - **Score**: integer 1-5
 - **Content**: max 1000 characters
+- **Review images**: optional `images[]` entries are persisted in `review_images` and returned from submit, my-review, and public list endpoints. Each item includes `id`, `mediaUrl`, `fileName`, `mimeType`, and `sortOrder`.
 - **Pagination**: `page` clamps to at least `1`; `pageSize` clamps to `1-50`
 - **Scoring side effects**: review submission recalculates the denormalized `rating_score` and `review_count` fields on the owning product or shop
 - **Duplicate detection**:

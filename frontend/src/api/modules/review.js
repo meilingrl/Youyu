@@ -1,4 +1,5 @@
 import service from '@/api/client'
+import { isValidEntityId } from '@/utils/id-utils'
 
 export function submitProductReview(payload) {
   return service.post('/reviews/products', payload)
@@ -17,17 +18,29 @@ export function getMyReviews() {
 }
 
 export function getProductReviewList(productId, params = {}) {
-  return service.get(`/products/${productId}/reviews`, { params })
+  if (!isValidEntityId(productId)) {
+    return Promise.reject(new Error('无效的商品 ID'))
+  }
+  return service.get(`/products/${String(productId).trim()}/reviews`, { params })
 }
 
 export function getProductReviewSummary(productId) {
-  return service.get(`/products/${productId}/review-summary`)
+  if (!isValidEntityId(productId)) {
+    return Promise.reject(new Error('无效的商品 ID'))
+  }
+  return service.get(`/products/${String(productId).trim()}/review-summary`)
 }
 
 export function getShopReviewList(shopId, params = {}) {
-  return service.get(`/shops/${shopId}/reviews`, { params })
+  if (!isValidEntityId(shopId)) {
+    return Promise.reject(new Error('无效的店铺 ID'))
+  }
+  return service.get(`/shops/${String(shopId).trim()}/reviews`, { params })
 }
 
 export function getShopReviewSummary(shopId) {
-  return service.get(`/shops/${shopId}/review-summary`)
+  if (!isValidEntityId(shopId)) {
+    return Promise.reject(new Error('无效的店铺 ID'))
+  }
+  return service.get(`/shops/${String(shopId).trim()}/review-summary`)
 }

@@ -33,10 +33,11 @@ GET {{baseUrl}}/api/admin/dashboard
 ### Dashboard overview
 ### Expected data fields:
 ### - summary
+### - summary.totalSalesAmount / todayOrderCount / todaySalesAmount
 ### - queueMetrics[] with stable id/source/target/available fields
 ### - governanceSignals[]
 ### - statusBreakdowns.orders[] and statusBreakdowns.mediation[]
-### - salesAnalytics.categorySales[] and salesAnalytics.shopRankings[]
+### - salesAnalytics.trend[] / hotProducts[] / categorySales[] / shopRankings[]
 ### - unavailableMetrics[] for non-instrumented metrics
 GET {{baseUrl}}/api/admin/dashboard
 Authorization: Bearer {{adminToken}}
@@ -68,6 +69,42 @@ Authorization: Bearer {{adminToken}}
 ### User detail
 GET {{baseUrl}}/api/admin/users/1001
 Authorization: Bearer {{adminToken}}
+
+###
+
+### Assign admin/staff role - super admin only
+PUT {{baseUrl}}/api/admin/users/1012/role
+Authorization: Bearer {{superAdminToken}}
+Content-Type: application/json
+
+{
+  "role": "OPERATOR",
+  "reason": "feature polish smoke"
+}
+
+###
+
+### Restore ordinary user role after smoke
+PUT {{baseUrl}}/api/admin/users/1012/role
+Authorization: Bearer {{superAdminToken}}
+Content-Type: application/json
+
+{
+  "role": "USER",
+  "reason": "cleanup after smoke"
+}
+
+###
+
+### Support agent cannot assign roles - expect 403
+PUT {{baseUrl}}/api/admin/users/1002/role
+Authorization: Bearer {{supportToken}}
+Content-Type: application/json
+
+{
+  "role": "REVIEWER",
+  "reason": "should be rejected"
+}
 
 ###
 
@@ -493,6 +530,36 @@ Authorization: Bearer {{adminToken}}
 ### Audit logs with USER token - expect 403
 GET {{baseUrl}}/api/admin/audit-logs
 Authorization: Bearer {{userToken}}
+
+# DATA EXPORT
+
+###
+
+### Export users summary CSV
+### Response is raw text/csv with Content-Disposition attachment header.
+GET {{baseUrl}}/api/admin/exports/users
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### Export orders summary CSV
+### Expected CSV columns:
+### orderId, orderNo, buyerUserId, sellerUserId, shopId, productTitle, itemCount,
+### orderStatus, paymentStatus, fulfillmentType, payableAmount, submittedAt, completedAt
+GET {{baseUrl}}/api/admin/exports/orders
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### Export products summary CSV
+GET {{baseUrl}}/api/admin/exports/products
+Authorization: Bearer {{superAdminToken}}
+
+###
+
+### Specialist role cannot export data - expect 403
+GET {{baseUrl}}/api/admin/exports/users
+Authorization: Bearer {{supportToken}}
 
 # ROLE PERMISSION SMOKE
 

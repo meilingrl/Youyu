@@ -104,6 +104,26 @@ class AdminRolePermissionTest extends BackendTestBase {
     }
 
     @Test
+    void specialistRolesCannotAssignRolesOrExportData() throws Exception {
+        mockMvc.perform(put("/api/admin/users/1002/role")
+                        .header("Authorization", "Bearer " + SUPPORT_AGENT)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "REVIEWER",
+                                  "reason": "forbidden"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+
+        mockMvc.perform(get("/api/admin/exports/users")
+                        .header("Authorization", "Bearer " + SUPPORT_AGENT))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"));
+    }
+
+    @Test
     void regularUserStillCannotAccessAdminCapabilities() throws Exception {
         mockMvc.perform(get("/api/admin/dashboard")
                         .header("Authorization", "Bearer " + USER))

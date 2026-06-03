@@ -1,3 +1,5 @@
+import { requireValidEntityIdParam } from '@/router/entity-id-guard'
+
 export default {
   path: '/app',
   component: () => import('@/layouts/AppLayout.vue'),
@@ -42,6 +44,7 @@ export default {
       name: 'app-product-detail',
       component: () => import('@/views/app/ProductDetailView.vue'),
       props: true,
+      beforeEnter: requireValidEntityIdParam('id', { name: 'app-explore' }),
       meta: {
         title: '商品详情',
         public: true,
@@ -74,6 +77,7 @@ export default {
       path: 'payments/:orderId',
       name: 'app-payment',
       component: () => import('@/views/app/PaymentView.vue'),
+      beforeEnter: requireValidEntityIdParam('orderId', { name: 'app-orders' }),
       meta: {
         title: '模拟支付',
         requiresAuth: true,
@@ -108,6 +112,7 @@ export default {
       name: 'app-shop',
       component: () => import('@/views/app/ShopView.vue'),
       props: true,
+      beforeEnter: requireValidEntityIdParam('id', { name: 'app-explore' }),
       meta: {
         title: '店铺主页',
         public: true,
@@ -184,6 +189,7 @@ export default {
       path: 'orders/:orderId',
       name: 'app-order-detail',
       component: () => import('@/views/app/OrderDetailView.vue'),
+      beforeEnter: requireValidEntityIdParam('orderId', { name: 'app-orders' }),
       meta: {
         title: '订单详情',
         requiresAuth: true,
@@ -252,6 +258,7 @@ export default {
       name: 'app-message-detail',
       component: () => import('@/views/app/MessagesView.vue'),
       props: true,
+      beforeEnter: requireValidEntityIdParam('conversationId', { name: 'app-messages' }),
       meta: {
         title: '消息会话',
         requiresAuth: true,

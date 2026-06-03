@@ -16,7 +16,7 @@ const LABELS = {
   resolved: '已解决',
   opened: '已开启',
   evidence_review: '证据核查',
-  decision_pending: '待裁决',
+  decision_pending: '待决策',
   cancelled: '已取消',
   paid: '已支付',
   unpaid: '未支付',
@@ -34,6 +34,12 @@ const LABELS = {
   service: '服务商品',
   digital_product: '资料商品',
   user: '用户',
+  admin: '管理员',
+  super_admin: '超级管理员',
+  support_agent: '客服专员',
+  reviewer: '审核员',
+  operator: '运营员',
+  order_admin: '订单管理员',
   product: '商品',
   shop: '店铺',
   order: '订单',
@@ -42,7 +48,7 @@ const LABELS = {
   refund_rejected_release_to_seller: '驳回退款并放款给卖家',
   order_completion_required: '要求完成订单',
   platform_governance_action: '平台治理处置',
-  no_action_invalid_or_duplicate: '无效或重复申诉',
+  no_action_invalid_or_duplicate: '无效或重复申请',
   SENSITIVE_WORD: '敏感词',
   STOP_WORD: '停用词',
   HIDE_KEYWORD: '隐藏关键词',
@@ -77,11 +83,12 @@ const TAG_TYPES = {
 
 export function adminLabel(value, fallback = '未填写') {
   if (value === null || value === undefined || value === '') return fallback
-  return LABELS[value] || String(value)
+  const raw = String(value)
+  return LABELS[raw] || LABELS[raw.toLowerCase()] || raw
 }
 
 export function adminTagType(value) {
-  return TAG_TYPES[value] || 'info'
+  return TAG_TYPES[value] || TAG_TYPES[String(value || '').toLowerCase()] || 'info'
 }
 
 export function optionLabel(value) {

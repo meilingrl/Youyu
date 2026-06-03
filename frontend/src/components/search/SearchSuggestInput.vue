@@ -29,18 +29,33 @@ const props = defineProps({
   elevated: {
     type: Boolean,
     default: true
+  },
+  searchHistory: {
+    type: Array,
+    default: () => []
+  },
+  hotKeywords: {
+    type: Array,
+    default: () => []
+  },
+  loadingHotKeywords: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'change', 'submit', 'selectSuggestion'])
+const emit = defineEmits(['update:modelValue', 'change', 'submit', 'selectSuggestion', 'applyHistory', 'applyHot'])
 
 const rootRef = ref(null)
 const panelVisible = ref(false)
 
 const hasQuery = computed(() => String(props.modelValue || '').trim().length > 0)
+const hasDiscovery = computed(() => props.searchHistory.length || props.hotKeywords.length || props.loadingHotKeywords)
 const showEmpty = computed(() => hasQuery.value && !props.loading && !props.error && !props.suggestions.length)
 const shouldShowPanel = computed(() =>
-  panelVisible.value && hasQuery.value && (props.loading || props.error || props.suggestions.length || showEmpty.value)
+  panelVisible.value &&
+  ((hasQuery.value && (props.loading || props.error || props.suggestions.length || showEmpty.value)) ||
+    (!hasQuery.value && hasDiscovery.value))
 )
 
 function updateValue(value) {
@@ -58,6 +73,18 @@ function selectSuggestion(keyword) {
   panelVisible.value = false
   emit('update:modelValue', keyword)
   emit('selectSuggestion', keyword)
+}
+
+function applyHistory(keyword) {
+  panelVisible.value = false
+  emit('update:modelValue', keyword)
+  emit('applyHistory', keyword)
+}
+
+function applyHot(keyword) {
+  panelVisible.value = false
+  emit('update:modelValue', keyword)
+  emit('applyHot', keyword)
 }
 
 function handleFocus() {
@@ -110,25 +137,61 @@ onBeforeUnmount(() => {
     </el-input>
 
     <div v-if="shouldShowPanel" class="search-suggest__panel">
-      <div v-if="loading" class="search-suggest__state">正在加载建议...</div>
-      <div v-else-if="error" class="search-suggest__state search-suggest__state--error">
-        {{ error }}，按回车仍可直接搜索。
-      </div>
-      <div v-else-if="showEmpty" class="search-suggest__state">暂时没有相关建议</div>
-      <button
-        v-for="item in suggestions"
-        v-else
-        :key="item.normalizedKeyword || item.keyword"
-        type="button"
-        class="search-suggest__item"
-        @click="selectSuggestion(item.keyword)"
-      >
-        <div class="search-suggest__text">
-          <strong>{{ item.keyword }}</strong>
-          <span v-if="item.pinned" class="search-suggest__badge">置顶</span>
+      <template v-if="hasQuery">
+        <div v-if="loading" class="search-suggest__state">正在加载建议...</div>
+        <div v-else-if="error" class="search-suggest__state search-suggest__state--error">
+          {{ error }}，按回车仍可直接搜索。
         </div>
-        <span class="search-suggest__meta">{{ item.searchCount }} 次搜索</span>
-      </button>
+        <div v-else-if="showEmpty" class="search-suggest__state">暂时没有相关建议</div>
+        <button
+          v-for="item in suggestions"
+          v-else
+          :key="item.normalizedKeyword || item.keyword"
+          type="button"
+          class="search-suggest__item"
+          @click="selectSuggestion(item.keyword)"
+        >
+          <div class="search-suggest__text">
+            <strong>{{ item.keyword }}</strong>
+            <span v-if="item.pinned" class="search-suggest__badge">置顶</span>
+          </div>
+          <span class="search-suggest__meta">{{ item.searchCount }} 次搜索</span>
+        </button>
+      </template>
+
+      <template v-else>
+        <div v-if="searchHistory.length" class="search-suggest__discovery-group">
+          <span class="search-suggest__section-label">最近搜索</span>
+          <div class="search-suggest__chips">
+            <button
+              v-for="item in searchHistory"
+              :key="item"
+              type="button"
+              class="search-suggest__chip"
+              @click="applyHistory(item)"
+            >
+              {{ item }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="loadingHotKeywords" class="search-suggest__state">正在加载热门搜索...</div>
+
+        <div v-if="hotKeywords.length" class="search-suggest__discovery-group">
+          <span class="search-suggest__section-label">热门搜索</span>
+          <div class="search-suggest__chips">
+            <button
+              v-for="kw in hotKeywords.slice(0, 6)"
+              :key="kw.normalizedKeyword || kw.keyword"
+              type="button"
+              class="search-suggest__chip"
+              @click="applyHot(kw.keyword)"
+            >
+              {{ kw.keyword }}
+            </button>
+          </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -137,6 +200,8 @@ onBeforeUnmount(() => {
 .search-suggest {
   position: relative;
   width: 100%;
+  min-width: 0;
+  min-height: 46px;
 }
 
 .search-suggest :deep(.el-input__wrapper) {
@@ -145,7 +210,6 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 10px 24px rgba(95, 58, 30, 0.08);
   transition:
-    transform 260ms ease,
     box-shadow 260ms ease,
     background-color 260ms ease;
 }
@@ -169,7 +233,6 @@ onBeforeUnmount(() => {
 }
 
 .search-suggest--active :deep(.el-input__wrapper) {
-  transform: translateY(-2px);
   background: rgba(255, 253, 249, 0.98);
   box-shadow: 0 18px 40px rgba(95, 58, 30, 0.14);
 }
@@ -234,6 +297,47 @@ onBeforeUnmount(() => {
 
 .search-suggest__state--error {
   color: #b42318;
+}
+
+.search-suggest__discovery-group {
+  display: grid;
+  gap: 10px;
+  padding: 8px 4px;
+}
+
+.search-suggest__section-label {
+  color: var(--cm-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.search-suggest__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.search-suggest__chip {
+  appearance: none;
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid rgba(88, 62, 43, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--cm-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--cm-transition-micro),
+    border-color var(--cm-transition-micro),
+    color var(--cm-transition-micro);
+}
+
+.search-suggest__chip:hover {
+  background: rgba(255, 247, 237, 0.96);
+  border-color: rgba(var(--cm-primary-rgb), 0.24);
+  color: var(--cm-text);
 }
 
 @media (max-width: 768px) {

@@ -16,9 +16,9 @@ public interface ProductMapper {
 
     List<Map<String, Object>> findPublic();
 
-    List<Map<String, Object>> findPublicByFilters(String keyword, Long categoryId, String productType);
+    List<Map<String, Object>> findPublicByFilters(String keyword, Long categoryId, String productType, String sort);
 
-    List<Map<String, Object>> findPublicByFiltersPaged(String keyword, Long categoryId, String productType, int offset, int limit);
+    List<Map<String, Object>> findPublicByFiltersPaged(String keyword, Long categoryId, String productType, String sort, int offset, int limit);
 
     long countPublicByFilters(String keyword, Long categoryId, String productType);
 

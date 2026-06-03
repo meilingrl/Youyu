@@ -24,8 +24,38 @@ GET {{baseUrl}}/api/products?categoryId=1
 
 ###
 
+### List products — fuzzy keyword + category
+GET {{baseUrl}}/api/products?keyword=Math&categoryId=1
+
+###
+
 ### List products — digital type only
 GET {{baseUrl}}/api/products?productType=digital
+
+###
+
+### List products — newest sort
+GET {{baseUrl}}/api/products?sort=newest
+
+###
+
+### List products — price ascending sort
+GET {{baseUrl}}/api/products?sort=price_asc
+
+###
+
+### List products — price descending sort
+GET {{baseUrl}}/api/products?sort=price_desc
+
+###
+
+### List products — sales/engagement descending sort
+GET {{baseUrl}}/api/products?sort=sales_desc
+
+###
+
+### List products — invalid sort should return 400
+GET {{baseUrl}}/api/products?sort=p.price%20desc
 
 ###
 

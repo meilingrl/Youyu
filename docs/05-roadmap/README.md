@@ -9,8 +9,8 @@ This directory now separates current planning artifacts from historical roadmap 
 Use this directory for roadmap documents that still guide current work:
 
 - `stage-roadmap.md`
-- `feature-roadmap.md`
-- `open-questions.md`
+- `launch-preparation-roadmap.md`
+- `message-center-roadmap.md` when that module still needs current planning follow-up
 
 These files should be short-lived, practical, and tightly aligned with the current codebase state.
 
@@ -19,6 +19,7 @@ These files should be short-lived, practical, and tightly aligned with the curre
 Use this directory for planning documents that still have traceability value but no longer define current decisions:
 
 - historical MVP boundary documents
+- completed feature roadmaps and resolved question trackers
 - superseded phase plans
 - old feature-sequencing notes
 - planning documents whose value is now mainly traceability

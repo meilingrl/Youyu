@@ -1,19 +1,41 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
-import { batchUpdateAdminUserStatus, getAdminUserDetail, getAdminUsers, updateAdminUserStatus } from '@/api/modules/admin'
+import {
+  batchUpdateAdminUserStatus,
+  exportAdminDataset,
+  getAdminUserDetail,
+  getAdminUsers,
+  updateAdminUserRole,
+  updateAdminUserStatus
+} from '@/api/modules/admin'
+import { useAuthStore } from '@/stores/auth'
+import { hasAnyAdminPermission } from '@/utils/admin-permissions'
+import { downloadBlobResponse } from '@/utils/download-utils'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
 
+const ROLE_OPTIONS = [
+  { label: '普通用户', value: 'USER' },
+  { label: '客服专员', value: 'SUPPORT_AGENT' },
+  { label: '审核员', value: 'REVIEWER' },
+  { label: '运营员', value: 'OPERATOR' },
+  { label: '订单管理员', value: 'ORDER_ADMIN' },
+  { label: '管理员', value: 'ADMIN' },
+  { label: '超级管理员', value: 'SUPER_ADMIN' }
+]
+
+const authStore = useAuthStore()
 const loading = ref(false)
 const error = ref('')
 const detailLoading = ref(false)
+const roleSaving = ref(false)
+const exportLoading = ref(false)
 const rows = ref([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
-const tableRef = ref(null)
 const selectedRows = ref([])
 const detailVisible = ref(false)
 const detail = ref({ user: null, verifications: [], reports: [], products: [] })
@@ -22,6 +44,18 @@ const filters = reactive({
   status: '',
   verificationStatus: ''
 })
+const roleForm = reactive({
+  role: 'USER',
+  reason: ''
+})
+
+const canAssignRoles = computed(() =>
+  hasAnyAdminPermission(authStore.currentRole, ['ADMIN_ROLE_ASSIGN'])
+)
+const canExport = computed(() =>
+  hasAnyAdminPermission(authStore.currentRole, ['ADMIN_DATA_EXPORT'])
+)
+
 async function loadUsers() {
   loading.value = true
   error.value = ''
@@ -38,13 +72,13 @@ async function loadUsers() {
   }
 }
 
-function onPageChange(p) {
-  page.value = p
+function onPageChange(nextPage) {
+  page.value = nextPage
   loadUsers()
 }
 
-function onPageSizeChange(ps) {
-  pageSize.value = ps
+function onPageSizeChange(nextPageSize) {
+  pageSize.value = nextPageSize
   page.value = 1
   loadUsers()
 }
@@ -65,8 +99,10 @@ async function openDetail(row) {
   try {
     const response = await getAdminUserDetail(row.id)
     detail.value = response.data
-  } catch (error) {
-    ElMessage.error(resolveErrorMessage(error))
+    roleForm.role = response.data?.user?.role || 'USER'
+    roleForm.reason = ''
+  } catch (err) {
+    ElMessage.error(resolveErrorMessage(err))
   } finally {
     detailLoading.value = false
   }
@@ -77,13 +113,13 @@ async function changeStatus(row, status) {
     let restrictionReason = ''
 
     if (status === 'disabled') {
-      const result = await ElMessageBox.prompt('请填写限制原因', '禁用用户', {
+      const result = await ElMessageBox.prompt('请输入限制原因', '禁用用户', {
         confirmButtonText: '确认',
         cancelButtonText: '取消'
       })
       restrictionReason = result.value
     } else {
-      await ElMessageBox.confirm(`确认将用户状态调整为${adminLabel(status)}吗？`, '状态变更', {
+      await ElMessageBox.confirm(`确认将用户状态调整为 ${adminLabel(status)} 吗？`, '状态变更', {
         type: 'warning'
       })
     }
@@ -91,28 +127,34 @@ async function changeStatus(row, status) {
     await updateAdminUserStatus(row.id, { status, restrictionReason })
     ElMessage.success('用户状态已更新')
     await loadUsers()
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(resolveErrorMessage(error))
+    if (detailVisible.value && detail.value.user?.id === row.id) {
+      await openDetail({ id: row.id })
+    }
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(resolveErrorMessage(err))
     }
   }
 }
 
 async function batchChangeStatus(status) {
   if (!selectedRows.value.length) return
+
   try {
     let restrictionReason = ''
+
     if (status === 'disabled') {
-      const result = await ElMessageBox.prompt('请填写批量禁用原因', '批量禁用用户', {
+      const result = await ElMessageBox.prompt('请输入批量禁用原因', '批量禁用用户', {
         confirmButtonText: '确认禁用',
         cancelButtonText: '取消'
       })
       restrictionReason = result.value
     } else {
-      await ElMessageBox.confirm(`确认批量启用 ${selectedRows.value.length} 个用户吗？`, '批量启用用户', {
+      await ElMessageBox.confirm(`确认批量启用 ${selectedRows.value.length} 个用户吗？`, '批量更新状态', {
         type: 'warning'
       })
     }
+
     await batchUpdateAdminUserStatus({
       ids: selectedRows.value.map((row) => row.id),
       status,
@@ -121,10 +163,50 @@ async function batchChangeStatus(status) {
     ElMessage.success('批量用户状态已更新')
     selectedRows.value = []
     await loadUsers()
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(resolveErrorMessage(error))
+  } catch (err) {
+    if (err !== 'cancel') {
+      ElMessage.error(resolveErrorMessage(err))
     }
+  }
+}
+
+async function saveRole() {
+  if (!detail.value.user?.id || !canAssignRoles.value) {
+    return
+  }
+
+  roleSaving.value = true
+  try {
+    const response = await updateAdminUserRole(detail.value.user.id, {
+      role: roleForm.role,
+      reason: roleForm.reason
+    })
+    detail.value.user = response.data.user
+    roleForm.role = response.data.user?.role || roleForm.role
+    roleForm.reason = ''
+    ElMessage.success('用户角色已更新')
+    await loadUsers()
+  } catch (err) {
+    ElMessage.error(resolveErrorMessage(err))
+  } finally {
+    roleSaving.value = false
+  }
+}
+
+async function downloadUsersExport() {
+  if (!canExport.value) {
+    return
+  }
+
+  exportLoading.value = true
+  try {
+    const response = await exportAdminDataset('users')
+    downloadBlobResponse(response, 'admin-users-summary.csv')
+    ElMessage.success('用户导出已开始')
+  } catch (err) {
+    ElMessage.error(resolveErrorMessage(err))
+  } finally {
+    exportLoading.value = false
   }
 }
 
@@ -134,7 +216,7 @@ onMounted(loadUsers)
 <template>
   <ListPageShell
     title="用户管理"
-    description="管理用户资料、认证状态与启用/禁用，保障校园账号使用秩序。"
+    description="管理用户资料、认证状态、可用状态与管理员角色分配。"
     :rows="rows"
     :loading="loading"
     :error="error"
@@ -143,6 +225,10 @@ onMounted(loadUsers)
     empty-description="当前没有符合条件的用户。"
     @retry="loadUsers"
   >
+    <template #toolbar>
+      <el-button v-if="canExport" plain :loading="exportLoading" @click="downloadUsersExport">导出用户摘要</el-button>
+    </template>
+
     <template #filters>
       <div class="filter-row">
         <el-input v-model="filters.keyword" placeholder="搜索用户 / 学号 / 邮箱" clearable @keyup.enter="onSearch" />
@@ -170,9 +256,9 @@ onMounted(loadUsers)
     </template>
 
     <template #table>
-      <el-table ref="tableRef" v-loading="loading" class="admin-select-table" row-key="id" :data="rows" @selection-change="onSelectionChange">
+      <el-table v-loading="loading" class="admin-select-table" row-key="id" :data="rows" @selection-change="onSelectionChange">
         <el-table-column type="selection" width="48" />
-        <el-table-column prop="nickname" label="用户昵称" min-width="120" />
+        <el-table-column prop="nickname" label="用户昵称" min-width="140" />
         <el-table-column prop="username" label="账号" min-width="120" />
         <el-table-column prop="studentNo" label="学号" min-width="120" />
         <el-table-column label="用户状态" min-width="100">
@@ -185,27 +271,21 @@ onMounted(loadUsers)
             <el-tag :type="adminTagType(row.verificationStatus)" effect="plain">{{ adminLabel(row.verificationStatus) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="privilegeLabel" label="权限档位" min-width="180" />
+        <el-table-column label="角色" min-width="140">
+          <template #default="{ row }">
+            <el-tag :type="row.role === 'SUPER_ADMIN' || row.role === 'ADMIN' ? 'danger' : 'info'" effect="plain">
+              {{ adminLabel(row.role) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="privilegeLabel" label="权限概况" min-width="160" />
         <el-table-column prop="restrictionReason" label="限制原因" min-width="180" />
-        <el-table-column label="操作" min-width="220" fixed="right">
+        <el-table-column label="操作" min-width="240" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row)">详情</el-button>
-            <el-button
-              v-if="row.status !== 'active'"
-              link
-              type="success"
-              @click="changeStatus(row, 'active')"
-            >
-              启用
-            </el-button>
-            <el-button
-              v-if="row.status !== 'disabled'"
-              link
-              type="danger"
-              @click="changeStatus(row, 'disabled')"
-            >
-              禁用
-            </el-button>
+            <el-button v-if="canAssignRoles" link type="warning" @click="openDetail(row)">设置角色</el-button>
+            <el-button v-if="row.status !== 'active'" link type="success" @click="changeStatus(row, 'active')">启用</el-button>
+            <el-button v-if="row.status !== 'disabled'" link type="danger" @click="changeStatus(row, 'disabled')">禁用</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -230,12 +310,29 @@ onMounted(loadUsers)
       <div v-if="detail.user" class="shell-card detail-grid">
         <span>昵称：{{ detail.user.nickname }}</span>
         <span>账号：{{ detail.user.username }}</span>
-        <span>邮箱：{{ detail.user.email }}</span>
-        <span>手机号：{{ detail.user.phone }}</span>
+        <span>邮箱：{{ detail.user.email || '未填写' }}</span>
+        <span>手机号：{{ detail.user.phone || '未填写' }}</span>
         <span>状态：{{ adminLabel(detail.user.status) }}</span>
         <span>认证状态：{{ adminLabel(detail.user.verificationStatus) }}</span>
         <span>信用等级：{{ detail.user.creditLevel }}</span>
-        <span>权限：{{ detail.user.privilegeLabel }}</span>
+        <span>角色：{{ adminLabel(detail.user.role) }}</span>
+      </div>
+
+      <div v-if="detail.user && canAssignRoles" class="shell-card page-stack">
+        <div class="section-heading"><h3>管理员角色分配</h3></div>
+        <el-form label-position="top">
+          <el-form-item label="目标角色">
+            <el-select v-model="roleForm.role">
+              <el-option v-for="option in ROLE_OPTIONS" :key="option.value" :label="option.label" :value="option.value" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="变更原因">
+            <el-input v-model="roleForm.reason" type="textarea" :rows="3" maxlength="255" show-word-limit placeholder="记录授权、回收或岗位调整原因" />
+          </el-form-item>
+        </el-form>
+        <div class="detail-actions">
+          <el-button type="primary" :loading="roleSaving" @click="saveRole">保存角色</el-button>
+        </div>
       </div>
 
       <div class="shell-card">
@@ -251,3 +348,22 @@ onMounted(loadUsers)
     </div>
   </el-drawer>
 </template>
+
+<style scoped>
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
