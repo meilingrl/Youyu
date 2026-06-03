@@ -1,4 +1,16 @@
 import service from '@/api/client'
+import { isValidEntityId } from '@/utils/id-utils'
+
+function rejectInvalidConversationId(conversationId) {
+  if (!isValidEntityId(conversationId)) {
+    return Promise.reject(new Error('无效的会话 ID'))
+  }
+  return null
+}
+
+function normalizeConversationId(conversationId) {
+  return String(conversationId).trim()
+}
 
 /**
  * 获取会话列表
@@ -18,7 +30,9 @@ export async function createConversation(data) {
  * 获取消息列表
  */
 export async function getMessages(conversationId, params) {
-  return service.get(`/chat/conversations/${conversationId}/messages`, { params })
+  const invalid = rejectInvalidConversationId(conversationId)
+  if (invalid) return invalid
+  return service.get(`/chat/conversations/${normalizeConversationId(conversationId)}/messages`, { params })
 }
 
 export async function searchMessages(params) {
@@ -30,30 +44,43 @@ export async function getUnreadCount() {
 }
 
 export async function markConversationRead(conversationId) {
-  return service.post(`/chat/conversations/${conversationId}/read`)
+  const invalid = rejectInvalidConversationId(conversationId)
+  if (invalid) return invalid
+  return service.post(`/chat/conversations/${normalizeConversationId(conversationId)}/read`)
 }
 
 export async function setConversationPinned(conversationId, isPinned) {
-  return service.post(`/chat/conversations/${conversationId}/pin`, { pinned: isPinned })
+  const invalid = rejectInvalidConversationId(conversationId)
+  if (invalid) return invalid
+  return service.post(`/chat/conversations/${normalizeConversationId(conversationId)}/pin`, { pinned: isPinned })
 }
 
 export async function setConversationMuted(conversationId, isMuted) {
-  return service.post(`/chat/conversations/${conversationId}/mute`, { muted: isMuted })
+  const invalid = rejectInvalidConversationId(conversationId)
+  if (invalid) return invalid
+  return service.post(`/chat/conversations/${normalizeConversationId(conversationId)}/mute`, { muted: isMuted })
 }
 
 export async function deleteConversation(conversationId) {
-  return service.delete(`/chat/conversations/${conversationId}`)
+  const invalid = rejectInvalidConversationId(conversationId)
+  if (invalid) return invalid
+  return service.delete(`/chat/conversations/${normalizeConversationId(conversationId)}`)
 }
 
 /**
  * 发送消息
  */
 export async function sendMessage(conversationId, data) {
-  return service.post(`/chat/conversations/${conversationId}/messages`, data)
+  const invalid = rejectInvalidConversationId(conversationId)
+  if (invalid) return invalid
+  return service.post(`/chat/conversations/${normalizeConversationId(conversationId)}/messages`, data)
 }
 
 export async function recallMessage(messageId) {
-  return service.post(`/chat/messages/${messageId}/recall`)
+  if (!isValidEntityId(messageId)) {
+    return Promise.reject(new Error('无效的消息 ID'))
+  }
+  return service.post(`/chat/messages/${String(messageId).trim()}/recall`)
 }
 
 export async function startSupportSession() {
@@ -61,11 +88,15 @@ export async function startSupportSession() {
 }
 
 export async function escalateSupportConversation(conversationId) {
-  return service.post(`/chat/conversations/${conversationId}/escalate`)
+  const invalid = rejectInvalidConversationId(conversationId)
+  if (invalid) return invalid
+  return service.post(`/chat/conversations/${normalizeConversationId(conversationId)}/escalate`)
 }
 
 export async function closeSupportConversation(conversationId) {
-  return service.post(`/chat/conversations/${conversationId}/close-support`)
+  const invalid = rejectInvalidConversationId(conversationId)
+  if (invalid) return invalid
+  return service.post(`/chat/conversations/${normalizeConversationId(conversationId)}/close-support`)
 }
 
 export async function getAutoReplySettings() {

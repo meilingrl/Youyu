@@ -15,6 +15,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -42,6 +43,20 @@ public class GlobalExceptionHandler {
                                                               HttpServletRequest request) {
         return ResponseEntity.badRequest()
                 .body(ApiResponse.failure(ResultCode.BAD_REQUEST, exception.getMessage(), traceId(request)));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException exception,
+                                                                HttpServletRequest request) {
+        String parameter = exception.getName();
+        Object value = exception.getValue();
+        log.warn("Rejected invalid request parameter {}={}", parameter, value);
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.failure(
+                        ResultCode.BAD_REQUEST,
+                        "请求参数格式无效: " + parameter,
+                        traceId(request)
+                ));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

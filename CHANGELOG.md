@@ -1,3 +1,14 @@
+## [2026-06-03] - Invalid Entity ID Guard
+
+### fixed
+- Prevented frontend requests with path segments such as `NaN`, `undefined`, or non-numeric ids from reaching Spring `Long` bindings by adding shared entity-id validation, route `beforeEnter` guards, API-module early rejection, and Axios query-param sanitization (notably explore `categoryId`).
+- Mapped backend `MethodArgumentTypeMismatchException` to HTTP 400 instead of logging an unhandled 500 when invalid query/path values still slip through.
+
+### verify
+- `npm test` in `frontend/` (includes new `id-utils` unit tests).
+
+---
+
 ## [2026-06-03] - Roadmap Archive Cleanup
 
 ### changed

@@ -13,6 +13,7 @@ import ExploreSearchShell from '@/components/explore/ExploreSearchShell.vue'
 import ExploreProductCard from '@/components/explore/ExploreProductCard.vue'
 import FeaturedShopsSection from '@/components/explore/FeaturedShopsSection.vue'
 import { buildFeaturedShops } from '@/components/explore/featured-shop-helpers'
+import { isValidEntityId, parseOptionalEntityId } from '@/utils/id-utils'
 
 const BOOKMARK_STORAGE_KEY = 'youyu-explore-bookmark-v2'
 const BOOKMARK_TOGGLE_THRESHOLD = 0.03
@@ -199,7 +200,7 @@ async function fetchProductsPage(page, { append = false } = {}) {
   try {
     const items = await marketStore.loadProducts({
       keyword: keyword.value || undefined,
-      categoryId: selectedCategoryId.value ? Number(selectedCategoryId.value) : undefined,
+      categoryId: parseOptionalEntityId(selectedCategoryId.value),
       productType: selectedProductType.value || undefined,
       page,
       pageSize: pageSize.value
@@ -240,7 +241,9 @@ async function fetchProductsPage(page, { append = false } = {}) {
 async function loadProductsByRoute() {
   syncingRoute = true
   keyword.value = routeKeyword()
-  selectedCategoryId.value = routeCategory()
+  const routeCategoryValue = routeCategory()
+  selectedCategoryId.value =
+    routeCategoryValue && isValidEntityId(routeCategoryValue) ? routeCategoryValue : ''
   selectedProductType.value = routeProductType()
   cards.value = []
   total.value = 0

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getAuthToken } from '@/utils/auth'
+import { sanitizeRequestParams } from '@/utils/id-utils'
 
 const service = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -11,6 +12,10 @@ service.interceptors.request.use((config) => {
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
+  }
+
+  if (config.params) {
+    config.params = sanitizeRequestParams(config.params)
   }
 
   return config

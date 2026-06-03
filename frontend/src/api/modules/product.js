@@ -1,11 +1,15 @@
 import service from '@/api/client'
+import { isValidEntityId } from '@/utils/id-utils'
 
 export function getProductList(params) {
   return service.get('/products', { params })
 }
 
 export function getProductDetail(id) {
-  return service.get(`/products/${id}`)
+  if (!isValidEntityId(id)) {
+    return Promise.reject(new Error('无效的商品 ID'))
+  }
+  return service.get(`/products/${String(id).trim()}`)
 }
 
 export function getMyProductList() {

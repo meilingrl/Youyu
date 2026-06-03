@@ -13,6 +13,7 @@ import { useChatStore } from '@/stores/chat'
 import { useMarketStore } from '@/stores/market'
 import { useRecommendStore } from '@/stores/recommend'
 import { useReviewStore } from '@/stores/review'
+import { isValidEntityId } from '@/utils/id-utils'
 
 const props = defineProps({
   id: {
@@ -129,8 +130,9 @@ function requireLogin(actionLabel) {
 }
 
 async function loadProduct() {
-  if (!props.id) {
+  if (!isValidEntityId(props.id)) {
     product.value = null
+    loadError.value = true
     return
   }
 
