@@ -23,6 +23,10 @@ service.interceptors.request.use((config) => {
 
 service.interceptors.response.use(
   (response) => {
+    if (response.config?.responseType === 'blob') {
+      return response
+    }
+
     const payload = response.data
 
     if (payload && typeof payload === 'object' && payload.success === false) {

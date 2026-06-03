@@ -15,6 +15,8 @@ public interface AdminService {
 
     Map<String, Object> updateUserStatus(Long userId, String status, String restrictionReason, Long adminUserId);
 
+    Map<String, Object> assignUserRole(Long userId, String role, String reason, Long adminUserId);
+
     Map<String, Object> batchUpdateUserStatus(List<Long> userIds, String status, String restrictionReason, Long adminUserId);
 
     Map<String, Object> listVerifications(String keyword, String status, int page, int pageSize);
@@ -62,4 +64,6 @@ public interface AdminService {
     Map<String, Object> listSearchLogs(int page, int pageSize);
 
     Map<String, Object> listAuditLogs(String action, String targetType, int page, int pageSize);
+
+    AdminCsvExport exportDataset(String dataset);
 }

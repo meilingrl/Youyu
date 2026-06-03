@@ -1,8 +1,10 @@
 package com.youyu.backend.service.admin.impl;
 
 import com.youyu.backend.common.api.ResultCode;
+import com.youyu.backend.common.auth.UserRole;
 import com.youyu.backend.common.enums.OrderStatus;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.common.exception.ForbiddenException;
 import com.youyu.backend.mapper.audit.AdminAuditLogMapper;
 import com.youyu.backend.mapper.mediation.MediationMapper;
 import com.youyu.backend.mapper.product.ProductMapper;
@@ -11,17 +13,25 @@ import com.youyu.backend.mapper.report.ReportMapper;
 import com.youyu.backend.mapper.shop.ShopMapper;
 import com.youyu.backend.mapper.user.StudentVerificationMapper;
 import com.youyu.backend.mapper.user.UserMapper;
+import com.youyu.backend.service.admin.AdminCsvExport;
 import com.youyu.backend.service.admin.AdminService;
 import com.youyu.backend.service.auth.AuthTokenService;
 import com.youyu.backend.service.auth.PasswordService;
 import com.youyu.backend.service.search.SearchService;
 import com.youyu.backend.service.transaction.support.TransactionDataStore;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Predicate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +48,19 @@ public class AdminServiceImpl implements AdminService {
     private static final List<String> SHOP_REVIEW_STATUSES = List.of("pending_review", "approved", "rejected");
     private static final List<String> REPORT_STATUSES = List.of("pending", "processing", "resolved", "rejected");
     private static final List<String> ACTIVE_MEDIATION_STATUSES = List.of("opened", "evidence_review", "decision_pending");
+    private static final List<String> DASHBOARD_ORDER_STATUS_SEQUENCE = List.of(
+            OrderStatus.PENDING_PAYMENT.getValue(),
+            OrderStatus.PENDING_FULFILLMENT.getValue(),
+            OrderStatus.PENDING_RECEIPT.getValue(),
+            OrderStatus.COMPLETED.getValue(),
+            OrderStatus.REFUNDING.getValue(),
+            OrderStatus.REFUNDED.getValue(),
+            OrderStatus.CANCELLED.getValue()
+    );
+    private static final Set<String> FULL_ACCESS_ADMIN_ROLES = Set.of(UserRole.ADMIN.name(), UserRole.SUPER_ADMIN.name());
+    private static final DateTimeFormatter EXPORT_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
     private static final int MAX_AUDIT_SUMMARY_LENGTH = 500;
+    private static final int DASHBOARD_TREND_DAYS = 7;
 
     private final UserMapper userMapper;
     private final StudentVerificationMapper studentVerificationMapper;
@@ -90,6 +112,15 @@ public class AdminServiceImpl implements AdminService {
 
         List<Map<String, Object>> verifications = studentVerificationMapper.findAll();
         List<Map<String, Object>> orders = transactionDataStore.listOrders();
+        BigDecimal totalSalesAmount = sumOrderAmounts(orders, this::isSuccessfulSalesOrder);
+        LocalDate today = LocalDate.now();
+        long todayOrderCount = orders.stream()
+                .filter(order -> isOnDate(order.get("submittedAt"), today))
+                .count();
+        BigDecimal todaySalesAmount = sumOrderAmounts(
+                orders,
+                order -> isSuccessfulSalesOrder(order) && isOnDate(order.get("submittedAt"), today)
+        );
 
         long pendingVerificationCount = studentVerificationMapper.countVerifications("", "pending_review");
         long riskFlagCount = countByTruthy(verifications, "riskFlag");
@@ -250,11 +281,7 @@ public class AdminServiceImpl implements AdminService {
         );
 
         Map<String, Object> statusBreakdowns = linkedMap(
-                "orders", List.of(
-                        statusMetric(OrderStatus.PENDING_FULFILLMENT.getValue(), pendingFulfillmentOrderCount, "/admin/orders"),
-                        statusMetric(OrderStatus.PENDING_RECEIPT.getValue(), pendingReceiptOrderCount, "/admin/orders"),
-                        statusMetric(OrderStatus.REFUNDING.getValue(), refundingOrderCount, "/admin/orders")
-                ),
+                "orders", buildOrderStatusMetrics(orders),
                 "mediation", List.of(
                         statusMetric("opened", openedMediationCount, "/admin/mediation"),
                         statusMetric("evidence_review", evidenceReviewMediationCount, "/admin/mediation"),
@@ -281,12 +308,17 @@ public class AdminServiceImpl implements AdminService {
                         "shopCount", shopCount,
                         "reportCount", reportCount,
                         "orderCount", orders.size(),
-                        "mediationCaseCount", mediationMapper.countCases("", "", null, null, "")
+                        "mediationCaseCount", mediationMapper.countCases("", "", null, null, ""),
+                        "totalSalesAmount", totalSalesAmount,
+                        "todayOrderCount", todayOrderCount,
+                        "todaySalesAmount", todaySalesAmount
                 ),
                 "queueMetrics", queueMetrics,
                 "governanceSignals", governanceSignals,
                 "statusBreakdowns", statusBreakdowns,
                 "salesAnalytics", linkedMap(
+                        "trend", buildSalesTrend(orders, today),
+                        "hotProducts", buildHotProducts(orders, 8),
                         "categorySales", shopMapper.summarizeCompletedSalesByCategory(8),
                         "shopRankings", shopMapper.rankShopsByCompletedSales(8)
                 ),
@@ -331,7 +363,7 @@ public class AdminServiceImpl implements AdminService {
         int pg = Math.max(1, page);
         int offset = (pg - 1) * ps;
         List<Map<String, Object>> items = userMapper.findUsersPaged(keyword, status, verificationStatus, offset, ps).stream()
-                .map(this::copy)
+                .map(this::sanitizeAdminUser)
                 .toList();
         long total = userMapper.countUsers(keyword, status, verificationStatus);
         return pagedResponse(items, total, pg, ps);
@@ -339,7 +371,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public Map<String, Object> userDetail(Long userId) {
-        Map<String, Object> user = copy(findUser(userId));
+        Map<String, Object> user = sanitizeAdminUser(findUser(userId));
         List<Map<String, Object>> relatedVerifications = studentVerificationMapper.findAll().stream()
                 .filter(item -> userId.equals(item.get("userId")))
                 .map(this::copy)
@@ -368,6 +400,7 @@ public class AdminServiceImpl implements AdminService {
         userMapper.updateStatus(userId, normalizedStatus);
         userMapper.updateRestriction(userId, restricted, restricted ? defaultString(restrictionReason) : "");
         Map<String, Object> result = linkedMap("user", copy(findUser(userId)));
+        result.put("user", sanitizeAdminUser(findUser(userId)));
         audit(adminUserId, "USER_STATUS_UPDATE", "USER", userId,
                 auditSummary(
                         "status=" + normalizedStatus,
@@ -375,6 +408,54 @@ public class AdminServiceImpl implements AdminService {
                         restricted ? "reason=" + defaultString(restrictionReason) : ""
                 ));
         return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> assignUserRole(Long userId, String role, String reason, Long adminUserId) {
+        Map<String, Object> actor = copy(findUser(adminUserId));
+        String actorRole = normalizeUserRole(actor.get("role"));
+        if (!FULL_ACCESS_ADMIN_ROLES.contains(actorRole)) {
+            throw new ForbiddenException("Only full-access admins can assign admin roles");
+        }
+
+        Map<String, Object> user = copy(findUser(userId));
+        String currentRole = normalizeUserRole(user.get("role"));
+        String nextRole = UserRole.fromName(role)
+                .map(UserRole::name)
+                .orElseThrow(() -> new BusinessException(ResultCode.BAD_REQUEST, "Unsupported admin role"));
+
+        if (userId.equals(adminUserId) && !currentRole.equals(nextRole)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Admins cannot change their own role");
+        }
+
+        if (currentRole.equals(nextRole)) {
+            return linkedMap(
+                    "user", sanitizeAdminUser(user),
+                    "previousRole", currentRole,
+                    "currentRole", nextRole
+            );
+        }
+
+        if (FULL_ACCESS_ADMIN_ROLES.contains(currentRole)
+                && !FULL_ACCESS_ADMIN_ROLES.contains(nextRole)
+                && userMapper.countByRoles(new ArrayList<>(FULL_ACCESS_ADMIN_ROLES)) <= 1) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "At least one full-access admin must remain assigned");
+        }
+
+        userMapper.updateRole(userId, nextRole);
+        Map<String, Object> updated = sanitizeAdminUser(findUser(userId));
+        audit(adminUserId, "USER_ROLE_ASSIGNMENT", "USER", userId,
+                auditSummary(
+                        "previousRole=" + currentRole,
+                        "currentRole=" + nextRole,
+                        "reason=" + defaultString(reason)
+                ));
+        return linkedMap(
+                "user", updated,
+                "previousRole", currentRole,
+                "currentRole", nextRole
+        );
     }
 
     @Override
@@ -720,6 +801,17 @@ public class AdminServiceImpl implements AdminService {
         return pagedResponse(items, total, pg, ps);
     }
 
+    @Override
+    public AdminCsvExport exportDataset(String dataset) {
+        String normalizedDataset = dataset == null ? "" : dataset.trim().toLowerCase(Locale.ROOT);
+        return switch (normalizedDataset) {
+            case "users" -> buildUsersExport();
+            case "orders" -> buildOrdersExport();
+            case "products" -> buildProductsExport();
+            default -> throw new BusinessException(ResultCode.BAD_REQUEST, "Unsupported export dataset");
+        };
+    }
+
     private Map<String, Object> pagedResponse(List<Map<String, Object>> items, long total, int page, int pageSize) {
         return linkedMap(
                 "items", items,
@@ -843,6 +935,247 @@ public class AdminServiceImpl implements AdminService {
         );
     }
 
+    private List<Map<String, Object>> buildSalesTrend(List<Map<String, Object>> orders, LocalDate today) {
+        List<Map<String, Object>> trend = new ArrayList<>();
+        for (int index = DASHBOARD_TREND_DAYS - 1; index >= 0; index--) {
+            LocalDate date = today.minusDays(index);
+            BigDecimal salesAmount = sumOrderAmounts(
+                    orders,
+                    order -> isSuccessfulSalesOrder(order) && isOnDate(order.get("submittedAt"), date)
+            );
+            long orderCount = orders.stream()
+                    .filter(order -> isSuccessfulSalesOrder(order) && isOnDate(order.get("submittedAt"), date))
+                    .count();
+            trend.add(linkedMap(
+                    "date", date.toString(),
+                    "salesAmount", salesAmount,
+                    "orderCount", orderCount
+            ));
+        }
+        return trend;
+    }
+
+    private List<Map<String, Object>> buildOrderStatusMetrics(List<Map<String, Object>> orders) {
+        List<Map<String, Object>> metrics = new ArrayList<>();
+        for (String status : DASHBOARD_ORDER_STATUS_SEQUENCE) {
+            metrics.add(statusMetric(status, countByValue(orders, "orderStatus", status), "/admin/orders"));
+        }
+        return metrics;
+    }
+
+    private List<Map<String, Object>> buildHotProducts(List<Map<String, Object>> orders, int limit) {
+        Map<String, Map<String, Object>> aggregate = new LinkedHashMap<>();
+        for (Map<String, Object> order : orders) {
+            if (!isSuccessfulSalesOrder(order)) {
+                continue;
+            }
+            List<Map<String, Object>> items = transactionDataStore.findOrderItems(toLong(order.get("id")));
+            if (items.isEmpty()) {
+                accumulateHotProduct(aggregate, "Unknown product", 1L, decimalValue(order.get("payableAmount")));
+                continue;
+            }
+
+            BigDecimal remainingAmount = decimalValue(order.get("payableAmount"));
+            for (int index = 0; index < items.size(); index++) {
+                Map<String, Object> orderItem = items.get(index);
+                String title = defaultIfBlank(defaultString(orderItem.get("productTitleSnapshot")), "Unknown product");
+                long quantity = Math.max(1L, toLongOrZero(orderItem.get("quantity")));
+                BigDecimal itemAmount = index == items.size() - 1
+                        ? remainingAmount
+                        : decimalValue(orderItem.get("subtotalAmount"));
+                remainingAmount = remainingAmount.subtract(itemAmount);
+                accumulateHotProduct(aggregate, title, quantity, itemAmount);
+            }
+        }
+        return aggregate.values().stream()
+                .sorted((left, right) -> {
+                    int soldCompare = Long.compare(toLongOrZero(right.get("soldCount")), toLongOrZero(left.get("soldCount")));
+                    if (soldCompare != 0) {
+                        return soldCompare;
+                    }
+                    int salesCompare = decimalValue(right.get("salesAmount")).compareTo(decimalValue(left.get("salesAmount")));
+                    if (salesCompare != 0) {
+                        return salesCompare;
+                    }
+                    return String.valueOf(left.get("productTitle")).compareTo(String.valueOf(right.get("productTitle")));
+                })
+                .limit(limit)
+                .toList();
+    }
+
+    private void accumulateHotProduct(Map<String, Map<String, Object>> aggregate,
+                                      String title,
+                                      long quantity,
+                                      BigDecimal salesAmount) {
+        Map<String, Object> item = aggregate.computeIfAbsent(title, ignored -> linkedMap(
+                "productTitle", title,
+                "soldCount", 0L,
+                "orderCount", 0L,
+                "salesAmount", BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+        ));
+        item.put("soldCount", toLongOrZero(item.get("soldCount")) + quantity);
+        item.put("orderCount", toLongOrZero(item.get("orderCount")) + 1L);
+        item.put("salesAmount", decimalValue(item.get("salesAmount")).add(salesAmount));
+    }
+
+    private BigDecimal sumOrderAmounts(List<Map<String, Object>> orders, Predicate<Map<String, Object>> predicate) {
+        BigDecimal total = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        for (Map<String, Object> order : orders) {
+            if (predicate.test(order)) {
+                total = total.add(decimalValue(order.get("payableAmount")));
+            }
+        }
+        return total;
+    }
+
+    private boolean isSuccessfulSalesOrder(Map<String, Object> order) {
+        if (!"paid".equals(String.valueOf(order.get("paymentStatus")))) {
+            return false;
+        }
+        String orderStatus = defaultString(order.get("orderStatus"));
+        return !OrderStatus.REFUNDING.getValue().equals(orderStatus)
+                && !OrderStatus.REFUNDED.getValue().equals(orderStatus)
+                && !OrderStatus.CANCELLED.getValue().equals(orderStatus);
+    }
+
+    private boolean isOnDate(Object value, LocalDate expectedDate) {
+        LocalDateTime dateTime = asLocalDateTime(value);
+        return dateTime != null && expectedDate.equals(dateTime.toLocalDate());
+    }
+
+    private LocalDateTime asLocalDateTime(Object value) {
+        if (value instanceof LocalDateTime localDateTime) {
+            return localDateTime;
+        }
+        return null;
+    }
+
+    private BigDecimal decimalValue(Object value) {
+        if (value instanceof BigDecimal bigDecimal) {
+            return bigDecimal.setScale(2, RoundingMode.HALF_UP);
+        }
+        if (value instanceof Number number) {
+            return BigDecimal.valueOf(number.doubleValue()).setScale(2, RoundingMode.HALF_UP);
+        }
+        if (value == null || String.valueOf(value).isBlank()) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return new BigDecimal(String.valueOf(value)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private AdminCsvExport buildUsersExport() {
+        List<Map<String, Object>> rows = userMapper.findAll();
+        return new AdminCsvExport(
+                exportFileName("users"),
+                buildCsv(
+                        List.of("userId", "username", "nickname", "status", "role", "verificationStatus", "privilegeLabel", "creditLevel", "isRestricted", "registeredAt", "lastLoginAt"),
+                        rows.stream().map(this::sanitizeAdminUser).map(row -> List.of(
+                                row.get("id"),
+                                row.get("username"),
+                                row.get("nickname"),
+                                row.get("status"),
+                                row.get("role"),
+                                row.get("verificationStatus"),
+                                row.get("privilegeLabel"),
+                                row.get("creditLevel"),
+                                row.get("isRestricted"),
+                                row.get("registeredAt"),
+                                row.get("lastLoginAt")
+                        )).toList()
+                )
+        );
+    }
+
+    private AdminCsvExport buildOrdersExport() {
+        List<Map<String, Object>> rows = transactionDataStore.listOrders().stream()
+                .map(this::toAdminOrderSummary)
+                .toList();
+        return new AdminCsvExport(
+                exportFileName("orders"),
+                buildCsv(
+                        List.of("orderId", "orderNo", "buyerUserId", "sellerUserId", "shopId", "productTitle", "itemCount", "orderStatus", "paymentStatus", "fulfillmentType", "payableAmount", "submittedAt", "completedAt"),
+                        rows.stream().map(row -> java.util.Arrays.asList(
+                                row.get("id"),
+                                row.get("orderNo"),
+                                row.get("buyerUserId"),
+                                row.get("sellerUserId"),
+                                row.get("shopId"),
+                                row.get("productTitle"),
+                                row.get("itemCount"),
+                                row.get("orderStatus"),
+                                row.get("paymentStatus"),
+                                row.get("fulfillmentType"),
+                                row.get("payableAmount"),
+                                row.get("submittedAt"),
+                                row.get("completedAt")
+                        )).toList()
+                )
+        );
+    }
+
+    private Map<String, Object> toAdminOrderSummary(Map<String, Object> order) {
+        List<Map<String, Object>> items = transactionDataStore.findOrderItems(toLong(order.get("id")));
+        Map<String, Object> firstItem = items.isEmpty() ? Map.of("productTitleSnapshot", "-") : items.get(0);
+        Map<String, Object> summary = copy(order);
+        summary.put("productTitle", firstItem.get("productTitleSnapshot"));
+        summary.put("itemCount", items.size());
+        return summary;
+    }
+
+    private AdminCsvExport buildProductsExport() {
+        List<Map<String, Object>> rows = productMapper.findAll();
+        return new AdminCsvExport(
+                exportFileName("products"),
+                buildCsv(
+                        List.of("productId", "title", "categoryName", "sellerUserId", "sellerName", "shopId", "shopName", "productType", "status", "reviewStatus", "price", "stock", "viewCount", "favoriteCount", "createdAt", "updatedAt"),
+                        rows.stream().map(row -> List.of(
+                                row.get("id"),
+                                row.get("title"),
+                                row.get("categoryName"),
+                                row.get("sellerUserId"),
+                                row.get("sellerName"),
+                                row.get("shopId"),
+                                row.get("shopName"),
+                                row.get("productType"),
+                                row.get("status"),
+                                row.get("reviewStatus"),
+                                row.get("price"),
+                                row.get("stock"),
+                                row.get("viewCount"),
+                                row.get("favoriteCount"),
+                                row.get("createdAt"),
+                                row.get("updatedAt")
+                        )).toList()
+                )
+        );
+    }
+
+    private String buildCsv(List<String> headers, List<List<Object>> rows) {
+        StringBuilder builder = new StringBuilder("\uFEFF");
+        builder.append(String.join(",", headers)).append('\n');
+        for (List<Object> row : rows) {
+            List<String> values = new ArrayList<>();
+            for (Object value : row) {
+                values.add(csvValue(value));
+            }
+            builder.append(String.join(",", values)).append('\n');
+        }
+        return builder.toString();
+    }
+
+    private String csvValue(Object value) {
+        String text = defaultString(value);
+        String escaped = text.replace("\"", "\"\"");
+        if (escaped.contains(",") || escaped.contains("\"") || escaped.contains("\n") || escaped.contains("\r")) {
+            return "\"" + escaped + "\"";
+        }
+        return escaped;
+    }
+
+    private String exportFileName(String dataset) {
+        return "admin-" + dataset + "-summary-" + LocalDateTime.now().format(EXPORT_TIMESTAMP_FORMATTER) + ".csv";
+    }
+
     private int countByTruthy(List<Map<String, Object>> items, String key) {
         return (int) items.stream()
                 .filter(item -> Boolean.TRUE.equals(item.get(key)))
@@ -855,12 +1188,25 @@ public class AdminServiceImpl implements AdminService {
                 .count();
     }
 
+    private String normalizeUserRole(Object roleValue) {
+        return UserRole.fromName(defaultString(roleValue))
+                .map(UserRole::name)
+                .orElse(UserRole.USER.name());
+    }
+
     private long countMediationCases(String status) {
         return mediationMapper.countCases(status, "", null, null, "");
     }
 
     private Map<String, Object> copy(Map<String, Object> source) {
         return new LinkedHashMap<>(source);
+    }
+
+    private Map<String, Object> sanitizeAdminUser(Map<String, Object> source) {
+        Map<String, Object> sanitized = copy(source);
+        sanitized.remove("password");
+        sanitized.remove("passwordHash");
+        return sanitized;
     }
 
     private Map<String, Object> linkedMap(Object... values) {
@@ -913,8 +1259,28 @@ public class AdminServiceImpl implements AdminService {
         return Long.parseLong(String.valueOf(value));
     }
 
+    private long toLongOrZero(Object value) {
+        if (value == null) {
+            return 0L;
+        }
+        String text = String.valueOf(value).trim();
+        if (text.isEmpty() || "null".equalsIgnoreCase(text)) {
+            return 0L;
+        }
+        return toLong(value);
+    }
+
     private void audit(Long adminUserId, String action, String targetType, Long targetId, String summary) {
-        adminAuditLogMapper.insert(adminUserId, "ADMIN", action, targetType, targetId, summary);
+        adminAuditLogMapper.insert(adminUserId, resolveOperatorRole(adminUserId), action, targetType, targetId, summary);
+    }
+
+    private String resolveOperatorRole(Long adminUserId) {
+        if (adminUserId == null) {
+            return UserRole.ADMIN.name();
+        }
+        return userMapper.findById(adminUserId)
+                .map(user -> normalizeUserRole(user.get("role")))
+                .orElse(UserRole.ADMIN.name());
     }
 
     private String auditSummary(String... parts) {

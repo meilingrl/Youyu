@@ -146,6 +146,11 @@ public class JdbcUserMapper implements UserMapper {
     }
 
     @Override
+    public void updateRole(Long id, String role) {
+        jdbcTemplate.update("UPDATE users SET role = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", role, id);
+    }
+
+    @Override
     public void updateNickname(Long id, String nickname) {
         jdbcTemplate.update("UPDATE users SET nickname = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", nickname, id);
     }
@@ -344,6 +349,20 @@ public class JdbcUserMapper implements UserMapper {
                 .map(this::normalizePreference)
                 .toList();
         return preferences.stream().findFirst();
+    }
+
+    @Override
+    public long countByRoles(List<String> roles) {
+        if (roles == null || roles.isEmpty()) {
+            return 0L;
+        }
+        String placeholders = String.join(", ", java.util.Collections.nCopies(roles.size(), "?"));
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE role IN (" + placeholders + ")",
+                Long.class,
+                roles.toArray()
+        );
+        return count == null ? 0L : count;
     }
 
     @Override

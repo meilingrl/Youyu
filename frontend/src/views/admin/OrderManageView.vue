@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from '@/plugins/element-plus-services'
 import ListPageShell from '@/components/shell/ListPageShell.vue'
+import { exportAdminDataset } from '@/api/modules/admin'
 import {
   completeRefund,
   getAdminOrderDetail,
@@ -10,12 +11,17 @@ import {
   sellerConfirmOffline,
   shipOrder
 } from '@/api/modules/order'
+import { useAuthStore } from '@/stores/auth'
+import { hasAnyAdminPermission } from '@/utils/admin-permissions'
+import { downloadBlobResponse } from '@/utils/download-utils'
 import { resolveErrorMessage } from '@/utils/error-utils'
 import { adminLabel, adminTagType } from '@/utils/admin-display-labels'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const loading = ref(false)
 const actionLoading = ref(false)
+const exportLoading = ref(false)
 const error = ref('')
 const rows = ref([])
 const detailVisible = ref(false)
@@ -30,6 +36,7 @@ function onResize() {
   windowWidth.value = window.innerWidth
 }
 const drawerSize = computed(() => (windowWidth.value < 768 ? '100%' : '720px'))
+const canExport = computed(() => hasAnyAdminPermission(authStore.currentRole, ['ADMIN_DATA_EXPORT']))
 
 async function loadOrders() {
   loading.value = true
@@ -135,6 +142,23 @@ function openMediationLane() {
   })
 }
 
+async function downloadOrdersExport() {
+  if (!canExport.value) {
+    return
+  }
+
+  exportLoading.value = true
+  try {
+    const response = await exportAdminDataset('orders')
+    downloadBlobResponse(response, 'admin-orders-summary.csv')
+    ElMessage.success('订单导出已开始')
+  } catch (err) {
+    ElMessage.error(resolveErrorMessage(err))
+  } finally {
+    exportLoading.value = false
+  }
+}
+
 onMounted(() => {
   loadOrders()
   window.addEventListener('resize', onResize)
@@ -155,6 +179,10 @@ onBeforeUnmount(() => {
     empty-description="当前没有订单数据。"
     @retry="loadOrders"
   >
+    <template #toolbar>
+      <el-button v-if="canExport" plain :loading="exportLoading" @click="downloadOrdersExport">导出订单摘要</el-button>
+    </template>
+
     <template #summary>
       <div class="filter-row filter-row--summary">
         <el-tag>订单总数 {{ rows.length }}</el-tag>
