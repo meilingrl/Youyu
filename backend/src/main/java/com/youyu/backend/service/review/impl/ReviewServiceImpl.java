@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,10 @@ public class ReviewServiceImpl implements ReviewService {
 
     private static final int MAX_CONTENT_LENGTH = 1000;
     private static final int MAX_PAGE_SIZE = 50;
+    private static final int MAX_IMAGE_COUNT = 3;
+    private static final int MAX_IMAGE_DATA_URL_LENGTH = 7_000_000;
+    private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
+            "image/jpeg", "image/png", "image/gif", "image/webp");
 
     private final ReviewMapper reviewMapper;
     private final TransactionDataStore transactionDataStore;
@@ -45,6 +50,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         String content = optionalString(command.get("content"), "");
         assertContentLength(content);
+        List<Map<String, Object>> images = normalizeImages(command.get("images"));
 
         Long orderItemId = requiredLong(command.get("orderItemId"), "orderItemId");
 
@@ -70,6 +76,7 @@ public class ReviewServiceImpl implements ReviewService {
         Long reviewId;
         try {
             reviewId = reviewMapper.insertProductReview(reviewData);
+            reviewMapper.insertReviewImages("product", reviewId, images);
         } catch (DuplicateKeyException e) {
             throw new BusinessException(ResultCode.BUSINESS_ERROR, "您已评价过该商品");
         }
@@ -92,6 +99,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         String content = optionalString(command.get("content"), "");
         assertContentLength(content);
+        List<Map<String, Object>> images = normalizeImages(command.get("images"));
 
         Long shopId = requiredLong(command.get("shopId"), "shopId");
 
@@ -118,6 +126,7 @@ public class ReviewServiceImpl implements ReviewService {
         Long reviewId;
         try {
             reviewId = reviewMapper.insertShopReview(reviewData);
+            reviewMapper.insertReviewImages("shop", reviewId, images);
         } catch (DuplicateKeyException e) {
             throw new BusinessException(ResultCode.BUSINESS_ERROR, "您已评价过该店铺");
         }
@@ -278,6 +287,63 @@ public class ReviewServiceImpl implements ReviewService {
         if (content != null && content.length() > MAX_CONTENT_LENGTH) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "评价内容不能超过" + MAX_CONTENT_LENGTH + "字");
         }
+    }
+
+    private List<Map<String, Object>> normalizeImages(Object value) {
+        if (value == null) {
+            return List.of();
+        }
+        if (!(value instanceof List<?> rawImages)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "images must be an array");
+        }
+        if (rawImages.size() > MAX_IMAGE_COUNT) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "review images cannot exceed " + MAX_IMAGE_COUNT);
+        }
+
+        List<Map<String, Object>> images = new ArrayList<>();
+        for (Object rawImage : rawImages) {
+            if (!(rawImage instanceof Map<?, ?> rawMap)) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "image metadata must be an object");
+            }
+
+            String mediaUrl = optionalString(rawMap.get("mediaUrl"), "").trim();
+            String mimeType = optionalString(rawMap.get("mimeType"), "").trim().toLowerCase();
+            String fileName = optionalString(rawMap.get("fileName"), "").trim();
+
+            if (mediaUrl.isBlank()) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "image mediaUrl is required");
+            }
+            if (mediaUrl.length() > MAX_IMAGE_DATA_URL_LENGTH) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "review image is too large");
+            }
+            if (mimeType.isBlank()) {
+                mimeType = inferDataUrlMimeType(mediaUrl);
+            }
+            if (!ALLOWED_IMAGE_TYPES.contains(mimeType)) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "unsupported review image type");
+            }
+            if (!mediaUrl.startsWith("data:" + mimeType + ";base64,")) {
+                throw new BusinessException(ResultCode.BAD_REQUEST, "review image must be a matching data URL");
+            }
+
+            Map<String, Object> image = new LinkedHashMap<>();
+            image.put("mediaUrl", mediaUrl);
+            image.put("mimeType", mimeType);
+            image.put("fileName", fileName.length() > 255 ? fileName.substring(0, 255) : fileName);
+            images.add(image);
+        }
+        return images;
+    }
+
+    private String inferDataUrlMimeType(String mediaUrl) {
+        if (!mediaUrl.startsWith("data:")) {
+            return "";
+        }
+        int separatorIndex = mediaUrl.indexOf(";base64,");
+        if (separatorIndex < 0) {
+            return "";
+        }
+        return mediaUrl.substring("data:".length(), separatorIndex).toLowerCase();
     }
 
     private Long toLong(Object value) {

@@ -8,6 +8,8 @@ public interface ReviewMapper {
 
     Long insertProductReview(Map<String, Object> reviewData);
 
+    void insertReviewImages(String reviewType, Long reviewId, List<Map<String, Object>> images);
+
     Optional<Map<String, Object>> findProductReviewById(Long id);
 
     List<Map<String, Object>> findProductReviewsByProductId(Long productId, int offset, int limit);

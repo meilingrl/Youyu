@@ -686,6 +686,19 @@ CREATE TABLE IF NOT EXISTS shop_reviews (
 CREATE INDEX idx_shop_reviews_shop  ON shop_reviews(shop_id);
 CREATE INDEX idx_shop_reviews_buyer ON shop_reviews(buyer_user_id);
 
+CREATE TABLE IF NOT EXISTS review_images (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    review_type VARCHAR(32) NOT NULL,
+    review_id BIGINT NOT NULL,
+    media_url MEDIUMTEXT NOT NULL,
+    file_name VARCHAR(255),
+    mime_type VARCHAR(64),
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_review_images_target ON review_images(review_type, review_id, sort_order, id);
+
 CREATE TABLE IF NOT EXISTS chat_conversations (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     type VARCHAR(32) NOT NULL DEFAULT 'direct',

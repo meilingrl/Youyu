@@ -11,6 +11,26 @@ import {
   getShopReviewSummary
 } from '@/api/modules/review'
 
+function normalizeReviewImages(value) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((image) => ({
+      id: image.id ?? null,
+      mediaUrl: image.mediaUrl ?? image.media_url ?? '',
+      fileName: image.fileName ?? image.file_name ?? '',
+      mimeType: image.mimeType ?? image.mime_type ?? '',
+      sortOrder: Number(image.sortOrder ?? image.sort_order ?? 0)
+    }))
+    .filter((image) => image.mediaUrl)
+}
+
+function normalizeReviewItem(review) {
+  return {
+    ...review,
+    images: normalizeReviewImages(review?.images)
+  }
+}
+
 export const useReviewStore = defineStore('review', () => {
   // Pending review items
   const pendingItems = ref([])
@@ -78,8 +98,8 @@ export const useReviewStore = defineStore('review', () => {
     try {
       const res = await getMyReviews()
       if (!res?.success) throw new Error(res?.message || 'Failed to load my reviews')
-      myProductReviews.value = res.data?.productReviews ?? []
-      myShopReviews.value = res.data?.shopReviews ?? []
+      myProductReviews.value = (res.data?.productReviews ?? []).map(normalizeReviewItem)
+      myShopReviews.value = (res.data?.shopReviews ?? []).map(normalizeReviewItem)
     } catch (e) {
       myReviewsError.value = e?.response?.data?.message || e.message || '加载我的评价失败'
       throw e
@@ -98,7 +118,7 @@ export const useReviewStore = defineStore('review', () => {
   async function doSubmitProductReview(payload) {
     const res = await submitProductReviewApi(payload)
     if (!res?.success) throw new Error(res?.message || '提交评价失败')
-    return res.data
+    return normalizeReviewItem(res.data)
   }
 
   /**
@@ -111,7 +131,7 @@ export const useReviewStore = defineStore('review', () => {
   async function doSubmitShopReview(payload) {
     const res = await submitShopReviewApi(payload)
     if (!res?.success) throw new Error(res?.message || '提交评价失败')
-    return res.data
+    return normalizeReviewItem(res.data)
   }
 
   /**
@@ -129,7 +149,7 @@ export const useReviewStore = defineStore('review', () => {
     try {
       const res = await getProductReviewList(productId, { page, pageSize })
       if (!res?.success) throw new Error(res?.message || 'Failed to load reviews')
-      productReviews.value = res.data?.items ?? []
+      productReviews.value = (res.data?.items ?? []).map(normalizeReviewItem)
       productReviewTotal.value = res.data?.total ?? 0
     } catch (e) {
       productReviewError.value = e?.response?.data?.message || e.message || '加载商品评价失败'
@@ -174,7 +194,7 @@ export const useReviewStore = defineStore('review', () => {
     try {
       const res = await getShopReviewList(shopId, { page, pageSize })
       if (!res?.success) throw new Error(res?.message || 'Failed to load shop reviews')
-      shopReviews.value = res.data?.items ?? []
+      shopReviews.value = (res.data?.items ?? []).map(normalizeReviewItem)
       shopReviewTotal.value = res.data?.total ?? 0
     } catch (e) {
       shopReviewError.value = e?.response?.data?.message || e.message || '加载店铺评价失败'
