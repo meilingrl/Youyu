@@ -1,0 +1,65 @@
+### Youyu - Launch Security Hardening
+### These checks are evidence-oriented smoke requests for the launch security task.
+### Do not commit real staging domains, JWTs, provider credentials, or local .env files.
+
+@baseUrl = http://localhost:8080
+@allowedOrigin = http://localhost:5173
+@blockedOrigin = https://untrusted.example.test
+@userToken = mock-1001-USER
+@adminToken = mock-9001-ADMIN
+
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
+
+### Allowed local origin preflight - dev/seed/test/default only
+OPTIONS {{baseUrl}}/api/auth/me
+Origin: {{allowedOrigin}}
+Access-Control-Request-Method: GET
+Access-Control-Request-Headers: authorization
+
+###
+
+### Untrusted origin preflight - expect no Access-Control-Allow-Origin match
+OPTIONS {{baseUrl}}/api/auth/me
+Origin: {{blockedOrigin}}
+Access-Control-Request-Method: GET
+Access-Control-Request-Headers: authorization
+
+# ---------------------------------------------------------------------------
+# Mock-token boundary
+# ---------------------------------------------------------------------------
+
+###
+
+### Mock token works only in dev/seed/test/default local modes
+GET {{baseUrl}}/api/auth/me
+Authorization: Bearer {{userToken}}
+
+###
+
+### Protected user endpoint without token - expect 401 envelope
+GET {{baseUrl}}/api/users/profile
+
+###
+
+### Admin endpoint with user token - expect forbidden envelope
+GET {{baseUrl}}/api/admin/users
+Authorization: Bearer {{userToken}}
+
+###
+
+### Admin endpoint with admin token - dev/seed/test/default local permission smoke
+GET {{baseUrl}}/api/admin/users
+Authorization: Bearer {{adminToken}}
+
+# ---------------------------------------------------------------------------
+# Payment mock boundary
+# ---------------------------------------------------------------------------
+
+###
+
+### Payment gateway exposure - staging/prod-like profiles must not list mock
+GET {{baseUrl}}/api/payments/gateway
+Authorization: Bearer {{userToken}}
+

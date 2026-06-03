@@ -35,4 +35,12 @@ public interface UserService {
     Map<String, Object> updateAddress(Long addressId, CreateUserAddressRequest request);
 
     Map<String, Object> deleteAddress(Long addressId);
+
+    Map<String, Object> logConsent(Map<String, Object> request, String requestSource, String userAgent);
+
+    List<Map<String, Object>> consentHistory();
+
+    Map<String, Object> exportPersonalData();
+
+    Map<String, Object> deleteAccount(Map<String, Object> request, String requestSource, String userAgent);
 }

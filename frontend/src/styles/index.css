@@ -670,6 +670,22 @@ textarea {
   padding-top: 20px;
 }
 
+.app-footer__links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.app-footer__links a {
+  color: var(--cm-text-secondary);
+  font-weight: 700;
+}
+
+.app-footer__links a:hover {
+  color: var(--cm-primary);
+}
+
 .page-section {
   padding: 28px;
 }

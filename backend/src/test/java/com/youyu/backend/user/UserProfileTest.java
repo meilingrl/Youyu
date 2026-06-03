@@ -328,4 +328,46 @@ class UserProfileTest extends BackendTestBase {
                 .andExpect(jsonPath("$.data.userId").exists())
                 .andExpect(jsonPath("$.data.role").exists());
     }
+
+    @Test
+    void consentHistoryAndDataExportAreAvailable() throws Exception {
+        mockMvc.perform(post("/api/users/consent/log")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "consentType": "cookie_functional",
+                                  "consented": true,
+                                  "source": "test"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.logged").value(true));
+
+        mockMvc.perform(get("/api/users/consent/history")
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].consentType").value("cookie_functional"));
+
+        mockMvc.perform(post("/api/users/me/data-export")
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.profile.username").value("zhangsan"))
+                .andExpect(jsonPath("$.data.addresses").isArray())
+                .andExpect(jsonPath("$.data.consentHistory").isArray())
+                .andExpect(jsonPath("$.data.limitations").isArray());
+    }
+
+    @Test
+    void accountDeletionRequiresExplicitConfirmation() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/users/me/account")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("{\"confirmation\":\"wrong\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
 }

@@ -34,7 +34,10 @@ class HealthEndpointTest {
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Trace-Id"))
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.status").value("UP"));
+                .andExpect(jsonPath("$.data.status").value("UP"))
+                .andExpect(jsonPath("$.data.database.status").value("UP"))
+                .andExpect(jsonPath("$.data.database.url").doesNotExist())
+                .andExpect(jsonPath("$.data.database.username").doesNotExist());
     }
 
     @Test

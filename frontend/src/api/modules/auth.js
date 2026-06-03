@@ -26,6 +26,9 @@ export function register(payload) {
   if (payload.phone) {
     body.phone = payload.phone
   }
+  if (Object.prototype.hasOwnProperty.call(payload, 'agreedToTerms')) {
+    body.agreedToTerms = payload.agreedToTerms === true
+  }
 
   return service.post('/auth/register', body)
 }

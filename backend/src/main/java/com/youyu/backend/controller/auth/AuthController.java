@@ -30,7 +30,10 @@ public class AuthController {
     @PostMapping("/register")
     public ApiResponse<Map<String, Object>> register(@Valid @RequestBody RegisterRequest body,
                                                      HttpServletRequest request) {
-        return ApiResponse.success(authService.register(body), traceId(request));
+        return ApiResponse.success(
+                authService.register(body, requestSource(request), userAgent(request)),
+                traceId(request)
+        );
     }
 
     @PostMapping("/email-codes")
@@ -90,5 +93,9 @@ public class AuthController {
 
     private String requestSource(HttpServletRequest request) {
         return request.getRemoteAddr();
+    }
+
+    private String userAgent(HttpServletRequest request) {
+        return request.getHeader("User-Agent");
     }
 }

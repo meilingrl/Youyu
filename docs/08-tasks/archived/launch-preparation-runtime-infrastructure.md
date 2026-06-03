@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: launch-preparation-runtime-infrastructure
-- Status: active
+- Status: completed
 - Owner: worker-runtime
 - Track: cross-cutting
 - Depends on: launch-preparation-l0-scope-freeze
 - Priority: P0
 - Planned date: 2026-06-04
-- Completed date:
+- Completed date: 2026-06-04
 
 ## Objective
 
@@ -77,15 +77,23 @@ The repository already has a staging profile, Compose stack, and several launch-
 
 ## Acceptance Criteria
 
-- [ ] Staging/runtime datasource and health behavior is documented and testable.
-- [ ] Logging can correlate requests with traceId without exposing secrets.
-- [ ] Backup/restore rehearsal procedure is executable in principle and preserves generated artifacts outside git.
-- [ ] Object-storage and data-lifecycle gaps are recorded as explicit follow-up work.
+- [x] Staging/runtime datasource and health behavior is documented and testable.
+- [x] Logging can correlate requests with traceId without exposing secrets.
+- [x] Backup/restore rehearsal procedure is executable in principle and preserves generated artifacts outside git.
+- [x] Object-storage and data-lifecycle gaps are recorded as explicit follow-up work.
 
 ## Documentation Updates Required
 
-- [ ] `CHANGELOG.md`
-- [ ] relevant standards/runbook docs
-- [ ] task status and archive move
+- [x] `CHANGELOG.md`
+- [x] relevant standards/runbook docs
+- [x] task status and archive move
 
 ## Completion Notes
+
+- Added explicit staging Hikari pool settings with environment-variable overrides for pool size, timeouts, lifetime, leak detection, and startup fail-fast behavior.
+- Kept default staging startup schema-only; `seed` remains opt-in and is not activated by `application-staging.yml`.
+- Extended `/api/health` to include a database `UP`/`DOWN` probe without exposing JDBC URLs, usernames, hostnames, pool internals, SQL errors, or secrets.
+- Kept Actuator exposure limited to health with `db` and `diskSpace` components and `show-details: never`.
+- Updated launch-foundation configuration, logging/health, and backup/restore standards with validation commands, trace logging boundaries, object-storage migration boundaries, rollback expectations, and data lifecycle follow-up rules.
+- Made backup pruning opt-in with `PRUNE_OLD_BACKUPS=true`; default backup creation is non-destructive and generated files remain under ignored `backups/mysql/`.
+- Main-agent integration verified backend `.\mvnw.cmd test`, including `HealthEndpointTest`, after CORS and task-overlap fixes.

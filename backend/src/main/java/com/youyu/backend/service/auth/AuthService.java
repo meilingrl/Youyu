@@ -16,7 +16,7 @@ public interface AuthService {
                                      String captchaCode,
                                      String requestSource);
 
-    Map<String, Object> register(RegisterRequest request);
+    Map<String, Object> register(RegisterRequest request, String requestSource, String userAgent);
 
     Map<String, Object> sendEmailCode(String email, String purpose, String requestSource);
 

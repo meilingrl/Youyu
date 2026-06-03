@@ -69,7 +69,8 @@ class YouyuBackendApplicationTests {
                                   "nickname": "链路用户",
                                   "phone": "139%s",
                                   "email": "%s",
-                                  "emailCode": "482913"
+                                  "emailCode": "482913",
+                                  "agreedToTerms": true
                                 }
                                 """.formatted(username, password, String.valueOf(suffix).substring(0, 8), email)))
                 .andExpect(status().isOk())

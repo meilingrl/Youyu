@@ -136,6 +136,21 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     CONSTRAINT fk_user_preferences_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS user_consent_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    consent_type VARCHAR(50) NOT NULL,
+    consented BOOLEAN NOT NULL,
+    source VARCHAR(64),
+    ip_address VARCHAR(45),
+    user_agent VARCHAR(500),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_consent_logs_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_user_consent_logs_user_created ON user_consent_logs(user_id, created_at, id);
+CREATE INDEX idx_user_consent_logs_type_created ON user_consent_logs(consent_type, created_at, id);
+
 CREATE TABLE IF NOT EXISTS categories (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     parent_id BIGINT,

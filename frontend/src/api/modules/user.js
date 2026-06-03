@@ -56,3 +56,19 @@ export function deleteUserAddress(addressId) {
 export function setDefaultUserAddress(addressId) {
   return service.put(`/users/addresses/${addressId}/default`)
 }
+
+export function logUserConsent(payload) {
+  return service.post('/users/consent/log', payload)
+}
+
+export function getUserConsentHistory() {
+  return service.get('/users/consent/history')
+}
+
+export function exportUserPersonalData() {
+  return service.post('/users/me/data-export')
+}
+
+export function deleteUserAccount(payload) {
+  return service.delete('/users/me/account', { data: payload })
+}

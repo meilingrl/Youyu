@@ -42,7 +42,8 @@ const registerForm = reactive({
   email: '',
   emailCode: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  agreedToTerms: false
 })
 
 function resolveErrorMessage(error) {
@@ -171,6 +172,11 @@ async function handleRegister() {
     return
   }
 
+  if (!registerForm.agreedToTerms) {
+    ElMessage.warning('请先阅读并同意用户协议与隐私政策')
+    return
+  }
+
   submitting.value = true
   try {
     await authStore.registerAsUser(registerForm)
@@ -277,6 +283,14 @@ async function handleRegister() {
                 placeholder="至少 6 位"
               />
             </el-form-item>
+            <el-form-item label="协议确认">
+              <el-checkbox v-model="registerForm.agreedToTerms" class="auth-agreement">
+                我已阅读并同意
+                <router-link to="/legal/user-agreement" target="_blank">《用户协议》</router-link>
+                和
+                <router-link to="/legal/privacy-policy" target="_blank">《隐私政策》</router-link>
+              </el-checkbox>
+            </el-form-item>
             <el-form-item label="确认密码">
               <el-input
                 v-model="registerForm.confirmPassword"
@@ -287,7 +301,14 @@ async function handleRegister() {
             </el-form-item>
             <div class="login-page__actions">
               <el-button plain @click="tab = 'login'">已有账号，去登录</el-button>
-              <el-button type="primary" :loading="submitting" @click="handleRegister">注册</el-button>
+              <el-button
+                type="primary"
+                :loading="submitting"
+                :disabled="!registerForm.agreedToTerms"
+                @click="handleRegister"
+              >
+                注册
+              </el-button>
             </div>
           </el-form>
         </el-tab-pane>
@@ -322,5 +343,15 @@ async function handleRegister() {
   width: 100%;
   color: #b93d2f;
   font-size: 13px;
+}
+
+.auth-agreement {
+  align-items: flex-start;
+  line-height: 1.6;
+}
+
+.auth-agreement a {
+  color: var(--cm-primary);
+  font-weight: 700;
 }
 </style>

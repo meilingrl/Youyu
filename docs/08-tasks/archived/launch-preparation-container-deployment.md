@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: launch-preparation-container-deployment
-- Status: active
+- Status: completed
 - Owner: worker-deploy
 - Track: cross-cutting
 - Depends on: launch-preparation-l0-scope-freeze
 - Priority: P0
 - Planned date: 2026-06-04
-- Completed date:
+- Completed date: 2026-06-04
 
 ## Objective
 
@@ -94,3 +94,26 @@ The repository already contains root Compose files, backend Dockerfile, frontend
 - [ ] task status and archive move
 
 ## Completion Notes
+
+- Updated Compose so the staging backend container receives the optional SMTP,
+  Meilisearch, Amap, and logistics tracking environment variables already
+  documented in `.env.example`; defaults remain disabled or empty.
+- Added frontend Docker build args for optional public Amap browser keys, while
+  preserving the default no-map build.
+- Confirmed `docker compose config` resolves default startup to
+  `SPRING_PROFILES_ACTIVE=staging` and the demo overlay to
+  `SPRING_PROFILES_ACTIVE=staging,seed`; default staging does not activate
+  `seed`.
+- Updated the containerization guide and runbook to state that `staging` is a
+  production-like rehearsal profile, not production approval; demo data remains
+  explicitly opt-in through `compose.demo.yml`.
+- Added executable rehearsal checks, non-destructive rollback boundaries,
+  CI/CD deployment notes, and external production blockers.
+- Docker CLI and Compose are installed, but full `docker compose build` /
+  `docker compose up` rehearsal was blocked because the Docker Desktop Linux
+  engine was not running (`npipe:////./pipe/dockerDesktopLinuxEngine` missing).
+- Main-agent integration updated `CHANGELOG.md`.
+- Main-agent integration verified `docker compose config` with temporary
+  example `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, and `APP_JWT_SECRET` values.
+  Full build/start remains blocked until the Docker Desktop Linux engine is
+  running.

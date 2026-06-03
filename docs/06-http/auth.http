@@ -31,7 +31,8 @@ Content-Type: application/json
   "password": "{{registrationPassword}}",
   "nickname": "HTTP Test User",
   "email": "{{registrationEmail}}",
-  "emailCode": "{{registrationEmailCode}}"
+  "emailCode": "{{registrationEmailCode}}",
+  "agreedToTerms": true
 }
 
 ###
@@ -249,6 +250,42 @@ DELETE {{baseUrl}}/api/users/addresses/1
 Authorization: Bearer mock-1001-USER
 
 # ─────────────────────────────────────────────
+###
+
+### Log cookie consent
+POST {{baseUrl}}/api/users/consent/log
+Authorization: Bearer ***
+Content-Type: application/json
+
+{
+  "consentType": "cookie_functional",
+  "consented": true,
+  "source": "http_smoke"
+}
+
+###
+
+### Get consent history
+GET {{baseUrl}}/api/users/consent/history
+Authorization: Bearer ***
+
+###
+
+### Generate personal data export
+POST {{baseUrl}}/api/users/me/data-export
+Authorization: Bearer ***
+
+###
+
+### Request account closure - use only with disposable test accounts
+DELETE {{baseUrl}}/api/users/me/account
+Authorization: Bearer ***
+Content-Type: application/json
+
+{
+  "confirmation": "DELETE_ACCOUNT"
+}
+
 # STUDENT VERIFICATION
 # ─────────────────────────────────────────────
 

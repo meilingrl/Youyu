@@ -30,6 +30,19 @@ Use the repository root `.env.example` as a name-only template. Create a local `
 
 The application staging profile consumes the database variables and `APP_JWT_SECRET`. `MYSQL_ROOT_PASSWORD` is reserved for environment bootstrap and operational scripts; the application must not use the MySQL root account.
 
+Optional staging runtime variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `DB_POOL_MAX_SIZE` | `10` | Maximum Hikari pool connections |
+| `DB_POOL_MIN_IDLE` | `2` | Minimum idle Hikari connections |
+| `DB_CONNECTION_TIMEOUT_MS` | `30000` | Maximum wait for a pooled connection |
+| `DB_VALIDATION_TIMEOUT_MS` | `5000` | Maximum wait for connection validation |
+| `DB_IDLE_TIMEOUT_MS` | `600000` | Idle connection retirement window |
+| `DB_MAX_LIFETIME_MS` | `1800000` | Maximum connection lifetime; keep below the MySQL/network idle close window |
+| `DB_LEAK_DETECTION_THRESHOLD_MS` | `0` | Disabled by default; enable only during focused investigation |
+| `DB_INITIALIZATION_FAIL_TIMEOUT_MS` | `1` | Fail startup quickly when the staging database is unavailable |
+
 ## Startup Modes
 
 Default staging rehearsal:
@@ -57,3 +70,18 @@ The Compose files are owned by the containerization task. They must pass the req
 - Do not load demo data in a real production environment.
 - Do not use the committed development JWT fallback with `staging`; startup must fail when `APP_JWT_SECRET` is absent.
 - Do not treat staging as production-ready. The current payment gateway is `MOCK`, which blocks real production use.
+
+## Runtime Validation
+
+After the backend starts with the `staging` profile:
+
+```bash
+curl http://localhost:8080/api/health
+curl http://localhost:8080/actuator/health
+```
+
+Expected behavior:
+
+- `/api/health` returns only service status, database status, and the trace ID envelope.
+- `/actuator/health` exposes aggregate `health`, `db`, and `diskSpace` component statuses without detailed connection properties.
+- `/actuator/metrics` and `/actuator/prometheus` remain unavailable during the launch-foundation rehearsal.

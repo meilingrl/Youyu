@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: launch-preparation-integration-verification
-- Status: active
+- Status: completed
 - Owner: main-agent
 - Track: cross-cutting
 - Depends on: launch-preparation-security-hardening; launch-preparation-privacy-compliance; launch-preparation-runtime-infrastructure; launch-preparation-container-deployment
 - Priority: P0
 - Planned date: 2026-06-04
-- Completed date:
+- Completed date: 2026-06-04
 
 ## Objective
 
@@ -79,19 +79,30 @@ Launch-preparation work spans shared configuration, legal UX, runtime infrastruc
 
 ## Acceptance Criteria
 
-- [ ] Every worker slice has reviewed diffs and completion notes.
-- [ ] Automated checks pass or failures are documented with root cause.
-- [ ] Launch-specific validation evidence is recorded.
-- [ ] API docs, HTTP samples, and standards docs match changed behavior.
-- [ ] `CHANGELOG.md` has a prepend entry for the launch-preparation wave.
-- [ ] Completed task docs are archived; blockers/deferred work remain active or clearly recorded.
+- [x] Every worker slice has reviewed diffs and completion notes.
+- [x] Automated checks pass or failures are documented with root cause.
+- [x] Launch-specific validation evidence is recorded.
+- [x] API docs, HTTP samples, and standards docs match changed behavior.
+- [x] `CHANGELOG.md` has a prepend entry for the launch-preparation wave.
+- [x] Completed task docs are archived; blockers/deferred work remain active or clearly recorded.
 
 ## Documentation Updates Required
 
-- [ ] `CHANGELOG.md`
-- [ ] relevant files in `docs/04-standards/`
-- [ ] relevant files in `docs/06-http/`
-- [ ] relevant files in `docs/09-api-spec/`
-- [ ] task status and archive move
+- [x] `CHANGELOG.md`
+- [x] relevant files in `docs/04-standards/`
+- [x] relevant files in `docs/06-http/`
+- [x] relevant files in `docs/09-api-spec/`
+- [x] task status and archive move
 
 ## Completion Notes
+
+- Reviewed and integrated the security, privacy compliance, runtime infrastructure, and container deployment worker slices.
+- Patched the CORS integration issue where empty local-safe mappings let Spring fall back to `allowedOrigins("*")` while credentials were enabled.
+- Localized the new legal, Cookie, registration-consent, and privacy-rights UI copy to match the existing Chinese frontend language.
+- Updated the existing backend main-chain registration test to include the now-required `agreedToTerms` contract.
+- Verified backend `.\mvnw.cmd test` passed, 242 tests.
+- Verified frontend `npm test` passed, 63 tests.
+- Verified frontend `npm run build` passed, with existing Rollup/chunk-size warnings.
+- Verified `docker compose config` passed with temporary example `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, and `APP_JWT_SECRET` values.
+- Verified `git diff --check` passed.
+- Full Docker build/start rehearsal remains blocked because Docker Desktop Linux engine is not running in this environment.

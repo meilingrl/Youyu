@@ -9,6 +9,9 @@ stack.
 ## Health Endpoints
 
 - `GET /api/health` remains available for existing smoke checks.
+- `/api/health` returns application status plus a database status probe. It
+  must not include JDBC URLs, usernames, hostnames, SQL errors, pool internals,
+  secrets, or environment variable values.
 - `GET /actuator/health` reports aggregate status plus the `db` and
   `diskSpace` components.
 - `/actuator/metrics` and `/actuator/prometheus` are not exposed.
@@ -24,6 +27,12 @@ block after request completion.
 The `staging` profile writes logs to stdout and includes `traceId` in the
 console pattern. Container logs remain the operational source for this
 foundation phase.
+
+Logs must remain request-correlatable but not credential-bearing. Do not log
+request bodies for authentication, registration, password reset, payment,
+student verification, or admin credential flows. Error handling should keep
+stack traces in server logs and return client-safe messages through the normal
+API envelope.
 
 ## Deferred Work
 

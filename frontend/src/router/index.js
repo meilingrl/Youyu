@@ -41,6 +41,33 @@ const routes = [
       public: true
     }
   },
+  {
+    path: '/legal/privacy-policy',
+    name: 'legal-privacy-policy',
+    component: () => import('@/views/legal/PrivacyPolicyView.vue'),
+    meta: {
+      title: '隐私政策',
+      public: true
+    }
+  },
+  {
+    path: '/legal/user-agreement',
+    name: 'legal-user-agreement',
+    component: () => import('@/views/legal/UserAgreementView.vue'),
+    meta: {
+      title: '用户协议',
+      public: true
+    }
+  },
+  {
+    path: '/legal/cookie-policy',
+    name: 'legal-cookie-policy',
+    component: () => import('@/views/legal/CookiePolicyView.vue'),
+    meta: {
+      title: 'Cookie 政策',
+      public: true
+    }
+  },
   appRoutes,
   adminRoutes,
   {

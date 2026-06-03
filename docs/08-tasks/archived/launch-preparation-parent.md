@@ -53,11 +53,11 @@ This program must consolidate that baseline and fill the remaining launch-prepar
 ## Child Tasks
 
 - [x] `launch-preparation-l0-scope-freeze`
-- [ ] `launch-preparation-security-hardening`
-- [ ] `launch-preparation-privacy-compliance`
-- [ ] `launch-preparation-runtime-infrastructure`
-- [ ] `launch-preparation-container-deployment`
-- [ ] `launch-preparation-integration-verification`
+- [x] `launch-preparation-security-hardening`
+- [x] `launch-preparation-privacy-compliance`
+- [x] `launch-preparation-runtime-infrastructure`
+- [x] `launch-preparation-container-deployment`
+- [x] `launch-preparation-integration-verification`
 
 ## Locked Interfaces
 
@@ -140,3 +140,5 @@ This program must consolidate that baseline and fill the remaining launch-prepar
 ## Completion Notes
 
 - L0 completed on 2026-06-04. The repository is ready for launch-preparation development and worker dispatch, but not ready for public production launch.
+- Wave 1 completed on 2026-06-04. Security, privacy compliance, runtime infrastructure, and container deployment rehearsal baselines were integrated and verified.
+- Public production launch remains blocked by external deployment work: HTTPS/certificate provisioning, real production CORS origins, production secret injection, payment-provider production approval, Docker engine/startup rehearsal, backup restore drill, monitoring/alerting ownership, and L7 release acceptance.

@@ -86,4 +86,16 @@ public interface UserMapper {
     List<Map<String, Object>> findRecentPurchases(Long userId, int limit);
 
     List<Map<String, Object>> summarizePurchasedCategories(Long userId, int limit);
+
+    void insertConsentLog(Long userId, String consentType, boolean consented, String source, String ipAddress, String userAgent);
+
+    List<Map<String, Object>> findConsentLogs(Long userId);
+
+    List<Map<String, Object>> findOrdersForUserExport(Long userId);
+
+    List<Map<String, Object>> findReviewsForUserExport(Long userId);
+
+    List<Map<String, Object>> findShopReviewsForUserExport(Long userId);
+
+    void anonymizeAndCloseAccount(Long userId, String anonymizedUsername, String passwordHash);
 }

@@ -1,3 +1,22 @@
+## [2026-06-04] - Launch Preparation Wave 1
+
+### changed
+- Added production-like CORS validation, mock-auth profile gating, and mock-payment fail-fast protection while preserving local dev/seed/test behavior.
+- Added legal document pages, cookie consent, registration agreement enforcement, consent logs, personal data export, and soft account closure.
+- Added staging Hikari configuration, database-aware `/api/health`, restricted Actuator health exposure, and non-destructive backup helper defaults.
+- Forwarded documented optional runtime variables through Compose and Docker build args while keeping default staging startup separate from the demo seed overlay.
+- Documented launch security scan commands, SQL/sort review evidence, mock JWT/payment boundaries, runtime validation, rollback steps, and external HTTPS/payment-production blockers.
+- Added security hardening HTTP smoke requests for CORS, protected endpoints, admin permission checks, and payment gateway exposure.
+
+### verify
+- Backend `.\mvnw.cmd test` passed, 242 tests.
+- Frontend `npm test` passed, 63 tests.
+- Frontend `npm run build` passed, with existing Rollup/chunk-size warnings.
+- `docker compose config` passed with temporary example `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, and `APP_JWT_SECRET` values.
+- `git diff --check` passed.
+
+---
+
 ## [2026-06-04] - Launch Preparation Task Activation
 
 ### changed

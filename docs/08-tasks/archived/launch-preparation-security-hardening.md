@@ -81,16 +81,37 @@ The repository already has JWT default-secret fail-fast behavior outside dev/see
 
 ## Acceptance Criteria
 
-- [ ] Production-like CORS and secret behavior is explicit and testable.
-- [ ] Security scans have documented commands and known limitations.
-- [ ] No dev/test mock-token or mock-payment behavior is accidentally promoted to production-like profiles.
-- [ ] SQL-injection and permission-review findings are recorded with follow-up blockers where needed.
+- [x] Production-like CORS and secret behavior is explicit and testable.
+- [x] Security scans have documented commands and known limitations.
+- [x] No dev/test mock-token or mock-payment behavior is accidentally promoted to production-like profiles.
+- [x] SQL-injection and permission-review findings are recorded with follow-up blockers where needed.
 
 ## Documentation Updates Required
 
-- [ ] `CHANGELOG.md`
-- [ ] relevant files in `docs/06-http/`
-- [ ] relevant standards/runbook docs
-- [ ] task status and archive move
+- [x] `CHANGELOG.md`
+- [x] relevant files in `docs/06-http/`
+- [x] relevant standards/runbook docs
+- [x] task status and archive move
 
 ## Completion Notes
+
+- Added explicit CORS configuration and startup validation. Production-like
+  profiles must set explicit origins and cannot use wildcard CORS origins.
+- Added mock-auth gating so local mock Bearer *** and header-auth are
+  accepted only in dev/seed/test/default local modes.
+- Added a mock-payment exposure guard and staging defaults that disable local
+  mock payment.
+- Added focused tests for CORS validation, mock-token boundaries, mock-payment
+  fail-fast behavior, and mock gateway bean exposure.
+- Added `docs/06-http/security-hardening.http` for CORS/auth/admin/payment
+  boundary smoke evidence.
+- SQL review found allowlisted product sort handling and fixed mapper sort
+  clauses; no reviewed mapper path directly interpolates user-provided sort
+  fields.
+- Remaining external blockers: HTTPS certificate provisioning/reverse-proxy or
+  gateway termination, production CORS domain values, deployment secret
+  injection, and payment provider production approval.
+- Main-agent integration fixed the CORS test-context issue by using
+  `allowedOriginPatterns("*")` for empty local-safe CORS mappings while keeping
+  production-like wildcard validation in `CorsProperties`.
+- Post-integration backend `.\mvnw.cmd test` passed, 242 tests.
