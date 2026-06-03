@@ -137,6 +137,8 @@ onBeforeUnmount(() => {
 .search-suggest {
   position: relative;
   width: 100%;
+  min-width: 0;
+  min-height: 46px;
 }
 
 .search-suggest :deep(.el-input__wrapper) {
@@ -145,7 +147,6 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 10px 24px rgba(95, 58, 30, 0.08);
   transition:
-    transform 260ms ease,
     box-shadow 260ms ease,
     background-color 260ms ease;
 }
@@ -169,7 +170,6 @@ onBeforeUnmount(() => {
 }
 
 .search-suggest--active :deep(.el-input__wrapper) {
-  transform: translateY(-2px);
   background: rgba(255, 253, 249, 0.98);
   box-shadow: 0 18px 40px rgba(95, 58, 30, 0.14);
 }

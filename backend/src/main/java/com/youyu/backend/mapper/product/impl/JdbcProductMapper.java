@@ -94,7 +94,7 @@ public class JdbcProductMapper implements ProductMapper {
     }
 
     @Override
-    public List<Map<String, Object>> findPublicByFilters(String keyword, Long categoryId, String productType) {
+    public List<Map<String, Object>> findPublicByFilters(String keyword, Long categoryId, String productType, String sort) {
         StringBuilder sql = new StringBuilder(baseSql())
                 .append(" WHERE p.is_deleted = FALSE AND p.status = 'on_sale'")
                 .append(" AND (p.review_status = 'not_required' OR p.review_status = 'approved')");
@@ -123,7 +123,7 @@ public class JdbcProductMapper implements ProductMapper {
             sql.append(" AND p.product_type = ?");
             args.add(productType.trim());
         }
-        sql.append(" ORDER BY p.created_at DESC");
+        sql.append(orderByForPublicSort(sort));
 
         return jdbcTemplate.queryForList(sql.toString(), args.toArray()).stream()
                 .map(this::toApiMap)
@@ -131,13 +131,13 @@ public class JdbcProductMapper implements ProductMapper {
     }
 
     @Override
-    public List<Map<String, Object>> findPublicByFiltersPaged(String keyword, Long categoryId, String productType, int offset, int limit) {
+    public List<Map<String, Object>> findPublicByFiltersPaged(String keyword, Long categoryId, String productType, String sort, int offset, int limit) {
         StringBuilder sql = new StringBuilder(baseSql())
                 .append(" WHERE p.is_deleted = FALSE AND p.status = 'on_sale'")
                 .append(" AND (p.review_status = 'not_required' OR p.review_status = 'approved')");
         List<Object> args = new ArrayList<>();
         buildFilterClauses(sql, args, keyword, categoryId, productType);
-        sql.append(" ORDER BY p.created_at DESC LIMIT ? OFFSET ?");
+        sql.append(orderByForPublicSort(sort)).append(" LIMIT ? OFFSET ?");
         args.add(limit);
         args.add(offset);
 
@@ -184,6 +184,16 @@ public class JdbcProductMapper implements ProductMapper {
             sql.append(" AND p.product_type = ?");
             args.add(productType.trim());
         }
+    }
+
+    private String orderByForPublicSort(String sort) {
+        return switch (sort == null ? "newest" : sort) {
+            case "price_asc" -> " ORDER BY p.sale_price ASC, p.created_at DESC, p.id DESC";
+            case "price_desc" -> " ORDER BY p.sale_price DESC, p.created_at DESC, p.id DESC";
+            case "sales_desc" -> " ORDER BY p.favorite_count DESC, p.view_count DESC, p.created_at DESC, p.id DESC";
+            case "newest" -> " ORDER BY p.created_at DESC, p.id DESC";
+            default -> " ORDER BY p.created_at DESC, p.id DESC";
+        };
     }
 
     @Override

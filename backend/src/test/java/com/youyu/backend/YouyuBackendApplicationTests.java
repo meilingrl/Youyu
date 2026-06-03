@@ -999,6 +999,45 @@ class YouyuBackendApplicationTests {
     }
 
     @Test
+    void productListSupportsAllowlistedSortOptions() throws Exception {
+        String priceResponse = mockMvc.perform(get("/api/products")
+                        .param("sort", "price_asc")
+                        .param("pageSize", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.sort").value("price_asc"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        List<Number> prices = JsonPath.read(priceResponse, "$.data.items[*].salePrice");
+        for (int i = 1; i < prices.size(); i++) {
+            assertTrue(prices.get(i - 1).doubleValue() <= prices.get(i).doubleValue());
+        }
+
+        String salesResponse = mockMvc.perform(get("/api/products")
+                        .param("sort", "sales_desc")
+                        .param("pageSize", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.sort").value("sales_desc"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        List<Number> favorites = JsonPath.read(salesResponse, "$.data.items[*].favoriteCount");
+        for (int i = 1; i < favorites.size(); i++) {
+            assertTrue(favorites.get(i - 1).intValue() >= favorites.get(i).intValue());
+        }
+    }
+
+    @Test
+    void productListRejectsUnsupportedSort() throws Exception {
+        mockMvc.perform(get("/api/products").param("sort", "p.price desc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+    }
+
+    @Test
     void invalidStateTransitionReturns400() throws Exception {
         String token = "mock-1002-USER";
 

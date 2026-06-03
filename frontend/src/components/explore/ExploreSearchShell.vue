@@ -6,8 +6,10 @@ const props = defineProps({
   modelValue: { type: String, default: '' },
   categories: { type: Array, default: () => [] },
   productTypes: { type: Array, default: () => [] },
+  sortOptions: { type: Array, default: () => [] },
   selectedCategoryId: { type: String, default: '' },
   selectedProductType: { type: String, default: '' },
+  selectedSort: { type: String, default: 'newest' },
   suggestions: { type: Array, default: () => [] },
   loadingSuggestions: { type: Boolean, default: false },
   suggestionError: { type: String, default: '' },
@@ -23,6 +25,7 @@ const emit = defineEmits([
   'select-suggestion',
   'select-category',
   'select-product-type',
+  'select-sort',
   'apply-history',
   'apply-hot',
   'clear'
@@ -35,6 +38,7 @@ const activeCount = computed(() => {
   if (String(props.modelValue || '').trim()) count += 1
   if (props.selectedCategoryId) count += 1
   if (props.selectedProductType) count += 1
+  if (props.selectedSort && props.selectedSort !== 'newest') count += 1
   return count
 })
 
@@ -46,6 +50,10 @@ const currentCategoryLabel = computed(
 
 const currentProductTypeLabel = computed(
   () => props.productTypes.find((t) => String(t.id || '') === props.selectedProductType)?.name || '全部类型'
+)
+
+const currentSortLabel = computed(
+  () => props.sortOptions.find((t) => String(t.id || '') === props.selectedSort)?.name || '最新发布'
 )
 
 function togglePanel(name) {
@@ -63,6 +71,11 @@ function selectCategory(id) {
 
 function selectProductType(id) {
   emit('select-product-type', id)
+  closePanel()
+}
+
+function selectSort(id) {
+  emit('select-sort', id)
   closePanel()
 }
 
@@ -127,6 +140,18 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
         <strong class="explore-search-shell__seg-value">{{ currentProductTypeLabel }}</strong>
       </button>
 
+      <span class="explore-search-shell__divider" aria-hidden="true" />
+
+      <button
+        type="button"
+        class="explore-search-shell__seg explore-search-shell__seg--btn"
+        :class="{ 'is-open': openPanel === 'sort', 'is-active': selectedSort !== 'newest' }"
+        @click.stop="togglePanel('sort')"
+      >
+        <span class="explore-search-shell__seg-label">排序</span>
+        <strong class="explore-search-shell__seg-value">{{ currentSortLabel }}</strong>
+      </button>
+
       <!-- 搜索按钮 -->
       <button
         type="button"
@@ -188,6 +213,31 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
             @click="selectProductType(productType.id)"
           >
             {{ productType.name }}
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- 排序 dropdown -->
+    <Transition name="panel">
+      <div
+        v-if="openPanel === 'sort'"
+        class="explore-search-shell__panel explore-search-shell__panel--sort"
+        role="dialog"
+        aria-label="选择排序"
+        @click.stop
+      >
+        <p class="explore-search-shell__panel-title">选择排序</p>
+        <div class="explore-search-shell__panel-chips" role="group">
+          <button
+            v-for="sort in sortOptions"
+            :key="sort.id"
+            type="button"
+            class="explore-search-shell__chip"
+            :class="{ 'is-active': selectedSort === sort.id }"
+            @click="selectSort(sort.id)"
+          >
+            {{ sort.name }}
           </button>
         </div>
       </div>
@@ -257,9 +307,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 /* ── 搜索栏主体行 ── */
 .explore-search-shell__bar {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) auto minmax(140px, 0.65fr) auto minmax(140px, 0.65fr) auto;
+  grid-template-columns: minmax(280px, 1.4fr) auto minmax(128px, 0.55fr) auto minmax(128px, 0.55fr) auto minmax(128px, 0.55fr) auto;
   align-items: center;
   padding: 8px 8px 8px 24px;
+  min-height: 68px;
 }
 
 /* ── 段落 ── */
@@ -268,6 +319,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   gap: 2px;
   padding: 10px 20px;
   min-width: 0;
+  min-height: 52px;
+  align-content: center;
 }
 
 .explore-search-shell__seg--search {
@@ -371,6 +424,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .explore-search-shell__panel--type {
   left: auto;
   min-width: 300px;
+}
+
+.explore-search-shell__panel--sort {
+  left: auto;
+  min-width: 320px;
 }
 
 .explore-search-shell__panel-title {
@@ -518,6 +576,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 /* ── 搜索输入框覆盖 ── */
 .explore-search-shell :deep(.search-suggest) {
   width: 100%;
+  min-width: 0;
 }
 
 .explore-search-shell :deep(.search-suggest .el-input-group__append) {
@@ -553,12 +612,14 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
 .explore-search-shell.is-condensed .explore-search-shell__bar {
   padding: 4px 4px 4px 18px;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) auto minmax(0, auto) auto;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(88px, auto) auto minmax(88px, auto) auto minmax(88px, auto) auto;
+  min-height: 50px;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__seg {
   padding: 4px 14px;
   gap: 1px;
+  min-height: 42px;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__seg--search {
@@ -634,7 +695,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 
   /* condensed 在窄屏保持单行 */
   .explore-search-shell.is-condensed .explore-search-shell__bar {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, auto) auto minmax(0, auto) auto;
+    grid-template-columns: minmax(180px, 1fr) auto minmax(76px, auto) auto minmax(76px, auto) auto minmax(76px, auto) auto;
     padding: 4px 4px 4px 14px;
     gap: 0;
   }
@@ -685,6 +746,15 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
     left: -16px;
     right: -16px;
     border-radius: 20px;
+  }
+
+  .explore-search-shell.is-condensed .explore-search-shell__bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .explore-search-shell.is-condensed .explore-search-shell__seg--btn,
+  .explore-search-shell.is-condensed .explore-search-shell__divider {
+    display: none;
   }
 
   .explore-search-shell.is-condensed {

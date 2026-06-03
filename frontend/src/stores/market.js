@@ -244,7 +244,6 @@ export const useMarketStore = defineStore('market', () => {
       } else {
         throw new Error(response?.message || '商品列表接口返回异常')
       }
-      categories.value = categoriesFromProducts(products.value)
       return products.value
     } catch (error) {
       productError.value = error?.response?.data?.message || error?.message || '商品列表加载失败'

@@ -5,7 +5,7 @@ import java.util.Map;
 
 public interface ProductService {
 
-    Map<String, Object> listProducts(String keyword, Long categoryId, String productType, Long viewerUserId, int page, int pageSize);
+    Map<String, Object> listProducts(String keyword, Long categoryId, String productType, String sort, Long viewerUserId, int page, int pageSize);
 
     Map<String, Object> getProductDetail(Long productId);
 
