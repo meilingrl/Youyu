@@ -42,8 +42,6 @@ const activeCount = computed(() => {
   return count
 })
 
-const hasDiscovery = computed(() => props.searchHistory.length || props.hotKeywords.length)
-
 const currentCategoryLabel = computed(
   () => props.categories.find((c) => String(c.id || '') === props.selectedCategoryId)?.name || '全部分类'
 )
@@ -107,10 +105,15 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
           :suggestions="suggestions"
           :loading="loadingSuggestions"
           :error="suggestionError"
+          :search-history="searchHistory"
+          :hot-keywords="hotKeywords"
+          :loading-hot-keywords="loadingHotKeywords"
           @update:model-value="emit('update:modelValue', $event)"
           @change="emit('change', $event)"
           @submit="emit('submit', $event)"
           @select-suggestion="emit('select-suggestion', $event)"
+          @apply-history="emit('apply-history', $event)"
+          @apply-hot="emit('apply-hot', $event)"
         />
       </div>
 
@@ -243,40 +246,6 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
       </div>
     </Transition>
 
-    <!-- 热门/历史发现区（无 panel 时显示） -->
-    <Transition name="discovery">
-      <div v-if="hasDiscovery && !openPanel" class="explore-search-shell__discovery">
-        <div v-if="searchHistory.length" class="explore-search-shell__discovery-group">
-          <span class="explore-search-shell__meta-label">最近搜过</span>
-          <div class="explore-search-shell__chips">
-            <button
-              v-for="item in searchHistory"
-              :key="item"
-              type="button"
-              class="explore-search-shell__chip explore-search-shell__chip--soft"
-              @click="emit('apply-history', item)"
-            >
-              {{ item }}
-            </button>
-          </div>
-        </div>
-        <div v-if="hotKeywords.length" class="explore-search-shell__discovery-group">
-          <span class="explore-search-shell__meta-label">热门搜索</span>
-          <div class="explore-search-shell__chips">
-            <button
-              v-for="kw in hotKeywords.slice(0, 6)"
-              :key="kw.normalizedKeyword || kw.keyword"
-              type="button"
-              class="explore-search-shell__chip explore-search-shell__chip--soft"
-              @click="emit('apply-hot', kw.keyword)"
-            >
-              {{ kw.keyword }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
     <!-- 激活筛选条 -->
     <div v-if="activeCount > 0 && !openPanel" class="explore-search-shell__active-bar">
       <span class="explore-search-shell__active-count">{{ activeCount }} 个条件生效</span>
@@ -311,6 +280,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   align-items: center;
   padding: 8px 8px 8px 24px;
   min-height: 68px;
+  transition:
+    grid-template-columns var(--cm-transition-feature),
+    min-height var(--cm-transition-feature),
+    padding var(--cm-transition-feature);
 }
 
 /* ── 段落 ── */
@@ -321,6 +294,10 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   min-width: 0;
   min-height: 52px;
   align-content: center;
+  transition:
+    gap var(--cm-transition-feature),
+    min-height var(--cm-transition-feature),
+    padding var(--cm-transition-feature);
 }
 
 .explore-search-shell__seg--search {
@@ -352,6 +329,11 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--cm-text);
+  max-height: 16px;
+  overflow: hidden;
+  transition:
+    max-height var(--cm-transition-feature),
+    opacity var(--cm-transition-feature);
 }
 
 .explore-search-shell__seg-value {
@@ -374,6 +356,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   height: 32px;
   background: rgba(88, 62, 43, 0.1);
   flex-shrink: 0;
+  transition: height var(--cm-transition-feature);
 }
 
 /* ── 搜索按钮 ── */
@@ -392,7 +375,9 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
   cursor: pointer;
   transition:
     transform var(--cm-transition),
-    box-shadow var(--cm-transition);
+    box-shadow var(--cm-transition),
+    height var(--cm-transition-feature),
+    width var(--cm-transition-feature);
 }
 
 .explore-search-shell__action svg {
@@ -627,7 +612,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__seg-label {
-  display: none;
+  max-height: 0;
+  opacity: 0;
 }
 
 .explore-search-shell.is-condensed .explore-search-shell__seg-value {

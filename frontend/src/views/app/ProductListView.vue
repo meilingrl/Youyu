@@ -757,7 +757,9 @@ watch(sentinelRef, () => {
   display: flex;
   justify-content: center;
   padding-top: 4px;
-  transition: padding var(--cm-transition-feature);
+  transition:
+    padding var(--cm-transition-feature),
+    top var(--cm-transition-feature);
 }
 
 .explore-search-shell-sticky::before {
