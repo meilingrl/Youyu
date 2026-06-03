@@ -883,6 +883,7 @@ watch(
   --msg-paper: #fafaf9;
   --msg-text: #1f2937;
   --msg-muted: #6b7280;
+  min-height: 0;
 }
 
 .messages-header,
@@ -941,13 +942,17 @@ watch(
   display: grid;
   grid-template-columns: 360px minmax(0, 1fr);
   gap: 20px;
-  min-height: 720px;
+  align-items: stretch;
+  height: clamp(560px, calc(100dvh - 220px), 760px);
+  min-height: 0;
 }
 
 .messages-sidebar {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .messages-categories {
@@ -981,8 +986,14 @@ watch(
 }
 
 .messages-conversation-list {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  overscroll-behavior: contain;
 }
 
 .messages-avatar {
@@ -1115,6 +1126,8 @@ watch(
 .messages-main {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
   border-radius: 20px;
   background: #fff;
@@ -1138,7 +1151,7 @@ watch(
 }
 
 .messages-thread {
-  flex: 1;
+  flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -1146,13 +1159,17 @@ watch(
   overflow-y: auto;
   padding: 24px;
   background: var(--msg-paper);
+  overscroll-behavior: contain;
 }
 
 .messages-bubble {
   position: relative;
+  min-width: 0;
   max-width: 66%;
   padding: 12px 16px;
   border-radius: 16px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .messages-bubble p {
@@ -1249,6 +1266,7 @@ watch(
 
 .messages-image-btn {
   display: block;
+  max-width: 100%;
   border: none;
   padding: 0;
   background: transparent;
@@ -1256,14 +1274,15 @@ watch(
 }
 
 .messages-image {
-  max-width: min(300px, 58vw);
-  max-height: 360px;
+  display: block;
+  max-width: min(300px, 100%);
+  max-height: min(360px, 46dvh);
   border-radius: 12px;
   object-fit: contain;
 }
 
 .messages-image-fallback {
-  width: min(300px, 58vw);
+  width: min(300px, 100%);
   min-height: 132px;
   border-radius: 12px;
   background: #e7e5e4;
@@ -1286,6 +1305,7 @@ watch(
 
 .messages-composer {
   gap: 10px;
+  min-width: 0;
 }
 
 .messages-quick-reply-panel {
@@ -1357,6 +1377,7 @@ watch(
 
   .messages-layout {
     grid-template-columns: 1fr;
+    height: clamp(500px, calc(100dvh - 230px - env(safe-area-inset-bottom, 0px)), 720px);
   }
 
   .messages-bubble {
@@ -1378,6 +1399,44 @@ watch(
   .messages-bubble:hover .messages-bubble__hoverbar,
   .messages-bubble:focus-within .messages-bubble__hoverbar {
     transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 640px) {
+  .messages-layout {
+    height: clamp(480px, calc(100dvh - 210px - env(safe-area-inset-bottom, 0px)), 680px);
+  }
+
+  .messages-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .messages-search-toggle {
+    margin-left: 0;
+  }
+
+  .messages-detail-header,
+  .messages-input-area,
+  .messages-mobile-back {
+    padding: 14px 16px;
+  }
+
+  .messages-thread {
+    padding: 16px;
+  }
+
+  .messages-composer {
+    flex-wrap: wrap;
+  }
+
+  .messages-input {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .messages-send-btn {
+    margin-left: auto;
   }
 }
 </style>
