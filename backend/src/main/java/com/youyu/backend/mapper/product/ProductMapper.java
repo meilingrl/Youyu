@@ -22,6 +22,12 @@ public interface ProductMapper {
 
     long countPublicByFilters(String keyword, Long categoryId, String productType);
 
+    List<Map<String, Object>> findPublicByIds(List<Long> productIds);
+
+    List<Map<String, Object>> findPublicSearchIndexDocuments();
+
+    Optional<Map<String, Object>> findPublicSearchIndexDocumentById(Long productId);
+
     List<Map<String, Object>> findBySellerId(Long sellerUserId);
 
     List<Map<String, Object>> findByShopId(Long shopId);

@@ -12,6 +12,7 @@ import {
 } from '@/api/modules/order'
 import { submitReport } from '@/api/modules/report'
 import ErrorBlock from '@/components/common/ErrorBlock.vue'
+import LogisticsMapPanel from '@/components/trade/LogisticsMapPanel.vue'
 import TradePageShell from '@/components/trade/TradePageShell.vue'
 import TradeStatusTag from '@/components/trade/TradeStatusTag.vue'
 import {
@@ -50,23 +51,27 @@ const refunds = computed(() => detail.value?.refunds || [])
 const relatedReports = computed(() => detail.value?.relatedReports || [])
 const mediationSummary = computed(() => detail.value?.mediationSummary || null)
 const afterSalesSummary = computed(() => detail.value?.afterSalesSummary || null)
-const logisticsAddressText = computed(() => {
+const fulfillmentAddress = computed(() => {
   const address = detail.value?.fulfillment?.addressSnapshot
-  if (!address) return ''
-  return [address.campusName, address.detailAddress].filter(Boolean).join(' / ')
+  if (!address) return null
+  if (typeof address === 'object') return address
+  if (typeof address !== 'string') return null
+  try {
+    return JSON.parse(address)
+  } catch {
+    return { detailAddress: address }
+  }
 })
-const mapProviderConfigured = computed(() => Boolean(import.meta.env.VITE_MAP_PROVIDER_KEY))
-const logisticsMapFallbackText = computed(() => {
-  if (detail.value?.fulfillmentType !== 'logistics') {
-    return ''
-  }
-  if (!logisticsAddressText.value) {
-    return 'No structured delivery address is available yet. Use the tracking number and order status for now.'
-  }
-  if (mapProviderConfigured.value) {
-    return 'A map provider key is configured. This version still shows address and logistics details first, with map rendering reserved behind this boundary.'
-  }
-  return 'No map provider key is configured. The page shows address and logistics details only, without pretending there is a live map.'
+const logisticsAddressText = computed(() => {
+  const address = fulfillmentAddress.value
+  if (!address) return ''
+  return [
+    address.province,
+    address.city,
+    address.district,
+    address.campusName,
+    address.detailAddress
+  ].filter(Boolean).join('')
 })
 const hasPrimaryActions = computed(() =>
   ['pay', 'cancel', 'confirm_receipt', 'offline_buyer_confirm', 'apply_refund'].some((action) =>
@@ -95,6 +100,17 @@ function reportStatusLabel(status) {
     rejected: '已驳回'
   }
   return labels[status] || status || '未知状态'
+}
+
+function reportReasonLabel(reason) {
+  const labels = {
+    inaccurate_content: '商品与描述不符',
+    seller_not_fulfilling: '卖家未履约',
+    quality_issue: '商品质量问题',
+    fake_transaction: '虚假交易',
+    other_violation: '其他违规'
+  }
+  return labels[reason] || reason || '未分类'
 }
 
 function mediationStatusLabel(status) {
@@ -279,7 +295,7 @@ watch(orderId, loadDetail, { immediate: true })
 
 <template>
   <TradePageShell
-    eyebrow="Order Detail"
+    eyebrow="订单详情"
     title="订单详情"
     description="查看订单进度、履约信息、数字资源、退款与平台介入入口。"
     current-key="orders"
@@ -348,43 +364,40 @@ watch(orderId, loadDetail, { immediate: true })
       </section>
 
       <section class="detail-panel">
-        <h3>Fulfillment</h3>
+        <h3>履约信息</h3>
         <p v-if="!detail.fulfillment" class="section-copy">
-          No structured fulfillment record is available for this sample order yet. Use the main order and payment status for now.
+          当前订单暂无结构化履约记录，请先以订单状态和支付状态为准。
         </p>
         <div v-else class="detail-grid">
           <div class="detail-kv">
-            <span>Fulfillment status</span>
-            <strong>{{ detail.fulfillment?.fulfillmentStatus || 'Not started' }}</strong>
+            <span>履约状态</span>
+            <strong>{{ detail.fulfillment?.fulfillmentStatus || '未开始' }}</strong>
           </div>
-          <div class="detail-kv" v-if="detail.fulfillment?.addressSnapshot">
-            <span>Delivery address</span>
+          <div class="detail-kv" v-if="fulfillmentAddress">
+            <span>收货地址</span>
             <strong>
-              {{ detail.fulfillment.addressSnapshot.campusName }} /
-              {{ detail.fulfillment.addressSnapshot.detailAddress }}
+              {{ logisticsAddressText || '已记录，暂无法解析地址明细' }}
             </strong>
           </div>
           <div class="detail-kv" v-if="detail.fulfillment?.logisticsCompany">
-            <span>Logistics</span>
+            <span>物流信息</span>
             <strong>{{ detail.fulfillment.logisticsCompany }} / {{ detail.fulfillment.trackingNo }}</strong>
           </div>
           <div class="detail-kv" v-if="detail.fulfillment?.offlineMeetTime">
-            <span>Offline handoff</span>
+            <span>线下交付</span>
             <strong>{{ detail.fulfillment.offlineMeetTime }} / {{ detail.fulfillment.offlineMeetLocation }}</strong>
           </div>
           <div class="detail-kv" v-if="detail.fulfillment?.downloadAccessStatus !== 'not_applicable'">
-            <span>Download access</span>
+            <span>下载权限</span>
             <strong>{{ detail.fulfillment?.downloadAccessStatus }}</strong>
           </div>
         </div>
-        <div v-if="detail.fulfillmentType === 'logistics'" class="detail-map-fallback">
-          <div class="detail-kv">
-            <span>Map / delivery view</span>
-            <strong>{{ mapProviderConfigured ? 'Map boundary configured' : 'Map key missing' }}</strong>
-          </div>
-          <p class="section-copy">{{ logisticsMapFallbackText }}</p>
-          <p v-if="logisticsAddressText" class="section-copy">Delivery address: {{ logisticsAddressText }}</p>
-        </div>
+        <LogisticsMapPanel
+          v-if="detail.fulfillmentType === 'logistics'"
+          :tracking="detail.logisticsTracking"
+          :map-payload="detail.logisticsMap"
+          :address-text="logisticsAddressText"
+        />
       </section>
 
       <section v-if="detail.digitalAssets?.length" class="detail-panel">
@@ -493,8 +506,8 @@ watch(orderId, loadDetail, { immediate: true })
         </article>
         <article v-for="report in relatedReports" :key="report.id" class="line-item line-item--stacked">
           <div class="line-item__copy">
-            <strong>举报 #{{ report.id }}</strong>
-            <span>{{ reportStatusLabel(report.status) }} / {{ report.reasonType || '未分类' }}</span>
+            <strong>举报记录 {{ report.id }}</strong>
+            <span>{{ reportStatusLabel(report.status) }} / {{ reportReasonLabel(report.reasonType) }}</span>
             <span>提交时间：{{ report.submittedAt || '未记录' }}</span>
             <span>{{ report.content }}</span>
           </div>
@@ -649,14 +662,6 @@ watch(orderId, loadDetail, { immediate: true })
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
-}
-
-.detail-map-fallback {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(50, 91, 63, 0.08);
-  display: grid;
-  gap: 8px;
 }
 
 .detail-kv,

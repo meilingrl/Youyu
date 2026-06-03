@@ -546,6 +546,7 @@ public class AdminServiceImpl implements AdminService {
         findProduct(productId);
         productMapper.updateStatus(productId, normalizedStatus);
         Map<String, Object> result = linkedMap("product", copy(findProduct(productId)));
+        syncProductSearchDocument(productId);
         audit(adminUserId, "PRODUCT_STATUS_UPDATE", "PRODUCT", productId,
                 auditSummary("status=" + normalizedStatus));
         return result;
@@ -607,6 +608,7 @@ public class AdminServiceImpl implements AdminService {
         } else {
             throw new BusinessException(ResultCode.BAD_REQUEST, "不支持的资料审核动作");
         }
+        syncProductSearchDocument(productId);
 
         reviewTask.put("reviewedBy", "管理员#" + adminUserId);
         Map<String, Object> result = linkedMap(
@@ -792,6 +794,19 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
+    @Transactional
+    public Map<String, Object> reindexProductSearch(Long adminUserId) {
+        Map<String, Object> result = searchService.reindexProductSearch();
+        audit(adminUserId, "PRODUCT_SEARCH_REINDEX", "SEARCH_INDEX", 0L,
+                auditSummary(
+                        "index=" + defaultString(result.get("index")),
+                        "status=" + defaultString(result.get("status")),
+                        "documentCount=" + defaultString(result.get("documentCount"))
+                ));
+        return result;
+    }
+
+    @Override
     public Map<String, Object> listAuditLogs(String action, String targetType, int page, int pageSize) {
         int ps = clampPageSize(pageSize);
         int pg = Math.max(1, page);
@@ -841,6 +856,12 @@ public class AdminServiceImpl implements AdminService {
     private Map<String, Object> findProduct(Long productId) {
         return productMapper.findById(productId)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "商品不存在"));
+    }
+
+    private void syncProductSearchDocument(Long productId) {
+        productMapper.findPublicSearchIndexDocumentById(productId)
+                .ifPresentOrElse(searchService::syncProductSearchDocument,
+                        () -> searchService.removeProductSearchDocument(productId));
     }
 
     private Map<String, Object> findReviewTask(Long reviewTaskId) {

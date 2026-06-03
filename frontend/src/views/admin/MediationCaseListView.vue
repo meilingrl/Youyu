@@ -123,8 +123,8 @@ onMounted(loadCases)
         <el-select v-model="filters.decisionCategory" placeholder="裁决类型" clearable>
           <el-option v-for="item in decisionOptions" :key="item" :label="adminLabel(item)" :value="item" />
         </el-select>
-        <el-input v-model="filters.reportId" placeholder="举报 ID" clearable @keyup.enter="onSearch" />
-        <el-input v-model="filters.orderId" placeholder="订单 ID" clearable @keyup.enter="onSearch" />
+        <el-input v-model="filters.reportId" placeholder="举报编号" clearable @keyup.enter="onSearch" />
+        <el-input v-model="filters.orderId" placeholder="订单编号" clearable @keyup.enter="onSearch" />
         <el-button type="primary" :loading="loading" @click="onSearch">查询</el-button>
       </div>
     </template>

@@ -15,6 +15,19 @@ npm run test:e2e        # Playwright E2E tests (requires backend + frontend runn
 npm run test:all        # Vitest + Playwright
 ```
 
+## Environment
+
+Optional logistics map rendering on order detail uses Amap JS:
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `VITE_AMAP_JS_KEY` | no | Public Amap JS API key. Configure domain restrictions in Amap before deploying. |
+| `VITE_AMAP_SECURITY_CODE` | no | Amap JS security code when required by the key configuration. |
+
+When the frontend key is absent, logistics order detail shows provider tracking
+facts and fallback text only. It does not draw guessed routes or fake live
+package movement.
+
 ## Directory conventions
 
 ```

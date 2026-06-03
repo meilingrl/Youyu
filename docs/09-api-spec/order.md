@@ -139,11 +139,51 @@ Return order detail for the current buyer.
   - `mediationSummary`
   - `afterSalesSummary`
 
-For seeded logistics orders, `fulfillment` now includes persisted address and
-tracking fields when that data exists, including `addressSnapshot`,
-`trackingNo`, `logisticsCompany`, and `shippedAt`. The frontend may render an
-honest map fallback from those fields when no map-provider key is configured;
-there is no separate map payload in the API contract yet.
+For logistics orders, `fulfillment` includes persisted address and tracking
+fields when that data exists, including `addressSnapshot`, `trackingNo`,
+`logisticsCompany`, and `shippedAt`.
+
+Logistics order detail also exposes provider-boundary fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `logisticsTracking` | object or null | Present only for `fulfillmentType=logistics`. Offline and digital orders return `null`. |
+| `logisticsMap` | object or null | Present only when `logisticsTracking` is present. It describes map-provider readiness and provider-derived markers. |
+
+`logisticsTracking` fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `provider` | string | `disabled` by default; `kdniao` when the Kdniao adapter is enabled and credentialed. |
+| `status` | string | `missing_tracking_no`, `disabled`, `available`, `unavailable`, or `failed`. Provider failure must not fail the whole order-detail request. |
+| `message` | string | User-safe fallback reason. |
+| `trackingNo` | string | Persisted shipment tracking number. |
+| `logisticsCompany` | string | Persisted carrier name. |
+| `events` | array | Provider-backed shipment events. Empty when disabled, missing, unavailable, or failed. |
+
+`logisticsTracking.events[]` fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `eventTime` | string | Provider event time when available. |
+| `statusText` | string | Provider event description. |
+| `locationText` | string | Provider event location text when available. |
+| `coordinates` | object or null | Optional `{ lng, lat }`; omitted by the default disabled flow and not guessed by the backend. |
+
+`logisticsMap` fields:
+
+| Field | Type | Notes |
+|---|---|---|
+| `provider` | string | Current value: `amap`. |
+| `configured` | boolean | Whether the backend Amap WebService configuration is enabled and credentialed. |
+| `status` | string | `map_provider_disabled`, `tracking_unavailable`, `no_coordinates`, or `ready`. |
+| `message` | string | Fallback reason or marker-source note. |
+| `markers` | array | Provider-derived event markers only; never guessed from address text. |
+| `polyline` | array | Provider-derived event coordinates only when at least two markers exist. |
+| `source` | string | Current value: `provider_events`. |
+
+Important boundary: a map API is not shipment tracking. The API does not return
+fake live courier movement, guessed route lines, or guessed package locations.
 
 #### After-sales visibility fields
 

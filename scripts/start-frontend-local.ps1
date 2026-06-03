@@ -5,7 +5,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-. (Join-Path $PSScriptRoot "load-local-env.ps1") -RepoRoot $repoRoot
+$frontendEnv = Join-Path $repoRoot "frontend\.env.development"
+if (Test-Path $frontendEnv) {
+    . (Join-Path $PSScriptRoot "load-local-env.ps1") -RepoRoot $repoRoot -EnvFile $frontendEnv
+}
 
 Push-Location (Join-Path $repoRoot "frontend")
 try {

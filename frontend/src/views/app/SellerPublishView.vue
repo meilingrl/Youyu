@@ -50,7 +50,7 @@ async function handleSave(submitMode) {
       media: form.cover ? [form.cover] : [],
       submitMode
     })
-    ElMessage.success(submitMode === 'submit' ? '发布申请已提交' : '草稿已保存')
+    ElMessage.success(submitMode === 'submit' ? '发布申请已提交' : '商品信息已暂存')
     await marketStore.loadMyProducts()
     await marketStore.loadMyShop().catch(() => {})
     router.push('/app/shop/manage/products')
@@ -76,7 +76,7 @@ onMounted(() => {
             {{
               ownedShop?.id
                 ? `当前店铺：${ownedShop.name}`
-                : '尚未识别到明确店铺记录，发布后将继续按现有权限规则处理'
+                : '当前账号暂未绑定店铺，提交后会按平台发布规则处理'
             }}
           </el-tag>
           <el-button plain @click="$router.push('/app/shop/manage/products')">返回商品管理</el-button>
@@ -88,8 +88,8 @@ onMounted(() => {
         type="warning"
         show-icon
         :closable="false"
-        title="店主状态字段仍需后续补强"
-        description="填写商品信息后即可发布到你的店铺。"
+        title="当前账号暂未绑定店铺"
+        description="你仍可填写商品信息并提交发布，平台会按账号权限进行处理。"
       />
 
       <el-form :model="form" label-position="top" class="grid-form">
@@ -133,7 +133,7 @@ onMounted(() => {
         </el-form-item>
 
         <el-form-item label="封面图地址" class="grid-form__full">
-          <el-input v-model="form.cover" placeholder="可留空，默认使用占位图" />
+          <el-input v-model="form.cover" placeholder="可留空，未填写时使用默认商品封面" />
         </el-form-item>
 
         <el-form-item label="交付方式" class="grid-form__full">
@@ -168,7 +168,7 @@ onMounted(() => {
 
         <el-form-item class="grid-form__full">
           <div class="shell-inline-actions">
-            <el-button :loading="submitting" @click="handleSave('draft')">保存草稿</el-button>
+            <el-button :loading="submitting" @click="handleSave('draft')">暂存商品信息</el-button>
             <el-button type="primary" :loading="submitting" @click="handleSave('submit')">提交发布</el-button>
           </div>
         </el-form-item>

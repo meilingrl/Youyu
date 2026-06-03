@@ -9,6 +9,8 @@ import com.youyu.backend.mapper.product.ProductReviewTaskMapper;
 import com.youyu.backend.mapper.shop.ShopMapper;
 import com.youyu.backend.mapper.user.UserMapper;
 import com.youyu.backend.service.product.ProductService;
+import com.youyu.backend.service.search.ProductSearchCriteria;
+import com.youyu.backend.service.search.ProductSearchResult;
 import com.youyu.backend.service.search.SearchService;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -16,6 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,11 +54,24 @@ public class ProductServiceImpl implements ProductService {
         String effectiveSort = normalizeListSort(sort);
         int offset = (page - 1) * pageSize;
 
-        List<Map<String, Object>> items = productMapper.findPublicByFiltersPaged(keyword, categoryId, productType, effectiveSort, offset, pageSize)
-                .stream()
-                .map(this::listItem)
-                .toList();
-        long total = productMapper.countPublicByFilters(keyword, categoryId, productType);
+        ProductSearchCriteria criteria = new ProductSearchCriteria(keyword, categoryId, productType, effectiveSort, page, pageSize);
+        Optional<ProductSearchResult> searchResult = searchService.searchProducts(criteria);
+        List<Map<String, Object>> items;
+        long total;
+        if (searchResult.isPresent()) {
+            ProductSearchResult result = searchResult.get();
+            items = productMapper.findPublicByIds(result.productIds())
+                    .stream()
+                    .map(this::listItem)
+                    .toList();
+            total = result.total();
+        } else {
+            items = productMapper.findPublicByFiltersPaged(keyword, categoryId, productType, effectiveSort, offset, pageSize)
+                    .stream()
+                    .map(this::listItem)
+                    .toList();
+            total = productMapper.countPublicByFilters(keyword, categoryId, productType);
+        }
 
         searchService.recordKeywordSearch(keyword, viewerUserId, items.size());
 
@@ -112,6 +128,7 @@ public class ProductServiceImpl implements ProductService {
         productMapper.addFavorite(userId, productId);
         if (!existed) {
             productMapper.updateFavoriteCount(productId, 1);
+            syncSearchDocument(productId);
         }
         return favoriteResult(productId, true);
     }
@@ -122,6 +139,7 @@ public class ProductServiceImpl implements ProductService {
         boolean removed = productMapper.removeFavorite(userId, productId);
         if (removed) {
             productMapper.updateFavoriteCount(productId, -1);
+            syncSearchDocument(productId);
         }
         return favoriteResult(productId, false);
     }
@@ -135,8 +153,10 @@ public class ProductServiceImpl implements ProductService {
         if ("pending_review".equals(product.get("reviewStatus"))) {
             productReviewTaskMapper.insertPending(productId);
         }
-        return productMapper.findById(productId)
+        Map<String, Object> created = productMapper.findById(productId)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Product not found"));
+        syncSearchDocument(productId);
+        return created;
     }
 
     @Override
@@ -151,8 +171,10 @@ public class ProductServiceImpl implements ProductService {
         if ("pending_review".equals(product.get("reviewStatus"))) {
             productReviewTaskMapper.insertPending(productId);
         }
-        return productMapper.findById(productId)
+        Map<String, Object> updated = productMapper.findById(productId)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Product not found"));
+        syncSearchDocument(productId);
+        return updated;
     }
 
     @Override
@@ -164,6 +186,7 @@ public class ProductServiceImpl implements ProductService {
         productMapper.updateStatus(productId, status);
         Map<String, Object> updated = new LinkedHashMap<>(product);
         updated.put("status", status);
+        syncSearchDocument(productId);
         return updated;
     }
 
@@ -172,6 +195,7 @@ public class ProductServiceImpl implements ProductService {
         Map<String, Object> product = findOwnedProduct(sellerUserId, productId);
         productMapper.softDelete(productId);
         product.put("status", "closed");
+        searchService.removeProductSearchDocument(productId);
         return product;
     }
 
@@ -271,6 +295,12 @@ public class ProductServiceImpl implements ProductService {
         }
         item.put("deliveryMethods", resolveAllowedFulfillmentTypes(product));
         return item;
+    }
+
+    private void syncSearchDocument(Long productId) {
+        productMapper.findPublicSearchIndexDocumentById(productId)
+                .ifPresentOrElse(searchService::syncProductSearchDocument,
+                        () -> searchService.removeProductSearchDocument(productId));
     }
 
     private String normalizeListSort(String sort) {

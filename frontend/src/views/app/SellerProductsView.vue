@@ -31,7 +31,7 @@ const rows = computed(() =>
 
 function statusLabel(item) {
   if (item.status === 'draft') {
-    return '草稿'
+    return '暂存'
   }
 
   if (item.reviewStatus === 'pending_review') {
@@ -43,6 +43,19 @@ function statusLabel(item) {
   }
 
   return '展示中'
+}
+
+function reviewStatusLabel(value) {
+  return (
+    {
+      pending_review: '审核中',
+      approved: '已通过',
+      not_required: '无需审核',
+      rejected: '未通过'
+    }[value] ||
+    value ||
+    '状态待确认'
+  )
 }
 
 async function loadProducts() {
@@ -75,7 +88,7 @@ onMounted(loadProducts)
           {{
             ownedShop?.id
               ? `当前关联店铺为「${ownedShop.name}」，商品公开展示仍以店铺为主体。`
-              : '当前账号未识别到已开通店铺，仍可先保留发布与草稿能力。'
+              : '当前账号暂未绑定店铺，仍可先整理商品信息并提交发布。'
           }}
         </p>
       </div>
@@ -113,7 +126,7 @@ onMounted(loadProducts)
     <EmptyState
       v-else-if="!loading && !rows.length"
       title="暂无商品记录"
-      description="当前接口没有返回与你账号匹配的商品。"
+      description="你还没有发布或暂存商品，可以先创建一件商品。"
     >
       <el-button type="primary" @click="$router.push('/app/shop/manage/publish')">继续发布</el-button>
     </EmptyState>
@@ -125,7 +138,7 @@ onMounted(loadProducts)
           <div class="product-card__meta">
             <el-tag size="small">{{ item.categoryName }}</el-tag>
             <el-tag size="small" type="warning">{{ statusLabel(item) }}</el-tag>
-            <el-tag size="small" type="success">{{ item.reviewStatus }}</el-tag>
+            <el-tag size="small" type="success">{{ reviewStatusLabel(item.reviewStatus) }}</el-tag>
           </div>
           <h3>{{ item.title }}</h3>
           <p>{{ item.subtitle }}</p>
@@ -137,7 +150,7 @@ onMounted(loadProducts)
         </div>
         <div class="publish-card__actions">
           <el-button plain @click="$router.push(`/app/products/${item.id}`)">查看详情</el-button>
-          <el-button plain @click="$router.push('/app/shop/manage/publish')">继续编辑入口</el-button>
+          <el-button plain @click="$router.push('/app/shop/manage/publish')">继续编辑</el-button>
         </div>
       </article>
     </section>

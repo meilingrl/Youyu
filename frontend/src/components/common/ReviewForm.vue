@@ -43,7 +43,7 @@ function readImage(file) {
         mimeType: file.type
       })
     }
-    reader.onerror = () => reject(new Error('Failed to read image'))
+    reader.onerror = () => reject(new Error('图片读取失败'))
     reader.readAsDataURL(file)
   })
 }
@@ -55,21 +55,21 @@ async function handleImageChange(event) {
 
   const remainingSlots = MAX_IMAGE_COUNT - images.value.length
   if (files.length > remainingSlots) {
-    imageError.value = `You can attach up to ${MAX_IMAGE_COUNT} images.`
+    imageError.value = `最多可上传 ${MAX_IMAGE_COUNT} 张评价图片。`
     resetImageInput(event)
     return
   }
 
   const invalidType = files.find((file) => !ALLOWED_IMAGE_TYPES.includes(file.type))
   if (invalidType) {
-    imageError.value = 'Only JPG, PNG, GIF, and WebP images are supported.'
+    imageError.value = '仅支持 JPG、PNG、GIF 和 WebP 格式的图片。'
     resetImageInput(event)
     return
   }
 
   const oversized = files.find((file) => file.size > MAX_IMAGE_SIZE)
   if (oversized) {
-    imageError.value = 'Each review image must be 5MB or smaller.'
+    imageError.value = '每张评价图片不能超过 5MB。'
     resetImageInput(event)
     return
   }
@@ -79,7 +79,7 @@ async function handleImageChange(event) {
     const nextImages = await Promise.all(files.map(readImage))
     images.value = [...images.value, ...nextImages]
   } catch (error) {
-    imageError.value = error?.message || 'Failed to read image.'
+    imageError.value = error?.message || '图片读取失败。'
   } finally {
     readingImages.value = false
     resetImageInput(event)
@@ -93,7 +93,7 @@ function removeImage(index) {
 
 async function handleSubmit() {
   if (score.value < 1 || score.value > 5) {
-    ElMessage.warning('Please choose a rating from 1 to 5.')
+    ElMessage.warning('请选择 1 到 5 星评分。')
     return
   }
   submitting.value = true
@@ -105,7 +105,7 @@ async function handleSubmit() {
         content: content.value,
         images: images.value
       })
-      ElMessage.success('Review submitted')
+      ElMessage.success('评价已提交')
     } else {
       await store.doSubmitShopReview({
         shopId: props.shopId,
@@ -113,11 +113,11 @@ async function handleSubmit() {
         content: content.value,
         images: images.value
       })
-      ElMessage.success('Shop review submitted')
+      ElMessage.success('店铺评价已提交')
     }
     emit('submitted')
   } catch (e) {
-    ElMessage.error(e.message || 'Submit failed')
+    ElMessage.error(e.message || '提交失败')
   } finally {
     submitting.value = false
   }
@@ -127,7 +127,7 @@ async function handleSubmit() {
 <template>
   <div class="review-form">
     <div class="review-form__score">
-      <span class="review-form__label">Rating</span>
+      <span class="review-form__label">评分</span>
       <el-rate v-model="score" :max="5" :disabled="submitting" />
     </div>
     <div class="review-form__content">
@@ -137,13 +137,13 @@ async function handleSubmit() {
         :rows="3"
         maxlength="1000"
         show-word-limit
-        placeholder="Write your review (optional)"
+        placeholder="填写评价内容，可补充商品成色、使用体验或交易沟通情况"
         :disabled="submitting"
       />
     </div>
     <div class="review-form__images">
       <div class="review-form__image-head">
-        <span class="review-form__label">Images</span>
+        <span class="review-form__label">评价图片</span>
         <el-button
           size="small"
           plain
@@ -151,7 +151,7 @@ async function handleSubmit() {
           :loading="readingImages"
           @click="openImagePicker"
         >
-          Add image
+          添加图片
         </el-button>
         <input
           ref="imageInputRef"
@@ -165,14 +165,14 @@ async function handleSubmit() {
       <p v-if="imageError" class="review-form__image-error">{{ imageError }}</p>
       <div v-if="images.length" class="review-form__image-grid">
         <figure v-for="(image, index) in images" :key="`${image.fileName}-${index}`" class="review-form__image">
-          <img :src="image.mediaUrl" :alt="image.fileName || 'Review image'" />
-          <button type="button" :disabled="submitting" @click="removeImage(index)">Remove</button>
+          <img :src="image.mediaUrl" :alt="image.fileName || '评价图片'" />
+          <button type="button" :disabled="submitting" @click="removeImage(index)">移除</button>
         </figure>
       </div>
     </div>
     <div class="review-form__actions">
-      <el-button :loading="submitting" type="primary" @click="handleSubmit">Submit review</el-button>
-      <el-button :disabled="submitting" @click="emit('cancel')">Cancel</el-button>
+      <el-button :loading="submitting" type="primary" @click="handleSubmit">提交评价</el-button>
+      <el-button :disabled="submitting" @click="emit('cancel')">取消</el-button>
     </div>
   </div>
 </template>

@@ -191,7 +191,7 @@ async function handleRegister() {
         <span class="eyebrow">Youyu</span>
         <h1>统一登录</h1>
         <p>
-          使用同一入口登录：系统根据账号类型自动进入前台或管理后台。管理员与普通用户使用各自账号与密码；演示用户可使用学号/用户名/邮箱登录。
+          使用同一入口登录：系统根据账号类型自动进入前台或管理后台。管理员与普通用户使用各自账号与密码；校园用户可使用学号、用户名或邮箱登录。
         </p>
       </div>
 
@@ -201,7 +201,7 @@ async function handleRegister() {
             <el-form-item label="账号">
               <el-input
                 v-model="loginForm.account"
-                placeholder="学号 / 邮箱 / 用户名，或管理员登录 ID"
+                placeholder="学号 / 邮箱 / 用户名，或管理员账号"
               />
             </el-form-item>
             <el-form-item label="密码">

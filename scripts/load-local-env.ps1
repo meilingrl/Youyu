@@ -1,14 +1,17 @@
 param(
-    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
+    [string]$EnvFile = ""
 )
 
-$envFile = Join-Path $RepoRoot ".env"
+if (!$EnvFile) {
+    $EnvFile = Join-Path $RepoRoot ".env"
+}
 
-if (!(Test-Path $envFile)) {
+if (!(Test-Path $EnvFile)) {
     return
 }
 
-Get-Content $envFile | ForEach-Object {
+Get-Content $EnvFile | ForEach-Object {
     $line = $_.Trim()
 
     if (!$line -or $line.StartsWith("#") -or !$line.Contains("=")) {

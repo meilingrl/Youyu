@@ -18,6 +18,14 @@ Spring Boot 3.3 backend for Youyu. Layered by domain: `controller / service / ma
 | `APP_MAIL_PASSWORD` | runtime email delivery: **yes** | none | SMTP login password or provider authorization code |
 | `APP_MAIL_FROM` | runtime email delivery: **yes** | none | Verified sender address |
 | `APP_MAIL_SSL_ENABLED` | runtime email delivery: **yes** | none | Set `true` when the provider requires SMTP SSL |
+| `YOUYU_AMAP_ENABLED` | logistics map WebService: optional | `false` | Enables backend Amap map-provider readiness metadata |
+| `YOUYU_AMAP_WEB_SERVICE_KEY` | logistics map WebService: yes when enabled | none | Server-side Amap WebService key; keep private |
+| `YOUYU_LOGISTICS_TRACKING_ENABLED` | real logistics tracking: optional | `false` | Enables outbound logistics provider requests |
+| `YOUYU_LOGISTICS_TRACKING_PROVIDER` | real logistics tracking: optional | `disabled` | Supported value for real adapter: `kdniao` |
+| `KDNIAO_BUSINESS_ID` | Kdniao tracking: yes when enabled | none | Kdniao EBusinessID |
+| `KDNIAO_APP_KEY` | Kdniao tracking: yes when enabled | none | Kdniao app key; keep private |
+| `KDNIAO_ENDPOINT` | Kdniao tracking: optional | Kdniao API URL | Override only for approved provider endpoints |
+| `YOUYU_LOGISTICS_TRACKING_TIMEOUT_SECONDS` | real logistics tracking: optional | `5` | Provider request timeout |
 
 **Production checklist**: `APP_JWT_SECRET` MUST be exported (≥32 chars) before booting any non-dev/seed/test profile. The application fails fast at startup if the committed dev default is detected under any other active profile.
 
@@ -25,6 +33,11 @@ The public registration and password-reset email-code endpoints require SMTP
 delivery. The `test` profile uses a deterministic fake sender and never opens a
 network connection. Do not commit provider credentials, recipient addresses, or
 verification codes.
+
+Logistics tracking is disabled by default and automated tests do not require
+provider credentials or network access. Enabling Kdniao only adds provider-backed
+event lookup; Amap map rendering remains a separate map-provider concern and
+must not be treated as live courier GPS.
 
 **First-time setup** (schema + seed data):
 ```bash

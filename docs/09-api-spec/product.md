@@ -7,8 +7,8 @@
   - controller: `backend/src/main/java/com/youyu/backend/controller/product/ProductController.java`
   - controller: `backend/src/main/java/com/youyu/backend/controller/product/FavoriteController.java`
   - request sample: `docs/06-http/product.http`
-- Last updated: 2026-06-01
-- Last contract change: 2026-06-03, added allowlisted product-list `sort`
+- Last updated: 2026-06-03
+- Last contract change: 2026-06-03, added optional Meilisearch-backed product search with MySQL fallback while preserving `GET /api/products` response shape
 
 ## Scope
 
@@ -71,7 +71,11 @@ List public products with basic filtering and pagination.
 
 #### Search and Sort Semantics
 
-- `keyword` uses fuzzy substring matching across product title, subtitle, description, and category name.
+- `keyword` uses Meilisearch-backed public product search when `youyu.search.meilisearch.enabled=true` and the index is reachable.
+- When Meilisearch is disabled or unavailable, `keyword` falls back to the existing MySQL fuzzy substring matching across product title, subtitle, description, and category name.
+- Meilisearch returns ordered product IDs only; the service hydrates full product-card data from MySQL and preserves the returned order.
+- MySQL remains the source of truth for product detail, price, stock, visibility, order, cart, and payment behavior.
+- The product search index is limited to public search-safe product fields: `productId`, title/subtitle/description, category, product type, public status, sale price, favorite/view counts, created time, and public shop identifiers.
 - `categoryId` applies an exact category match.
 - `productType` applies an exact product-type match.
 - `sort` is allowlisted and never interpolated directly into SQL:

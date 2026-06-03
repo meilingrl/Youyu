@@ -29,7 +29,7 @@ const emit = defineEmits(['update:page'])
             type="button"
             class="review-list__image"
           >
-            <img :src="image.mediaUrl" :alt="image.fileName || 'Review image'" loading="lazy" decoding="async" />
+            <img :src="image.mediaUrl" :alt="image.fileName || '评价图片'" loading="lazy" decoding="async" />
           </button>
         </div>
         <span class="review-list__time">{{ review.createdAt }}</span>

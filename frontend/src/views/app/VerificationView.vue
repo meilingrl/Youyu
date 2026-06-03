@@ -28,7 +28,7 @@ async function handleSubmitToApi() {
     syncFormFromProfile()
     ElMessage.success('认证申请已提交')
   } catch (error) {
-    ElMessage.error(error?.response?.data?.message || '认证申请接口暂不可用')
+    ElMessage.error(error?.response?.data?.message || '认证申请提交失败，请稍后再试')
   } finally {
     submitting.value = false
   }

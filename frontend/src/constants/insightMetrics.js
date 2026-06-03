@@ -26,7 +26,7 @@ export const preferenceOptions = {
     { label: '电子交付', value: 'digital' }
   ],
   defaultPaymentMethod: [
-    { label: '平台支付', value: 'mock_payment' },
+    { label: '快捷支付', value: 'mock_payment' },
     { label: '后续选择', value: 'choose_later' }
   ]
 }
