@@ -24,7 +24,7 @@ const card = computed(() => {
 
   return {
     id: product.id ?? product.productId ?? null,
-    title: product.title || product.productTitle || '商品信息暂不可用',
+    title: product.title || product.productTitle || '商品信息更新中',
     price: Number(product.price ?? product.salePrice ?? product.sale_price ?? 0),
     status,
     statusLabel: getStatusLabel(status),
@@ -43,7 +43,7 @@ function getStatusLabel(status) {
     on_sale: '在售',
     off_sale: '已下架',
     closed: '已下架',
-    draft: '草稿',
+    draft: '暂存',
     inactive: '不可用',
     unavailable: '不可用'
   }

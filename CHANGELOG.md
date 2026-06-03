@@ -1,3 +1,15 @@
+## [2026-06-03] - Frontend Production Copy Polish
+
+### changed
+- Reworked visible frontend copy that still referenced development-stage concepts such as backend interfaces, fields, placeholder assets, drafts, and raw IDs.
+- Normalized product, report, mediation, seller, shop, login, and support labels so user-facing pages use formal Chinese business wording instead of internal enum or database-style terms.
+
+### verify
+- `npm run build` in `frontend/` pass.
+- `npm test` in `frontend/` pass, 62 tests.
+
+---
+
 ## [2026-06-03] - Invalid Entity ID Guard
 
 ### fixed

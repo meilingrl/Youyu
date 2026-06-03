@@ -79,6 +79,17 @@ function reportStatusLabel(status) {
   return labels[status] || status || '未知状态'
 }
 
+function reportReasonLabel(reason) {
+  const labels = {
+    inaccurate_content: '商品与描述不符',
+    seller_not_fulfilling: '卖家未履约',
+    quality_issue: '商品质量问题',
+    fake_transaction: '虚假交易',
+    other_violation: '其他违规'
+  }
+  return labels[reason] || reason || '未分类'
+}
+
 function mediationStatusLabel(status) {
   const labels = {
     opened: '已立案',
@@ -464,8 +475,8 @@ watch(orderId, loadDetail, { immediate: true })
         </article>
         <article v-for="report in relatedReports" :key="report.id" class="line-item line-item--stacked">
           <div class="line-item__copy">
-            <strong>举报 #{{ report.id }}</strong>
-            <span>{{ reportStatusLabel(report.status) }} / {{ report.reasonType || '未分类' }}</span>
+            <strong>举报记录 {{ report.id }}</strong>
+            <span>{{ reportStatusLabel(report.status) }} / {{ reportReasonLabel(report.reasonType) }}</span>
             <span>提交时间：{{ report.submittedAt || '未记录' }}</span>
             <span>{{ report.content }}</span>
           </div>

@@ -320,7 +320,7 @@ function unreadFor(item) {
 
 function requesterName(item) {
   const user = item?.requester || item || {}
-  return user.nickname || user.username || `用户 #${user.id ?? '-'}`
+  return user.nickname || user.username || `用户 ${user.id ?? '-'}`
 }
 
 function isPlatformMessage(message) {
@@ -806,7 +806,7 @@ onBeforeUnmount(stopPolling)
         <section class="admin-cs__panel">
           <h3>请求者</h3>
           <p class="admin-cs__requester">{{ requesterName(conversationDetail) }}</p>
-          <p class="admin-cs__requester-sub">用户 ID：{{ requester.id || '-' }}</p>
+          <p class="admin-cs__requester-sub">用户编号：{{ requester.id || '-' }}</p>
         </section>
 
         <section class="admin-cs__panel">

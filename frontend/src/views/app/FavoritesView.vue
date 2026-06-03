@@ -9,6 +9,15 @@ const marketStore = useMarketStore()
 const loading = ref(false)
 const loadError = ref(false)
 const rows = computed(() => marketStore.favoriteProducts)
+const productTypeLabels = {
+  digital: '电子资料',
+  physical: '实物商品',
+  service: '服务商品'
+}
+
+function productTypeLabel(value) {
+  return productTypeLabels[value] || value || '商品'
+}
 
 async function loadProducts() {
   loading.value = true
@@ -64,7 +73,7 @@ onMounted(loadProducts)
         <div class="product-card__body">
           <div class="product-card__meta">
             <el-tag size="small">{{ item.categoryName }}</el-tag>
-            <el-tag size="small" type="success">{{ item.type }}</el-tag>
+            <el-tag size="small" type="success">{{ productTypeLabel(item.type) }}</el-tag>
           </div>
           <h3>{{ item.title }}</h3>
           <p>{{ item.subtitle }}</p>

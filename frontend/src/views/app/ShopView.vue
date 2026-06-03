@@ -42,6 +42,16 @@ const shopActivities = computed(() => marketingStore.getShopActivitiesByShop(pro
 const availableCoupons = computed(() => marketingStore.getAvailableCouponsByShop(props.id))
 const shopInsightReserved = computed(() => shopInsight.value?.metricSource !== 'real_query')
 const shopInsightFailed = computed(() => shopInsight.value?.metricSource === 'unavailable')
+const productTypeLabels = {
+  digital: '电子资料',
+  physical: '实物商品',
+  service: '服务商品'
+}
+
+function productTypeLabel(value) {
+  return productTypeLabels[value] || value || '商品'
+}
+
 const shopIncomeBars = computed(() => {
   if (shopInsightReserved.value) {
     return []
@@ -138,7 +148,7 @@ const liveIdentityCards = computed(() => {
     {
       label: '店主昵称',
       value: shopViewModel.value.ownerName,
-      note: '当前接口已返回店主昵称，可作为店铺主体的最小公开身份。'
+      note: '店主昵称用于公开展示店铺主体身份。'
     },
     {
       label: '店铺信用',
@@ -348,7 +358,7 @@ onMounted(loadShop)
             </article>
             <article class="shop-hero__stat">
               <span>回复效率</span>
-              <strong>{{ shopViewModel.responseRate || '待接口补充' }}</strong>
+              <strong>{{ shopViewModel.responseRate || '暂无记录' }}</strong>
             </article>
           </aside>
         </div>
@@ -418,7 +428,7 @@ onMounted(loadShop)
             <EmptyState
               v-else
               title="登录后查看优惠券"
-              description="可领取优惠券需要登录后由接口按用户状态返回。"
+              description="登录后可查看当前账号可领取的店铺优惠券。"
             >
               <el-button type="primary" @click="$router.push({ path: '/login', query: { redirect: `/app/shops/${props.id}` } })">
                 登录后查看
@@ -438,8 +448,8 @@ onMounted(loadShop)
 
           <article class="shop-panel shell-card is-reserved">
             <span class="shop-panel__eyebrow">校园身份精选</span>
-            <strong>待接口补充</strong>
-            <p>如院系、认证标签、经营年限等精选身份信息，需要后续店铺主体接口补充。</p>
+            <strong>暂未公开</strong>
+            <p>店主暂未公开院系、认证标签、经营年限等更多身份信息。</p>
           </article>
         </div>
       </PageSection>
@@ -558,7 +568,7 @@ onMounted(loadShop)
               <el-button plain disabled>优惠群</el-button>
             </div>
             <p class="shop-panel__hint">
-              这些入口已经在信息架构中留位，但当前不会假装后端和真实社群链路已完成。
+              关注、社群和优惠群能力开放后，会在这里提供统一入口。
             </p>
           </article>
         </div>
@@ -594,7 +604,7 @@ onMounted(loadShop)
             <div class="product-card__body">
               <div class="product-card__meta">
                 <el-tag size="small">{{ item.categoryName }}</el-tag>
-                <el-tag size="small" effect="plain">{{ item.productType || item.type }}</el-tag>
+                <el-tag size="small" effect="plain">{{ productTypeLabel(item.productType || item.type) }}</el-tag>
               </div>
               <h3>{{ item.title }}</h3>
               <p>{{ item.subtitle || item.description }}</p>

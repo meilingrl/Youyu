@@ -57,7 +57,7 @@ const categoryChartData = computed(() => {
 })
 const spendDataSource = computed(() => {
   if (spendAgg.value.source === 'orders') return '基于近期订单统计'
-  return '月度明细待后端口径完善'
+  return '基于当前可用交易记录统计'
 })
 
 const categoryPreferenceBars = computed(() => {

@@ -117,7 +117,38 @@ async function submitDecision() {
 }
 
 function userLabel(user) {
-  return user?.nickname || user?.username || `#${user?.id || '-'}`
+  return user?.nickname || user?.username || `用户 ${user?.id || '-'}`
+}
+
+function userWithNumber(user) {
+  const label = userLabel(user)
+  return user?.id ? `${label}（用户编号 ${user.id}）` : label
+}
+
+function entityNumber(value, fallback = '-') {
+  return value ? `编号 ${value}` : fallback
+}
+
+function reportReasonLabel(reason) {
+  const labels = {
+    inaccurate_content: '商品与描述不符',
+    seller_not_fulfilling: '卖家未履约',
+    quality_issue: '商品质量问题',
+    fake_transaction: '虚假交易',
+    other_violation: '其他违规'
+  }
+  return labels[reason] || reason || '-'
+}
+
+function messageTypeLabel(type) {
+  const labels = {
+    text: '文本消息',
+    image: '图片消息',
+    product_card: '商品卡片',
+    order_card: '订单卡片',
+    system: '系统消息'
+  }
+  return labels[type] || type || '消息'
 }
 
 function money(value) {
@@ -155,9 +186,9 @@ onMounted(loadDetail)
             <dt>状态</dt>
             <dd>{{ adminLabel(caseRecord.status) }}</dd>
             <dt>来源举报</dt>
-            <dd>#{{ caseRecord.sourceReportId }}</dd>
+            <dd>{{ entityNumber(caseRecord.sourceReportId) }}</dd>
             <dt>关联订单</dt>
-            <dd>#{{ caseRecord.relatedOrderId }}</dd>
+            <dd>{{ entityNumber(caseRecord.relatedOrderId) }}</dd>
             <dt>裁决</dt>
             <dd>{{ adminLabel(caseRecord.decisionCategory, '-') }}</dd>
             <dt>创建时间</dt>
@@ -171,11 +202,11 @@ onMounted(loadDetail)
           <h2>参与方</h2>
           <dl>
             <dt>买家</dt>
-            <dd>{{ userLabel(detail.participants.buyer) }} (#{{ detail.participants.buyer.id }})</dd>
+            <dd>{{ userWithNumber(detail.participants.buyer) }}</dd>
             <dt>卖家</dt>
-            <dd>{{ userLabel(detail.participants.seller) }} (#{{ detail.participants.seller.id }})</dd>
+            <dd>{{ userWithNumber(detail.participants.seller) }}</dd>
             <dt>举报人</dt>
-            <dd>{{ userLabel(detail.participants.reporter) }} (#{{ detail.participants.reporter.id }})</dd>
+            <dd>{{ userWithNumber(detail.participants.reporter) }}</dd>
           </dl>
         </article>
       </section>
@@ -185,11 +216,11 @@ onMounted(loadDetail)
           <h2>来源举报</h2>
           <dl>
             <dt>对象</dt>
-            <dd>{{ adminLabel(detail.sourceReport.targetType) }} #{{ detail.sourceReport.targetId }}</dd>
+            <dd>{{ adminLabel(detail.sourceReport.targetType) }} {{ entityNumber(detail.sourceReport.targetId) }}</dd>
             <dt>对象名称</dt>
             <dd>{{ detail.sourceReport.targetLabel || '-' }}</dd>
             <dt>原因</dt>
-            <dd>{{ detail.sourceReport.reasonType || '-' }}</dd>
+            <dd>{{ reportReasonLabel(detail.sourceReport.reasonType) }}</dd>
             <dt>状态</dt>
             <dd>{{ adminLabel(detail.sourceReport.status) }}</dd>
             <dt>处理结论</dt>
@@ -227,7 +258,7 @@ onMounted(loadDetail)
       <section class="shell-card detail-panel">
         <h2>订单聊天记录</h2>
         <p class="detail-text">
-          展示订单 #{{ detail.chatContext.orderId }} 相关消息，便于核查争议背景。
+          展示订单编号 {{ detail.chatContext.orderId }} 相关消息，便于核查争议背景。
         </p>
 
         <div v-if="chatItems.length" class="chat-context-list">
@@ -237,7 +268,7 @@ onMounted(loadDetail)
               <span>{{ message.createdAt }}</span>
             </header>
             <p>{{ message.isRecalled ? '[已撤回]' : message.body }}</p>
-            <small>{{ message.messageType }} / conversation #{{ message.conversationId }}</small>
+            <small>{{ messageTypeLabel(message.messageType) }} / 会话编号 {{ message.conversationId }}</small>
           </article>
         </div>
         <div v-else class="empty-inline">暂无该订单关联聊天消息。</div>

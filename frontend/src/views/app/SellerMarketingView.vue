@@ -229,7 +229,7 @@ onMounted(loadMarketing)
       show-icon
       :closable="false"
       title="暂未识别到店铺主体"
-      description="如果后端拒绝创建或查看营销内容，页面会直接展示接口返回的权限或店铺状态错误。"
+      description="如当前账号暂不具备创建或查看营销内容的权限，页面会提示对应原因。"
     />
 
     <ErrorBlock v-if="loadError" :message="loadError" @retry="loadMarketing" />
