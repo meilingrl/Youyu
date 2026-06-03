@@ -76,39 +76,32 @@ const metrics = computed(() => [
   {
     label: '购物车商品',
     value: String(cartItemCount.value),
-    helper: sources.cart.error ? '购物车暂未更新' : '来自当前购物车条目数'
-  },
-  {
-    label: '已选购物车',
-    value: String(selectedCartCount.value),
-    helper: selectedCartCount.value
-      ? `已选商品合计 ${formatCurrency(selectedCartAmount.value)}`
-      : '来自购物车 selectedCount'
+    helper: sources.cart.error ? '购物车暂未更新' : '当前购物车内待整理的商品'
   },
   {
     label: '待支付',
     value: String(orderCounts.value.pending_payment),
-    helper: '来自订单状态 pending_payment'
+    helper: '已提交但尚未完成付款的订单'
   },
   {
     label: '待收货',
     value: String(orderCounts.value.pending_receipt),
-    helper: '来自订单状态 pending_receipt'
+    helper: '已履约，等待确认收货的订单'
   },
   {
     label: '退款处理中',
     value: String(orderCounts.value.refund_in_progress),
-    helper: '来自订单状态 refund_in_progress'
+    helper: '正在跟进退款或售后处理的订单'
   },
   {
     label: '已完成',
     value: String(orderCounts.value.completed),
-    helper: '来自订单状态 completed'
+    helper: '交易流程已经结束的订单'
   },
   {
     label: '待评价',
     value: String(pendingReviewCount.value),
-    helper: '来自待评价列表'
+    helper: '可以补充使用体验的商品'
   }
 ])
 

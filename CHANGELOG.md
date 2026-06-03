@@ -1,3 +1,15 @@
+## [2026-06-03] - Trade Center Copy Cleanup
+
+### changed
+- Removed the selected-cart summary card from the trade center metric strip.
+- Replaced trade-center metric helper text that exposed internal order/cart status names with formal transaction workflow copy.
+
+### verify
+- `npm run build` in `frontend/` pass.
+- `npm test` in `frontend/` pass, 62 tests.
+
+---
+
 ## [2026-06-03] - Frontend Production Copy Polish
 
 ### changed
