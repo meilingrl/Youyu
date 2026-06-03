@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: execution-wave-plan-2026-05-20
-- Status: active
+- Status: archived
 - Owner: meilingrl
 - Track: cross-cutting
 - Depends on: current roadmap, `docs/08-tasks/drafts/*.md`, and `docs/08-tasks/drafts/issue.md`
 - Priority: high
 - Planned date: 2026-05-20
-- Completed date:
+- Completed date: 2026-05-20
 
 ## Objective
 
@@ -152,6 +152,6 @@ Rationale:
 - [x] `CHANGELOG.md`
 - [ ] relevant files in `docs/06-http/`
 - [ ] roadmap or standards docs if applicable
-- [ ] task status and archive move
+- [x] task status and archive move
 
 ## Completion Notes

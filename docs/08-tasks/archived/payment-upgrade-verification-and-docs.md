@@ -3,14 +3,14 @@
 ## Metadata
 
 - ID: F2-payment-integration-docs
-- Status: active
+- Status: archived
 - Owner: main-agent
 - Track: cross-cutting
 - Depends on: `payment-upgrade-gateway-foundation.md`,
   `payment-upgrade-refund-consistency.md`, `payment-upgrade-frontend-experience.md`
 - Priority: P1
 - Planned date: 2026-05-31
-- Completed date:
+- Completed date: 2026-06-03
 
 ## Objective
 
@@ -53,7 +53,7 @@ verify runtime behavior, and close the governed task lifecycle.
 - [x] Backend tests, frontend tests, frontend build, and `git diff --check` were
   run with outcomes recorded.
 - [x] Unrelated baseline failures remain explicit if still present.
-- [ ] Parent and child task records are archived only after verification.
+- [x] Parent and child task records are archived only after verification.
 
 ## Completion Notes
 
@@ -64,15 +64,14 @@ verify runtime behavior, and close the governed task lifecycle.
   `git diff --check` passing. An earlier backend run reproduced the unrelated
   transient `SupportChatTest` same-timestamp ordering failure before the
   repeat full run passed.
-- Remaining acceptance work: real Alipay sandbox QR checkout, callback replay,
-  and gateway-backed refund exercise with local secrets and a reachable HTTPS
-  notify URL. Keep this task active until that evidence is recorded.
+- Remaining acceptance work closed on 2026-06-03 after user-confirmed sandbox
+  QR checkout, callback, and refund verification. The task is now archived.
 - Interrupted-delivery audit added synchronous Alipay API response signature
   verification against the original response-object text.
 - 2026-06-03 follow-up: local mock completion failures on older MySQL databases
   were traced to missing additive payment columns. The fix now runs through
   startup-time compatibility repair (`PaymentSchemaUpgrader`) instead of
   putting `ALTER TABLE` statements into `schema.sql`.
-- 2026-06-03 operator note: sandbox QR verification must use the Alipay sandbox
-  wallet / sandbox buyer flow. Regular production Alipay scanning is not an
-  acceptance signal for this task.
+- 2026-06-03 operator note retained for traceability: sandbox QR verification
+  must use the Alipay sandbox wallet / sandbox buyer flow rather than the
+  regular production Alipay app.

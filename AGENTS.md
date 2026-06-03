@@ -21,7 +21,7 @@ When starting a task, read in this order unless the task is documentation-only:
 4. Relevant roadmap or task documents:
    - `docs/04-standards/development-process.md`
    - `docs/05-roadmap/current/stage-roadmap.md`
-   - `docs/05-roadmap/current/feature-roadmap.md`
+   - `docs/05-roadmap/current/launch-preparation-roadmap.md`
    - `docs/08-tasks/active/*.md`
 5. Relevant module docs:
    - `frontend/README.md`
@@ -60,8 +60,8 @@ Agents must not treat these as interchangeable:
   - Not a feature roadmap.
 - `docs/05-roadmap/current/stage-roadmap.md`
   - Project phase and stage progression.
-- `docs/05-roadmap/current/feature-roadmap.md`
-  - Feature expansion order, status, and dependency relationships.
+- `docs/05-roadmap/current/launch-preparation-roadmap.md`
+  - Launch-preparation sequencing, blockers, and acceptance work.
 - `docs/08-tasks/`
   - Concrete executable tasks with file scope, risks, tests, and completion notes.
 

@@ -1,5 +1,8 @@
 # Payment Upgrade Main-Agent Launch Prompt
 
+Archived on 2026-06-03 after the payment-upgrade task group completed and the
+remaining sandbox verification gate was confirmed closed.
+
 ```text
 Execute F2 payment gateway and refund consistency upgrade in:
 E:\Dev\Projects\Youyu-payment-upgrade

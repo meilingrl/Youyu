@@ -3,7 +3,7 @@
 ## Metadata
 
 - ID: seller-publish-loading-diagnosis
-- Status: active
+- Status: archived
 - Owner: unassigned
 - Track: feature
 - Depends on: current seller-management frontend/backend baseline

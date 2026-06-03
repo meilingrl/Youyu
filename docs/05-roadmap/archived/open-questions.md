@@ -1,5 +1,8 @@
 # 当前待决问题
 
+> Archived on 2026-06-03 because the tracker no longer contains unresolved
+> items that affect current work.
+
 本文档只记录仍会影响后续开发决策的问题。
 
 ## 当前状态

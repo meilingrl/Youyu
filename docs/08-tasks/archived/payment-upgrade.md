@@ -3,13 +3,13 @@
 ## Metadata
 
 - ID: F2-payment-upgrade
-- Status: active
+- Status: archived
 - Owner: main-agent
 - Track: cross-cutting
 - Depends on: current order, payment, refund, notification, and launch-foundation baselines
 - Priority: P1
 - Planned date: 2026-05-31
-- Completed date:
+- Completed date: 2026-06-03
 
 ## Objective
 
@@ -53,7 +53,7 @@ commercial payment readiness.
 - [x] `../archived/payment-upgrade-gateway-foundation.md`
 - [x] `../archived/payment-upgrade-refund-consistency.md`
 - [x] `../archived/payment-upgrade-frontend-experience.md`
-- [ ] `payment-upgrade-verification-and-docs.md`
+- [x] `payment-upgrade-verification-and-docs.md`
 
 ## Locked Interfaces
 
@@ -100,7 +100,7 @@ commercial payment readiness.
 - [x] Documentation and smoke assets match runtime behavior.
 - [x] Synchronous Alipay API responses are signature-verified, either directly
   or through the official SDK client.
-- [ ] Every child task is reviewed before archival.
+- [x] Every child task is reviewed before archival.
 
 ## Documentation Updates Required
 
@@ -109,14 +109,12 @@ commercial payment readiness.
 - [x] `docs/09-api-spec/payment.md`
 - [x] `docs/09-api-spec/order.md` if refund behavior changes
 - [x] payment sandbox configuration guide
-- [ ] task status and archive move
+- [x] task status and archive move
 
 ## Completion Notes
 
-- Implementation slices are complete and reviewed. The total task remains
-  active until real Alipay sandbox QR payment, asynchronous callback, replay,
-  and refund verification are exercised with local credentials and a public
-  HTTPS callback URL.
+- Implementation slices are complete and reviewed. This parent task is archived
+  after user-confirmed sandbox verification and task closeout.
 - Automated verification recorded so far: frontend 44 passing, frontend build
   passing, and `git diff --check` passing. Full backend verification passed
   with 184 tests; one earlier run
@@ -129,6 +127,6 @@ commercial payment readiness.
 - 2026-06-03 follow-up: local mock completion is stable again on pre-existing
   MySQL databases after introducing startup-time payment schema compatibility
   repair for missing additive columns and tables.
-- 2026-06-03 acceptance reminder: manual sandbox QR verification must be done
-  with the sandbox wallet / sandbox buyer flow rather than the production
-  Alipay app.
+- 2026-06-03 acceptance closeout: the user confirmed sandbox verification is
+  complete, so the remaining live-payment acceptance gate is closed for this
+  repository milestone.

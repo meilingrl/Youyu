@@ -1,3 +1,27 @@
+## [2026-06-03] - Roadmap Archive Cleanup
+
+### changed
+- Archived `docs/05-roadmap/current/feature-roadmap.md`, `docs/05-roadmap/current/open-questions.md`, and `docs/05-roadmap/current/admin-module-goal-roadmap.md` after they stopped defining current work.
+- Archived `docs/08-tasks/drafts/messages-ux-redesign.md` by user decision.
+- Updated `AGENTS.md`, `docs/README.md`, `docs/05-roadmap/README.md`, and standards docs so the current reading order now points to `stage-roadmap.md` plus `launch-preparation-roadmap.md` instead of the archived feature/question documents.
+
+---
+
+## [2026-06-03] - Roadmap And Task Closeout Sync
+
+### changed
+- Archived `payment-upgrade.md`, `payment-upgrade-verification-and-docs.md`, `payment-upgrade-main-agent-prompt.md`, and `preference-theme-capability-gap.md` after user-confirmed payment sandbox acceptance and theme-work cancellation.
+- Updated the current stage and feature roadmaps to reflect that the present F0-F6 functional roadmap has been completed and that the repository is now focused on launch preparation plus future expansion planning.
+
+---
+
+## [2026-06-03] - Task Lifecycle Metadata Sync
+
+### changed
+- Corrected archived task metadata for `execution-wave-plan-2026-05-20.md` and `seller-publish-loading-diagnosis.md` so their status now matches the archived lifecycle state.
+
+---
+
 ## [2026-06-03] - Payment Upgrade Verification Follow-Up
 
 ### changed
