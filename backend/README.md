@@ -14,6 +14,12 @@ Spring Boot 3.3 backend for Youyu. Layered by domain: `controller / service / ma
 | `APP_JWT_SECRET` | local: optional, deploy: **yes** | committed dev secret | JWT signing secret (≥32 chars); falls back to a dev default when running with profile `dev` / `seed` / `test` |
 | `YOUYU_CORS_ALLOWED_ORIGINS` | staging/prod: **yes** | empty | Comma-separated exact frontend origins allowed by CORS, for example `https://www.example.com` |
 | `YOUYU_CORS_ALLOWED_ORIGIN_PATTERNS` | staging/prod: optional | empty | Comma-separated CORS origin patterns; avoid this unless exact origins are not sufficient |
+| `ALIPAY_SANDBOX_ENABLED` | payment rehearsal: optional | `false` | Enables Alipay sandbox gateway when fully configured |
+| `ALIPAY_SANDBOX_APP_ID` | Alipay sandbox: yes when enabled | none | Sandbox application ID |
+| `ALIPAY_SANDBOX_PRIVATE_KEY` | Alipay sandbox: yes when enabled | none | Application private key; keep private |
+| `ALIPAY_SANDBOX_PUBLIC_KEY` | Alipay sandbox: yes when enabled | none | Alipay public key used to verify responses and callbacks |
+| `ALIPAY_SANDBOX_NOTIFY_URL` | Alipay sandbox: yes when enabled | none | Stable public HTTPS callback URL ending in `/api/payments/callbacks/alipay-sandbox` |
+| `ALIPAY_SANDBOX_GATEWAY_URL` | Alipay sandbox: optional | Alipay sandbox URL | Override only for approved sandbox endpoints |
 | `APP_MAIL_HOST` | runtime email delivery: **yes** | none | SMTP server host |
 | `APP_MAIL_PORT` | runtime email delivery: **yes** | none | SMTP server port |
 | `APP_MAIL_USERNAME` | runtime email delivery: **yes** | none | SMTP login username |

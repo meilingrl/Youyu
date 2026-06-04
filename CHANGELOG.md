@@ -1,3 +1,32 @@
+## [2026-06-04] - Docker Demo Upload And Shop Detail Stabilization
+
+### changed
+- Raised the frontend Nginx upload limit and proxied `/uploads/` to the backend so avatar uploads and uploaded media work through Docker.
+- Persisted backend uploaded avatars in a Docker volume and created writable upload directories in the backend image.
+- Enabled the Docker demo seed profile by default, fixed the MySQL `DROP INDEX` syntax, and removed conflicting demo shop seed rows that left products pointing at missing shops.
+- Added frontend image fallbacks and restored payment-page product snapshots so product media degrades cleanly when remote images fail.
+- Documented the Alipay sandbox public HTTPS callback requirement.
+
+### verify
+- `docker compose build backend`
+- `docker compose up -d --force-recreate backend frontend`
+- Avatar upload through `http://localhost:18080/api/users/me/avatar` returned success and the uploaded `/uploads/avatars/...png` URL returned HTTP 200.
+- `http://localhost:18080/api/shops/4203` returned success with 300 products.
+- Demo seed verification reported 2400 expansion products and no orphan product shop references.
+
+---
+
+## [2026-06-04] - Profile Spend Chart Category Consolidation
+
+### changed
+- Limited the profile spend-category donut chart to the top 5 spending categories and merged the remaining long-tail categories into a single `其他` slice so the legend no longer overruns the card.
+- Normalized category chart input inside `SpendChart.vue` before rendering, keeping monthly and yearly spend views unchanged.
+
+### verify
+- Frontend `npm run build`
+
+---
+
 ## [2026-06-04] - Demo Dataset Expansion And Refresh
 
 ### changed
