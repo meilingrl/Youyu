@@ -18,6 +18,40 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  redis:
+    image: redis:7.4-alpine
+    command:
+      - sh
+      - -c
+      - >
+        args="--appendonly yes --maxmemory $${REDIS_MAXMEMORY:-256mb}
+        --maxmemory-policy $${REDIS_MAXMEMORY_POLICY:-allkeys-lru}";
+        if [ -n "$${REDIS_PASSWORD:-}" ]; then
+        args="$$args --requirepass $${REDIS_PASSWORD}";
+        fi;
+        exec redis-server $$args
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_MAXMEMORY: ${REDIS_MAXMEMORY:-256mb}
+      REDIS_MAXMEMORY_POLICY: ${REDIS_MAXMEMORY_POLICY:-allkeys-lru}
+    ports:
+      - "${REDIS_PORT:-16379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >
+          if [ -n "$$REDIS_PASSWORD" ]; then
+          redis-cli -a "$$REDIS_PASSWORD" ping;
+          else redis-cli ping;
+          fi
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
@@ -29,6 +63,8 @@ services:
       DB_USERNAME: ${DB_USERNAME:-youyu}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
       APP_JWT_SECRET: ${APP_JWT_SECRET:?Set APP_JWT_SECRET}
+      YOUYU_CORS_ALLOWED_ORIGINS: ${YOUYU_CORS_ALLOWED_ORIGINS:-}
+      YOUYU_CORS_ALLOWED_ORIGIN_PATTERNS: ${YOUYU_CORS_ALLOWED_ORIGIN_PATTERNS:-}
       ALIPAY_SANDBOX_ENABLED: ${ALIPAY_SANDBOX_ENABLED:-false}
       ALIPAY_SANDBOX_APP_ID: ${ALIPAY_SANDBOX_APP_ID:-}
       ALIPAY_SANDBOX_PRIVATE_KEY: ${ALIPAY_SANDBOX_PRIVATE_KEY:-}
@@ -46,6 +82,19 @@ services:
       MEILISEARCH_API_KEY: ${MEILISEARCH_API_KEY:-}
       MEILISEARCH_PRODUCT_INDEX: ${MEILISEARCH_PRODUCT_INDEX:-youyu_products}
       MEILISEARCH_TIMEOUT: ${MEILISEARCH_TIMEOUT:-2s}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_TIMEOUT: ${REDIS_TIMEOUT:-2s}
+      REDIS_POOL_MAX_ACTIVE: ${REDIS_POOL_MAX_ACTIVE:-20}
+      REDIS_POOL_MAX_IDLE: ${REDIS_POOL_MAX_IDLE:-10}
+      REDIS_POOL_MIN_IDLE: ${REDIS_POOL_MIN_IDLE:-0}
+      YOUYU_REDIS_CACHE_ENABLED: ${YOUYU_REDIS_CACHE_ENABLED:-false}
+      YOUYU_REDIS_HEALTH_ENABLED: ${YOUYU_REDIS_HEALTH_ENABLED:-false}
+      YOUYU_REDIS_CACHE_KEY_PREFIX: ${YOUYU_REDIS_CACHE_KEY_PREFIX:-youyu:cache:}
+      YOUYU_REDIS_HOT_SEARCH_TTL: ${YOUYU_REDIS_HOT_SEARCH_TTL:-1h}
+      YOUYU_REDIS_HOME_RECOMMEND_TTL: ${YOUYU_REDIS_HOME_RECOMMEND_TTL:-15m}
+      YOUYU_REDIS_ALSO_BOUGHT_TTL: ${YOUYU_REDIS_ALSO_BOUGHT_TTL:-15m}
       YOUYU_AMAP_ENABLED: ${YOUYU_AMAP_ENABLED:-false}
       YOUYU_AMAP_WEB_SERVICE_KEY: ${YOUYU_AMAP_WEB_SERVICE_KEY:-}
       YOUYU_LOGISTICS_TRACKING_ENABLED: ${YOUYU_LOGISTICS_TRACKING_ENABLED:-false}
@@ -58,6 +107,8 @@ services:
       - "${BACKEND_PORT:-18081}:8080"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
@@ -82,3 +133,4 @@ services:
 
 volumes:
   mysql-data:
+  redis-data:

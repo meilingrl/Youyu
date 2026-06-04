@@ -15,6 +15,17 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_TIMEOUT:2s}
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX_ACTIVE:20}
+          max-idle: ${REDIS_POOL_MAX_IDLE:10}
+          min-idle: ${REDIS_POOL_MIN_IDLE:0}
 
 server:
   port: 8080
@@ -77,6 +88,13 @@ youyu:
       api-key: ${MEILISEARCH_API_KEY:}
       product-index: ${MEILISEARCH_PRODUCT_INDEX:youyu_products}
       timeout: ${MEILISEARCH_TIMEOUT:2s}
+  cache:
+    redis:
+      enabled: ${YOUYU_REDIS_CACHE_ENABLED:false}
+      key-prefix: ${YOUYU_REDIS_CACHE_KEY_PREFIX:youyu:cache:}
+      hot-search-ttl: ${YOUYU_REDIS_HOT_SEARCH_TTL:1h}
+      home-recommend-ttl: ${YOUYU_REDIS_HOME_RECOMMEND_TTL:15m}
+      also-bought-ttl: ${YOUYU_REDIS_ALSO_BOUGHT_TTL:15m}
   cors:
     allowed-origins:
       - ${YOUYU_CORS_ALLOWED_ORIGIN_LOCAL_FRONTEND:http://localhost:5173}
@@ -113,6 +131,8 @@ management:
       enabled: true
     diskspace:
       enabled: true
+    redis:
+      enabled: ${YOUYU_REDIS_HEALTH_ENABLED:false}
 
 app:
   jwt:
