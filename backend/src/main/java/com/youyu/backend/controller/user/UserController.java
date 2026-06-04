@@ -2,6 +2,7 @@ package com.youyu.backend.controller.user;
 
 import com.youyu.backend.common.api.ApiResponse;
 import com.youyu.backend.common.auth.LoginRequired;
+import com.youyu.backend.common.auth.UserRole;
 import com.youyu.backend.common.support.RequestContext;
 import com.youyu.backend.controller.user.dto.CreateUserAddressRequest;
 import com.youyu.backend.controller.user.dto.SubmitStudentVerificationRequest;
@@ -24,7 +25,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
-@LoginRequired
+@LoginRequired(roles = {
+        UserRole.USER,
+        UserRole.ADMIN,
+        UserRole.SUPER_ADMIN,
+        UserRole.SUPPORT_AGENT,
+        UserRole.REVIEWER,
+        UserRole.OPERATOR,
+        UserRole.ORDER_ADMIN
+})
 public class UserController {
 
     private final UserService userService;

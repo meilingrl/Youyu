@@ -52,7 +52,7 @@ public class ShopController {
 
     @GetMapping("/{shopId}")
     public ApiResponse<Map<String, Object>> detail(@PathVariable Long shopId, HttpServletRequest request) {
-        return ApiResponse.success(shopService.getShopDetail(shopId), traceId(request));
+        return ApiResponse.success(shopService.getShopDetail(shopId, currentUserId()), traceId(request));
     }
 
     @GetMapping("/{shopId}/insight-snapshot")

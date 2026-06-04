@@ -76,6 +76,23 @@ class UserProfileTest extends BackendTestBase {
     }
 
     @Test
+    void uploadAvatarAllowsScopedAdminRoles() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
+        );
+
+        mockMvc.perform(multipart("/api/users/me/avatar")
+                        .file(file)
+                        .header("Authorization", "Bearer mock-9102-SUPPORT_AGENT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.user.avatar").value(org.hamcrest.Matchers.startsWith("/uploads/avatars/user-9102-")));
+    }
+
+    @Test
     void uploadAvatarRejectsUnsupportedType() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file",

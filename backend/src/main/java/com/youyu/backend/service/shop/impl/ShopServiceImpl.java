@@ -59,13 +59,14 @@ public class ShopServiceImpl implements ShopService {
     }
 
     @Override
-    public Map<String, Object> getShopDetail(Long shopId) {
+    public Map<String, Object> getShopDetail(Long shopId, Long viewerUserId) {
         Map<String, Object> shop = shopMapper.findById(shopId)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Shop not found"));
-        if (!"active".equals(shop.get("status")) || !"approved".equals(shop.get("reviewStatus"))) {
+        boolean ownerViewing = viewerUserId != null && viewerUserId.equals(toLong(shop.get("ownerUserId")));
+        if (!ownerViewing && (!"active".equals(shop.get("status")) || !"approved".equals(shop.get("reviewStatus")))) {
             throw new BusinessException(ResultCode.NOT_FOUND, "Shop not found");
         }
-        return composeShopDetail(shop, true);
+        return composeShopDetail(shop, !ownerViewing);
     }
 
     @Override

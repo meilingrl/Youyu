@@ -1167,6 +1167,31 @@ class YouyuBackendApplicationTests {
     }
 
     @Test
+    void shopOwnerCanViewPendingOwnShopButOthersCannot() throws Exception {
+        long shopId = 4003L;
+        jdbcTemplate.update("""
+                UPDATE shops
+                SET status = 'inactive',
+                    review_status = 'pending_review',
+                    reviewed_at = NULL,
+                    reviewed_by = NULL,
+                    reject_reason = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """, shopId);
+        mockMvc.perform(get("/api/shops/{shopId}", shopId)
+                        .header("Authorization", "Bearer mock-1002-USER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.shop.id").value((int) shopId));
+
+        mockMvc.perform(get("/api/shops/{shopId}", shopId)
+                        .header("Authorization", "Bearer mock-1010-USER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
+    }
+
+    @Test
     void searchGovernanceRulesCrud() throws Exception {
         String adminToken = "mock-9001-ADMIN";
 
