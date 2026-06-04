@@ -13,7 +13,9 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN addgroup -S spring && adduser -S spring -G spring \
+    && mkdir -p /app/data/uploads/avatars \
+    && chown -R spring:spring /app/data
 
 COPY --from=builder /workspace/target/youyu-backend-*.jar /app/app.jar
 

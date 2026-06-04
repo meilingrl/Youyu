@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS student_verifications (
     CONSTRAINT fk_student_verification_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-DROP INDEX uk_student_verifications_approved_student_no;
+DROP INDEX uk_student_verifications_approved_student_no ON student_verifications;
 
 CREATE INDEX idx_student_verifications_user_submitted ON student_verifications(user_id, submitted_at, id);
 CREATE INDEX idx_student_verifications_status_submitted ON student_verifications(verification_status, submitted_at, id);
