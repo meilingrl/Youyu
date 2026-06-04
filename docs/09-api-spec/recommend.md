@@ -11,7 +11,10 @@
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - request sample: `docs/06-http/recommend.http`
   - related task: `docs/08-tasks/archived/api-spec-standardization-follow-up.md`
-- Last updated: 2026-05-23
+- Last updated: 2026-06-04
+- Runtime note: as of 2026-06-04, these endpoints may use optional Redis
+  caching when `YOUYU_REDIS_CACHE_ENABLED=true`; this does not change request or
+  response contracts.
 
 ## Scope
 
@@ -189,3 +192,5 @@ Unknown products or products with no co-purchases return `data: []`.
 
 - No known method/path/auth drift between `RecommendController` and `docs/06-http/recommend.http`.
 - Recommendation payloads are currently map-based. If dedicated DTOs are introduced later, this spec should be updated to use those DTOs as the contract source.
+- Optional Redis cache keys are internal implementation detail; clients must not
+  rely on cache state or observe different payload shapes when caching is on.

@@ -1,3 +1,41 @@
+## [2026-06-04] - Demo Dataset Expansion And Refresh
+
+### changed
+- Replaced the old optional realistic-product load step with a generated `seed/demo-expansion.sql` dataset that adds 2400 more presentation-ready products, richer buyer/seller lifecycles, denser admin/support/message data, and dashboard-friendly order coverage.
+- Cleaned visible demo-facing names in the base seed assets so storefronts, users, product cards, support tickets, spend history, and chat threads no longer expose raw `seed` or stress-test wording.
+- Added a demo-only MySQL volume override in `compose.demo.yml` and a `scripts/run-demo-fresh.ps1` helper so the Docker demo stack can be reset and reseeded from scratch in one step.
+- Documented the new demo-seed workflow in backend and scripts docs and recorded the cross-cutting execution task.
+
+### verify
+- `node scripts/generate-demo-expansion-sql.mjs` passed and regenerated `backend/src/main/resources/seed/demo-expansion.sql`.
+- `git diff --check` passed.
+- Seed-asset search confirmed no remaining visible `Seed Buyer`, `Seed Secondhand`, `SEED-SUP`, `Reviewed Product`, or `Scenario Product` strings across the active demo seed files.
+
+---
+
+## [2026-06-04] - Launch Preparation Redis Cache Candidate
+
+### changed
+- Added optional Redis-backed cache support for hot search, home recommendations, and also-bought recommendations with configurable TTLs and fallback to existing JDBC paths.
+- Added cache invalidation for search-governance mutations, product publish/update/status/delete mutations, order completion, and product-review submission.
+- Added Redis service and cache environment switches to Compose and `.env.example`, including optional Redis password, memory ceiling, and `allkeys-lru` eviction policy.
+- Added Compose CORS example forwarding and fixed the frontend Docker build for Alpine/Rollup optional native dependencies so the demo stack can start from the checked-in Compose files.
+- Added frontend product-list pagination protection so a stale external search index cannot trigger unbounded product-page loading during local rehearsals.
+- Fixed logistics map render timing so the Amap panel initializes after the Vue container is mounted in the local Compose frontend, and added a Northeast University Hunnan campus address marker fallback for local orders without courier coordinates.
+- Documented Redis rehearsal behavior in backend docs, launch runbook, and search/recommend API specs.
+
+### verify
+- Backend `.\mvnw.cmd test -Dtest=RecommendServiceCacheTest,SearchServiceCacheTest` passed, 6 tests.
+- Backend `.\mvnw.cmd test` passed, 248 tests.
+- Frontend Docker image build passed after the Rollup native dependency fix, with existing chunk-size warnings.
+- Compose demo stack with Redis password, cache enabled, and Redis health enabled started successfully; `/actuator/health` reported Redis `UP`, cache candidate endpoints returned success, and Redis contained `youyu:cache:search:hot`, `youyu:cache:recommend:home:anonymous:8`, and `youyu:cache:recommend:also-bought:3001:6`.
+- Redis container configuration confirmed `appendonly yes`, `maxmemory 256mb`, and `maxmemory-policy allkeys-lru`.
+- Browser smoke for `/app/products` passed after disabling external Meilisearch in local `.env`; the page loaded one product-list request and displayed 11 local seed products.
+- `docker compose --env-file .env.example config` passed.
+- `git diff --check` passed.
+
+---
+
 ## [2026-06-04] - Launch Preparation Wave 1
 
 ### changed

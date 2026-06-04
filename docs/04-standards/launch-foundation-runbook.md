@@ -9,9 +9,10 @@ production-like rehearsal profile rather than production approval.
 
 - The current payment integration is a mock implementation. It must be replaced
   and reviewed before any real production release.
-- Redis, rate limiting, OSS, Flyway, remote deployment, full monitoring,
-  privacy compliance work, security final acceptance, and L7 release acceptance
-  remain deferred.
+- Rate limiting, OSS, Flyway, remote deployment, full monitoring, privacy
+  compliance work, security final acceptance, and L7 release acceptance remain
+  deferred. Redis now exists as an optional cache rehearsal dependency, but it
+  is not a production acceptance claim by itself.
 - HTTP is the default rehearsal entry point. A real release must install and
   verify HTTPS using the provided Nginx template and an environment-specific
   certificate mount.
@@ -32,9 +33,18 @@ Optional host-port overrides are `HTTP_PORT` and `BACKEND_PORT`. Their defaults
 are `18080` and `18081`. The published MySQL rehearsal port defaults to
 `13306`; containers still communicate with MySQL internally on `3306`.
 
-Optional Alipay sandbox, SMTP, Meilisearch, Amap, and logistics tracking
-variables are forwarded by Compose but remain disabled or empty by default.
-Configure them only for a rehearsal that explicitly validates that integration.
+Optional Alipay sandbox, SMTP, Meilisearch, Redis cache, Amap, and logistics
+tracking variables are forwarded by Compose but remain disabled or empty by
+default. Configure them only for a rehearsal that explicitly validates that
+integration.
+
+Compose starts a Redis service for parity, but backend cache usage remains off
+unless `YOUYU_REDIS_CACHE_ENABLED=true`. Leave `YOUYU_REDIS_HEALTH_ENABLED=false`
+unless the rehearsal intentionally treats Redis as a required dependency.
+For staging/prod-like rehearsals, set a non-empty `REDIS_PASSWORD`; keep Redis
+inside the private application network; use `REDIS_MAXMEMORY=256mb` and
+`REDIS_MAXMEMORY_POLICY=allkeys-lru` unless a later capacity test justifies a
+larger memory ceiling.
 
 ## Start And Check
 
@@ -62,6 +72,27 @@ docker compose -f compose.yml -f compose.demo.yml up -d --build
 The default command activates `staging`; the demo overlay activates
 `staging,seed`. Spring Boot continues to initialize the existing `schema.sql`;
 this wave does not introduce Flyway.
+
+To rehearse Redis caching, set `YOUYU_REDIS_CACHE_ENABLED=true` before startup,
+then call `/api/search/hot`, `/api/recommend/home`, and
+`/api/recommend/also-bought/{productId}` at least twice. The response contract
+must stay unchanged. Redis failures should degrade to the existing database path
+unless `YOUYU_REDIS_HEALTH_ENABLED=true` was explicitly enabled for dependency
+health validation.
+
+Recommended Redis health policy:
+
+- local / CI: `YOUYU_REDIS_CACHE_ENABLED=false`,
+  `YOUYU_REDIS_HEALTH_ENABLED=false`
+- staging cache rehearsal: `YOUYU_REDIS_CACHE_ENABLED=true`,
+  `YOUYU_REDIS_HEALTH_ENABLED=true`
+- production if Redis is accepted as a launch dependency:
+  `YOUYU_REDIS_CACHE_ENABLED=true`, `YOUYU_REDIS_HEALTH_ENABLED=true`
+
+Redis is cache-only in the current design. Do not include Redis in backup
+restore acceptance; back up MySQL. Monitor Redis availability, memory usage,
+evicted keys, hit/miss ratio, connected clients, blocked clients, and slowlog
+events before treating Redis as production-ready.
 
 To verify the default path stayed schema-only, inspect the active backend
 environment and use a database count query:
@@ -122,7 +153,8 @@ docker run --rm -e BASE_URL=http://host.docker.internal \
 
 This is a baseline smoke for `/api/health`, `/api/products`,
 `/api/search/hot`, and `/api/recommend/home`. It is not a 500-concurrency
-capacity acceptance test.
+capacity acceptance test. When Redis caching is enabled, run the same smoke once
+to warm the cache and again to compare hot-search and recommendation latency.
 
 ## Stop And Roll Back
 
