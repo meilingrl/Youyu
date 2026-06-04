@@ -8,7 +8,7 @@ public interface ShopService {
 
     Map<String, Object> insightSnapshot(Long shopId);
 
-    Map<String, Object> getShopDetail(Long shopId);
+    Map<String, Object> getShopDetail(Long shopId, Long viewerUserId);
 
     Map<String, Object> getMyShop(Long ownerUserId);
 

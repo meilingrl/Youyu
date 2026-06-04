@@ -1,4 +1,6 @@
 <script setup>
+import { handleImageFallback } from '@/utils/image-fallback'
+
 const props = defineProps({
   product: {
     type: Object,
@@ -46,6 +48,7 @@ function openShop() {
         class="explore-product-card__image"
         loading="lazy"
         decoding="async"
+        @error="(event) => handleImageFallback(event, product.title)"
       />
       <div class="explore-product-card__chips">
         <span class="explore-product-card__chip">{{ product.categoryName || '校园精选' }}</span>

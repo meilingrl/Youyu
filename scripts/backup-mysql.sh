@@ -7,6 +7,7 @@ MYSQL_USER="${MYSQL_USER:-root}"
 DB_NAME="${DB_NAME:-youyu}"
 BACKUP_DIR="${BACKUP_DIR:-./backups/mysql}"
 RETENTION_DAYS="${RETENTION_DAYS:-7}"
+PRUNE_OLD_BACKUPS="${PRUNE_OLD_BACKUPS:-false}"
 TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP_FILE="${BACKUP_DIR}/${DB_NAME}_${TIMESTAMP}.sql.gz"
 TEMP_FILE="${BACKUP_FILE}.tmp"
@@ -23,6 +24,11 @@ fi
 
 if [[ ! "${RETENTION_DAYS}" =~ ^[0-9]+$ ]]; then
   echo "Error: RETENTION_DAYS must be a non-negative integer." >&2
+  exit 1
+fi
+
+if [[ "${PRUNE_OLD_BACKUPS}" != "true" && "${PRUNE_OLD_BACKUPS}" != "false" ]]; then
+  echo "Error: PRUNE_OLD_BACKUPS must be true or false." >&2
   exit 1
 fi
 
@@ -47,10 +53,12 @@ mysqldump \
 mv "${TEMP_FILE}" "${BACKUP_FILE}"
 trap - EXIT
 
-find "${BACKUP_DIR}" \
-  -type f \
-  -name "${DB_NAME}_*.sql.gz" \
-  -mtime "+${RETENTION_DAYS}" \
-  -delete
+if [[ "${PRUNE_OLD_BACKUPS}" == "true" ]]; then
+  find "${BACKUP_DIR}" \
+    -type f \
+    -name "${DB_NAME}_*.sql.gz" \
+    -mtime "+${RETENTION_DAYS}" \
+    -delete
+fi
 
 echo "Backup completed: ${BACKUP_FILE}"

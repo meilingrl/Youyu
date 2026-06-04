@@ -40,6 +40,38 @@ const WARM_COLORS = [
   '#c26b44', '#d78b55', '#c47a2c', '#e4a55a',
   '#b65f3b', '#d57a4a', '#8a6953', '#b87972'
 ]
+const CATEGORY_LEGEND_LIMIT = 5
+
+const normalizedCategoryData = computed(() => {
+  const items = props.categoryData
+    .map((item) => ({
+      label: item.label || item.name || '其他',
+      amount: Number(item.amount ?? item.value ?? 0)
+    }))
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount)
+
+  if (items.length <= CATEGORY_LEGEND_LIMIT) {
+    return items
+  }
+
+  const topItems = items.slice(0, CATEGORY_LEGEND_LIMIT)
+  const otherAmount = items
+    .slice(CATEGORY_LEGEND_LIMIT)
+    .reduce((sum, item) => sum + item.amount, 0)
+
+  if (otherAmount <= 0) {
+    return topItems
+  }
+
+  return [
+    ...topItems,
+    {
+      label: '其他',
+      amount: otherAmount
+    }
+  ]
+})
 
 const monthlyOption = computed(() => {
   const data = props.monthlyData
@@ -93,7 +125,7 @@ const monthlyOption = computed(() => {
 })
 
 const categoryOption = computed(() => {
-  const data = props.categoryData
+  const data = normalizedCategoryData.value
   if (!data.length) return null
 
   return {
@@ -137,7 +169,7 @@ const hasData = computed(() => {
     return Number(total) > 0
   }
   if (props.mode === 'category') {
-    return props.categoryData.some((d) => Number(d.amount || 0) > 0)
+    return normalizedCategoryData.value.some((d) => Number(d.amount || 0) > 0)
   }
   return false
 })

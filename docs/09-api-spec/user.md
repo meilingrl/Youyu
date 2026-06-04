@@ -11,7 +11,7 @@
   - shared response / error handling: `backend/src/main/java/com/youyu/backend/controller/advice/GlobalExceptionHandler.java`
   - request sample: `docs/06-http/auth.http`
   - related task: `docs/08-tasks/drafts/api-spec-standardization-follow-up.md`
-- Last updated: 2026-05-31
+- Last updated: 2026-06-04
 
 ## Scope
 
@@ -22,6 +22,9 @@ This document covers authenticated user-side endpoints under `/api/users`:
 - personal insight snapshot
 - student verification read and submit
 - address list, creation, and default-address switching
+- consent logging and consent history
+- personal data export
+- soft account closure request
 
 It does not cover authentication endpoints under `/api/auth`, product operations, shop operations, or admin governance endpoints.
 
@@ -381,6 +384,84 @@ Path:
 
 - `401`: missing token or invalid token
 - `404`: address does not exist
+
+### `POST /api/users/consent/log`
+
+#### Purpose
+
+Record an authenticated consent event for privacy, registration, cookie, or account-deletion audit history.
+
+#### Request
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `consentType` | yes | string | Supported: `registration_terms`, `privacy_policy`, `cookie_functional`, `cookie_analytics`, `account_deletion_request` |
+| `consented` | yes | boolean | Whether the user consented or declined |
+| `source` | no | string | Client/source label, for example `cookie_banner` |
+
+The backend records request IP and user agent from the HTTP request.
+
+#### Response
+
+| Field | Type | Notes |
+|---|---|---|
+| `logged` | boolean | `true` when the record is saved |
+| `consentType` | string | Stored consent type |
+| `consented` | boolean | Stored consent value |
+
+### `GET /api/users/consent/history`
+
+#### Purpose
+
+Return authenticated consent history newest first.
+
+#### Response
+
+`data` is an array of consent records with `id`, `userId`, `consentType`, `consented`, `source`, `ipAddress`, `userAgent`, and `createdAt`.
+
+### `POST /api/users/me/data-export`
+
+#### Purpose
+
+Generate an immediate JSON personal-data export for the authenticated user.
+
+#### Response
+
+The export includes implemented profile, privilege, verification, address, preference, consent, order, product review, and shop review data. It excludes other users' personal data and internal password hashes.
+
+| Field | Type | Notes |
+|---|---|---|
+| `generatedAt` | string | Local generation time |
+| `profile` | object | Public profile fields |
+| `addresses` | array | Saved addresses |
+| `preference` | object | User preference state |
+| `consentHistory` | array | Consent records |
+| `orders` | array | Buyer/seller order summaries involving the current user |
+| `reviews` | array | Product reviews authored by the user |
+| `shopReviews` | array | Shop reviews authored by the user |
+| `limitations` | array | Explicit export and deletion-flow limitations |
+
+### `DELETE /api/users/me/account`
+
+#### Purpose
+
+Request account closure. This baseline performs soft closure and PII anonymization, not hard deletion of historical transaction records.
+
+#### Request
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `confirmation` | yes | string | Must equal `DELETE_ACCOUNT` |
+
+#### Response
+
+| Field | Type | Notes |
+|---|---|---|
+| `deleted` | boolean | `true` after closure completes |
+| `status` | string | Current value: `deleted` |
+| `retainedRecords` | array | Explains retained order/review/consent records |
+
+After closure, the account status is `deleted`, profile contact fields are cleared/anonymized, and login is blocked. Historical orders, reviews, and consent/deletion request records are retained for transaction traceability.
 
 ### `PATCH /api/users/profile`
 

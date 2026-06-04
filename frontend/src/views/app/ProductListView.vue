@@ -39,6 +39,7 @@ const currentPage = ref(0)
 const pageSize = ref(12)
 const cards = ref([])
 const total = ref(0)
+const reachedServerEnd = ref(false)
 const scrollProgress = ref(0)
 const isSearchShellCondensed = computed(() => appStore.isHeaderCondensed)
 const bookmarks = ref(readStoredBookmarks())
@@ -74,7 +75,7 @@ const hasActiveFilters = computed(() =>
   !!selectedProductType.value ||
   selectedSort.value !== 'newest'
 )
-const hasMore = computed(() => cards.value.length < total.value)
+const hasMore = computed(() => !reachedServerEnd.value && cards.value.length < total.value)
 const activeQuery = computed(() => buildFilterQuery())
 const activeQueryKey = computed(() => buildQueryKey(activeQuery.value))
 const currentQueryBookmarks = computed(() =>
@@ -225,9 +226,14 @@ async function fetchProductsPage(page, { append = false } = {}) {
     const normalizedItems = Array.isArray(items) ? items : []
     total.value = Number(marketStore.searchTotal || normalizedItems.length || 0)
     currentPage.value = page
-    cards.value = append
+    const nextCards = append
       ? dedupeProducts([...cards.value, ...normalizedItems])
       : normalizedItems
+    cards.value = nextCards
+    if (normalizedItems.length < pageSize.value) {
+      reachedServerEnd.value = true
+      total.value = nextCards.length
+    }
 
     searchStore.clearSuggestions()
     if (keyword.value) {
@@ -264,6 +270,7 @@ async function loadProductsByRoute() {
   selectedSort.value = route.query.sort ? routeSort() : preferenceSort()
   cards.value = []
   total.value = 0
+  reachedServerEnd.value = false
   currentPage.value = 0
   loadMoreError.value = ''
 

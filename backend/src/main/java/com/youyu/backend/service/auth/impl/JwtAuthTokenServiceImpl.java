@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 @Primary
@@ -27,11 +28,17 @@ public class JwtAuthTokenServiceImpl implements AuthTokenService {
 
     private final SecretKey signingKey;
     private final long expirationHours;
+    private final boolean mockTokenEnabled;
+    private final Environment environment;
 
     public JwtAuthTokenServiceImpl(@Value("${app.jwt.secret:youyu-dev-secret-key-replace-in-production-min32}") String secret,
-                                   @Value("${app.jwt.expiration-hours:72}") long expirationHours) {
+                                   @Value("${app.jwt.expiration-hours:72}") long expirationHours,
+                                   @Value("${youyu.auth.mock-token-enabled:true}") boolean mockTokenEnabled,
+                                   Environment environment) {
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expirationHours = expirationHours;
+        this.mockTokenEnabled = mockTokenEnabled;
+        this.environment = environment;
     }
 
     @Override
@@ -52,6 +59,9 @@ public class JwtAuthTokenServiceImpl implements AuthTokenService {
         if (authorization != null && authorization.startsWith(BEARER_PREFIX)) {
             String token = authorization.substring(BEARER_PREFIX.length()).trim();
             if (MOCK_TOKEN_PATTERN.matcher(token).matches()) {
+                if (!allowMockAuth()) {
+                    return Optional.empty();
+                }
                 return resolveMockToken(token);
             }
 
@@ -74,6 +84,9 @@ public class JwtAuthTokenServiceImpl implements AuthTokenService {
         String userIdHeader = request.getHeader("X-User-Id");
         String roleHeader = request.getHeader("X-User-Role");
         if (userIdHeader == null || roleHeader == null) {
+            return Optional.empty();
+        }
+        if (!allowMockAuth()) {
             return Optional.empty();
         }
 
@@ -112,5 +125,24 @@ public class JwtAuthTokenServiceImpl implements AuthTokenService {
             return null;
         }
         return parseLong(String.valueOf(value));
+    }
+
+    private boolean allowMockAuth() {
+        if (!mockTokenEnabled) {
+            return false;
+        }
+        String[] activeProfiles = environment.getActiveProfiles();
+        if (activeProfiles.length == 0) {
+            return true;
+        }
+        for (String activeProfile : activeProfiles) {
+            if (!"dev".equals(activeProfile)
+                    && !"seed".equals(activeProfile)
+                    && !"test".equals(activeProfile)
+                    && !"default".equals(activeProfile)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

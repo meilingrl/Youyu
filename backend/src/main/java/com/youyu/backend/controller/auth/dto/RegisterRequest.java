@@ -29,6 +29,8 @@ public class RegisterRequest {
     @NotBlank(message = "Email verification code is required")
     private String emailCode;
 
+    private Boolean agreedToTerms;
+
     public String getUsername() {
         return username;
     }
@@ -75,5 +77,13 @@ public class RegisterRequest {
 
     public void setEmailCode(String emailCode) {
         this.emailCode = emailCode;
+    }
+
+    public Boolean getAgreedToTerms() {
+        return agreedToTerms;
+    }
+
+    public void setAgreedToTerms(Boolean agreedToTerms) {
+        this.agreedToTerms = agreedToTerms;
     }
 }

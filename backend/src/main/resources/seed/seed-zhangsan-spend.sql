@@ -47,23 +47,23 @@ INSERT INTO order_items (
     id, order_id, product_id, title_snapshot, image_snapshot, price_snapshot, quantity, subtotal_amount, product_type_snapshot, created_at
 ) VALUES
 (8901, 8801, 3002, 'Engineering Drawing Tool Set', '', 45.00, 1, 45.00, 'physical', '2026-01-08 14:00:00'),
-(8902, 8802, 3010, 'Seed USB Hub 4-Port', '', 22.00, 1, 22.00, 'physical', '2026-01-15 09:30:00'),
+(8902, 8802, 3010, 'Compact USB Hub 4-Port', '', 22.00, 1, 22.00, 'physical', '2026-01-15 09:30:00'),
 (8903, 8803, 3002, 'Engineering Drawing Tool Set', '', 35.00, 1, 35.00, 'physical', '2026-02-20 11:00:00'),
 (8904, 8803, 3004, 'CET-6 Vocabulary Book', '', 33.50, 1, 33.50, 'physical', '2026-02-20 11:00:00'),
-(8905, 8804, 3011, 'Seed Wireless Mouse', '', 16.50, 1, 16.50, 'physical', '2026-02-25 16:00:00'),
+(8905, 8804, 3011, 'Wireless Mouse Campus Edition', '', 16.50, 1, 16.50, 'physical', '2026-02-25 16:00:00'),
 (8906, 8805, 3002, 'Engineering Drawing Tool Set', '', 35.00, 1, 35.00, 'physical', '2026-03-05 10:00:00'),
 (8907, 8806, 3001, 'Advanced Math Review Pack', '', 19.90, 1, 19.90, 'digital', '2026-03-12 14:30:00'),
 (8908, 8807, 3004, 'CET-6 Vocabulary Book', '', 33.50, 2, 67.00, 'physical', '2026-03-20 09:00:00'),
 (8909, 8808, 3002, 'Engineering Drawing Tool Set', '', 120.00, 1, 120.00, 'physical', '2026-04-02 08:00:00'),
-(8910, 8809, 3010, 'Seed USB Hub 4-Port', '', 22.00, 2, 44.00, 'physical', '2026-04-15 13:00:00'),
+(8910, 8809, 3010, 'Compact USB Hub 4-Port', '', 22.00, 2, 44.00, 'physical', '2026-04-15 13:00:00'),
 (8911, 8810, 3003, 'Dorm Storage Rack', '', 25.00, 1, 25.00, 'physical', '2026-04-22 17:00:00'),
 (8912, 8811, 3001, 'Advanced Math Review Pack', '', 19.90, 2, 39.80, 'digital', '2026-05-03 10:00:00'),
 (8913, 8811, 3003, 'Dorm Storage Rack', '', 18.00, 1, 18.00, 'physical', '2026-05-03 10:00:00'),
-(8914, 8812, 3010, 'Seed USB Hub 4-Port', '', 22.00, 1, 22.00, 'physical', '2026-05-10 11:00:00'),
-(8915, 8812, 3011, 'Seed Wireless Mouse', '', 11.00, 1, 11.00, 'physical', '2026-05-10 11:00:00'),
+(8914, 8812, 3010, 'Compact USB Hub 4-Port', '', 22.00, 1, 22.00, 'physical', '2026-05-10 11:00:00'),
+(8915, 8812, 3011, 'Wireless Mouse Campus Edition', '', 11.00, 1, 11.00, 'physical', '2026-05-10 11:00:00'),
 (8916, 8813, 3001, 'Advanced Math Review Pack', '', 9.90, 1, 9.90, 'digital', '2026-05-18 15:00:00'),
 (8917, 8814, 3004, 'CET-6 Vocabulary Book', '', 33.50, 2, 67.00, 'physical', '2026-05-25 09:00:00'),
-(8918, 8815, 3010, 'Seed USB Hub 4-Port', '', 22.00, 1, 22.00, 'physical', '2026-06-01 10:00:00')
+(8918, 8815, 3010, 'Compact USB Hub 4-Port', '', 22.00, 1, 22.00, 'physical', '2026-06-01 10:00:00')
 ON DUPLICATE KEY UPDATE title_snapshot = VALUES(title_snapshot);
 
 INSERT INTO order_fulfillments (

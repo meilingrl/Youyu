@@ -13,6 +13,7 @@ import com.youyu.backend.service.notification.NotificationService;
 import com.youyu.backend.service.order.OrderService;
 import com.youyu.backend.service.payment.PaymentGatewayRouter;
 import com.youyu.backend.service.payment.PaymentGatewayService;
+import com.youyu.backend.service.product.RecommendService;
 import com.youyu.backend.service.transaction.support.TransactionDataStore;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -37,6 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private final MarketingService marketingService;
     private final PaymentGatewayRouter paymentGatewayRouter;
     private final LogisticsTrackingService logisticsTrackingService;
+    private final RecommendService recommendService;
 
     public OrderServiceImpl(TransactionDataStore transactionDataStore,
                             ProductMapper productMapper,
@@ -46,7 +48,8 @@ public class OrderServiceImpl implements OrderService {
                             NotificationService notificationService,
                             MarketingService marketingService,
                             PaymentGatewayRouter paymentGatewayRouter,
-                            LogisticsTrackingService logisticsTrackingService) {
+                            LogisticsTrackingService logisticsTrackingService,
+                            RecommendService recommendService) {
         this.transactionDataStore = transactionDataStore;
         this.productMapper = productMapper;
         this.digitalAccessMapper = digitalAccessMapper;
@@ -56,6 +59,7 @@ public class OrderServiceImpl implements OrderService {
         this.marketingService = marketingService;
         this.paymentGatewayRouter = paymentGatewayRouter;
         this.logisticsTrackingService = logisticsTrackingService;
+        this.recommendService = recommendService;
     }
 
     @Override
@@ -274,6 +278,7 @@ public class OrderServiceImpl implements OrderService {
             fulfillment.put("fullDownloadOpenedAt", LocalDateTime.now());
         }
         notifyOrderStatus(order, "completed", true);
+        recommendService.invalidateRecommendationCaches();
         return getOrderDetail(userId, orderId, false);
     }
 
@@ -317,6 +322,7 @@ public class OrderServiceImpl implements OrderService {
         if (Boolean.TRUE.equals(fulfillment.get("offlineBuyerConfirmed"))) {
             finalizeOfflineOrder(order, fulfillment);
             notifyOrderStatus(order, "completed", true);
+            recommendService.invalidateRecommendationCaches();
         } else {
             notifyOrderStatus(order, "seller confirmed offline delivery", false);
         }
@@ -343,6 +349,7 @@ public class OrderServiceImpl implements OrderService {
         if (Boolean.TRUE.equals(fulfillment.get("offlineSellerConfirmed"))) {
             finalizeOfflineOrder(order, fulfillment);
             notifyOrderStatus(order, "completed", true);
+            recommendService.invalidateRecommendationCaches();
         } else {
             notifyOrderStatus(order, "buyer confirmed offline receipt", true);
         }

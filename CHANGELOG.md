@@ -1,3 +1,101 @@
+## [2026-06-04] - Docker Demo Upload And Shop Detail Stabilization
+
+### changed
+- Raised the frontend Nginx upload limit and proxied `/uploads/` to the backend so avatar uploads and uploaded media work through Docker.
+- Persisted backend uploaded avatars in a Docker volume and created writable upload directories in the backend image.
+- Enabled the Docker demo seed profile by default, fixed the MySQL `DROP INDEX` syntax, and removed conflicting demo shop seed rows that left products pointing at missing shops.
+- Added frontend image fallbacks and restored payment-page product snapshots so product media degrades cleanly when remote images fail.
+- Documented the Alipay sandbox public HTTPS callback requirement.
+
+### verify
+- `docker compose build backend`
+- `docker compose up -d --force-recreate backend frontend`
+- Avatar upload through `http://localhost:18080/api/users/me/avatar` returned success and the uploaded `/uploads/avatars/...png` URL returned HTTP 200.
+- `http://localhost:18080/api/shops/4203` returned success with 300 products.
+- Demo seed verification reported 2400 expansion products and no orphan product shop references.
+
+---
+
+## [2026-06-04] - Profile Spend Chart Category Consolidation
+
+### changed
+- Limited the profile spend-category donut chart to the top 5 spending categories and merged the remaining long-tail categories into a single `其他` slice so the legend no longer overruns the card.
+- Normalized category chart input inside `SpendChart.vue` before rendering, keeping monthly and yearly spend views unchanged.
+
+### verify
+- Frontend `npm run build`
+
+---
+
+## [2026-06-04] - Demo Dataset Expansion And Refresh
+
+### changed
+- Replaced the old optional realistic-product load step with a generated `seed/demo-expansion.sql` dataset that adds 2400 more presentation-ready products, richer buyer/seller lifecycles, denser admin/support/message data, and dashboard-friendly order coverage.
+- Cleaned visible demo-facing names in the base seed assets so storefronts, users, product cards, support tickets, spend history, and chat threads no longer expose raw `seed` or stress-test wording.
+- Added a demo-only MySQL volume override in `compose.demo.yml` and a `scripts/run-demo-fresh.ps1` helper so the Docker demo stack can be reset and reseeded from scratch in one step.
+- Documented the new demo-seed workflow in backend and scripts docs and recorded the cross-cutting execution task.
+
+### verify
+- `node scripts/generate-demo-expansion-sql.mjs` passed and regenerated `backend/src/main/resources/seed/demo-expansion.sql`.
+- `git diff --check` passed.
+- Seed-asset search confirmed no remaining visible `Seed Buyer`, `Seed Secondhand`, `SEED-SUP`, `Reviewed Product`, or `Scenario Product` strings across the active demo seed files.
+
+---
+
+## [2026-06-04] - Launch Preparation Redis Cache Candidate
+
+### changed
+- Added optional Redis-backed cache support for hot search, home recommendations, and also-bought recommendations with configurable TTLs and fallback to existing JDBC paths.
+- Added cache invalidation for search-governance mutations, product publish/update/status/delete mutations, order completion, and product-review submission.
+- Added Redis service and cache environment switches to Compose and `.env.example`, including optional Redis password, memory ceiling, and `allkeys-lru` eviction policy.
+- Added Compose CORS example forwarding and fixed the frontend Docker build for Alpine/Rollup optional native dependencies so the demo stack can start from the checked-in Compose files.
+- Added frontend product-list pagination protection so a stale external search index cannot trigger unbounded product-page loading during local rehearsals.
+- Fixed logistics map render timing so the Amap panel initializes after the Vue container is mounted in the local Compose frontend, and added a Northeast University Hunnan campus address marker fallback for local orders without courier coordinates.
+- Documented Redis rehearsal behavior in backend docs, launch runbook, and search/recommend API specs.
+
+### verify
+- Backend `.\mvnw.cmd test -Dtest=RecommendServiceCacheTest,SearchServiceCacheTest` passed, 6 tests.
+- Backend `.\mvnw.cmd test` passed, 248 tests.
+- Frontend Docker image build passed after the Rollup native dependency fix, with existing chunk-size warnings.
+- Compose demo stack with Redis password, cache enabled, and Redis health enabled started successfully; `/actuator/health` reported Redis `UP`, cache candidate endpoints returned success, and Redis contained `youyu:cache:search:hot`, `youyu:cache:recommend:home:anonymous:8`, and `youyu:cache:recommend:also-bought:3001:6`.
+- Redis container configuration confirmed `appendonly yes`, `maxmemory 256mb`, and `maxmemory-policy allkeys-lru`.
+- Browser smoke for `/app/products` passed after disabling external Meilisearch in local `.env`; the page loaded one product-list request and displayed 11 local seed products.
+- `docker compose --env-file .env.example config` passed.
+- `git diff --check` passed.
+
+---
+
+## [2026-06-04] - Launch Preparation Wave 1
+
+### changed
+- Added production-like CORS validation, mock-auth profile gating, and mock-payment fail-fast protection while preserving local dev/seed/test behavior.
+- Added legal document pages, cookie consent, registration agreement enforcement, consent logs, personal data export, and soft account closure.
+- Added staging Hikari configuration, database-aware `/api/health`, restricted Actuator health exposure, and non-destructive backup helper defaults.
+- Forwarded documented optional runtime variables through Compose and Docker build args while keeping default staging startup separate from the demo seed overlay.
+- Documented launch security scan commands, SQL/sort review evidence, mock JWT/payment boundaries, runtime validation, rollback steps, and external HTTPS/payment-production blockers.
+- Added security hardening HTTP smoke requests for CORS, protected endpoints, admin permission checks, and payment gateway exposure.
+
+### verify
+- Backend `.\mvnw.cmd test` passed, 242 tests.
+- Frontend `npm test` passed, 63 tests.
+- Frontend `npm run build` passed, with existing Rollup/chunk-size warnings.
+- `docker compose config` passed with temporary example `DB_PASSWORD`, `MYSQL_ROOT_PASSWORD`, and `APP_JWT_SECRET` values.
+- `git diff --check` passed.
+
+---
+
+## [2026-06-04] - Launch Preparation Task Activation
+
+### changed
+- Activated the launch-preparation task program for the L0-L7 roadmap, with separate active tasks for security, privacy compliance, runtime infrastructure, container deployment, and integration verification.
+- Reconciled stale active feature-polish task copies by moving them into archived `*-stale-active-copy.md` records while preserving completed task history.
+- Recorded that the repository is ready for launch-preparation execution, but public production launch remains blocked by the roadmap P0 items and external operations.
+
+### verify
+- Documentation-only L0 transition; active task directory now contains the launch-preparation task set.
+
+---
+
 ## [2026-06-04] - Search And Logistics Seed Samples
 
 ### changed

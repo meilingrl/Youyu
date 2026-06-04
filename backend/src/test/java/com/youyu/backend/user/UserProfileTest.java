@@ -76,6 +76,23 @@ class UserProfileTest extends BackendTestBase {
     }
 
     @Test
+    void uploadAvatarAllowsScopedAdminRoles() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}
+        );
+
+        mockMvc.perform(multipart("/api/users/me/avatar")
+                        .file(file)
+                        .header("Authorization", "Bearer mock-9102-SUPPORT_AGENT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.user.avatar").value(org.hamcrest.Matchers.startsWith("/uploads/avatars/user-9102-")));
+    }
+
+    @Test
     void uploadAvatarRejectsUnsupportedType() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -327,5 +344,47 @@ class UserProfileTest extends BackendTestBase {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.userId").exists())
                 .andExpect(jsonPath("$.data.role").exists());
+    }
+
+    @Test
+    void consentHistoryAndDataExportAreAvailable() throws Exception {
+        mockMvc.perform(post("/api/users/consent/log")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "consentType": "cookie_functional",
+                                  "consented": true,
+                                  "source": "test"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.logged").value(true));
+
+        mockMvc.perform(get("/api/users/consent/history")
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data[0].consentType").value("cookie_functional"));
+
+        mockMvc.perform(post("/api/users/me/data-export")
+                        .header("Authorization", "Bearer " + USER))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.profile.username").value("zhangsan"))
+                .andExpect(jsonPath("$.data.addresses").isArray())
+                .andExpect(jsonPath("$.data.consentHistory").isArray())
+                .andExpect(jsonPath("$.data.limitations").isArray());
+    }
+
+    @Test
+    void accountDeletionRequiresExplicitConfirmation() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.delete("/api/users/me/account")
+                        .header("Authorization", "Bearer " + USER)
+                        .contentType("application/json")
+                        .content("{\"confirmation\":\"wrong\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
     }
 }

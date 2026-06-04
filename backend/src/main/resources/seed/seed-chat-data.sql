@@ -77,7 +77,7 @@ INSERT INTO chat_messages (
     id, conversation_id, sender_user_id, body, is_read, read_at, message_type, media_url, product_id, order_id, created_at
 )
 VALUES
-(15001, 15001, 1010, 'Mediation seed context: buyer asks seller to confirm order SEED8008 handoff evidence.', FALSE, NULL, 'order_card', NULL, 3003, 8008, '2026-05-27 09:40:00')
+(15001, 15001, 1010, 'Buyer asks seller to confirm handoff evidence for order 8008.', FALSE, NULL, 'order_card', NULL, 3003, 8008, '2026-05-27 09:40:00')
 ON DUPLICATE KEY UPDATE
     conversation_id = VALUES(conversation_id),
     sender_user_id = VALUES(sender_user_id),

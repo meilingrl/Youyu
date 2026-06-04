@@ -2,18 +2,25 @@
 
 This runbook covers a single-host staging rehearsal. It proves that the current
 application can be built, started, checked, backed up, and restored. It is not
-a production deployment procedure.
+a production deployment procedure, and the `staging` profile is a
+production-like rehearsal profile rather than production approval.
 
 ## Production Blockers
 
 - The current payment integration is a mock implementation. It must be replaced
   and reviewed before any real production release.
-- Redis, rate limiting, OSS, Flyway, remote deployment, full monitoring,
-  privacy compliance work, security final acceptance, and L7 release acceptance
-  remain deferred.
+- Rate limiting, OSS, Flyway, remote deployment, full monitoring, privacy
+  compliance work, security final acceptance, and L7 release acceptance remain
+  deferred. Redis now exists as an optional cache rehearsal dependency, but it
+  is not a production acceptance claim by itself.
 - HTTP is the default rehearsal entry point. A real release must install and
   verify HTTPS using the provided Nginx template and an environment-specific
   certificate mount.
+- No registry publishing, server provisioning, TLS certificate issuance,
+  deployment approval gate, or production rollback automation exists in the
+  current repository.
+- Generated secrets, certificates, reports, backups, and local `.env` files
+  must stay untracked.
 
 ## Environment
 
@@ -26,11 +33,25 @@ Optional host-port overrides are `HTTP_PORT` and `BACKEND_PORT`. Their defaults
 are `18080` and `18081`. The published MySQL rehearsal port defaults to
 `13306`; containers still communicate with MySQL internally on `3306`.
 
+Optional Alipay sandbox, SMTP, Meilisearch, Redis cache, Amap, and logistics
+tracking variables are forwarded by Compose but remain disabled or empty by
+default. Configure them only for a rehearsal that explicitly validates that
+integration.
+
+Compose starts a Redis service for parity, but backend cache usage remains off
+unless `YOUYU_REDIS_CACHE_ENABLED=true`. Leave `YOUYU_REDIS_HEALTH_ENABLED=false`
+unless the rehearsal intentionally treats Redis as a required dependency.
+For staging/prod-like rehearsals, set a non-empty `REDIS_PASSWORD`; keep Redis
+inside the private application network; use `REDIS_MAXMEMORY=256mb` and
+`REDIS_MAXMEMORY_POLICY=allkeys-lru` unless a later capacity test justifies a
+larger memory ceiling.
+
 ## Start And Check
 
 Start the schema-only staging rehearsal:
 
 ```bash
+docker compose config
 docker compose up -d --build
 docker compose ps
 curl http://localhost:18080/api/health
@@ -44,12 +65,46 @@ exposed; metrics and Prometheus endpoints are intentionally unavailable.
 Start the explicit demo overlay only when stable seed records are needed:
 
 ```bash
+docker compose -f compose.yml -f compose.demo.yml config
 docker compose -f compose.yml -f compose.demo.yml up -d --build
 ```
 
 The default command activates `staging`; the demo overlay activates
 `staging,seed`. Spring Boot continues to initialize the existing `schema.sql`;
 this wave does not introduce Flyway.
+
+To rehearse Redis caching, set `YOUYU_REDIS_CACHE_ENABLED=true` before startup,
+then call `/api/search/hot`, `/api/recommend/home`, and
+`/api/recommend/also-bought/{productId}` at least twice. The response contract
+must stay unchanged. Redis failures should degrade to the existing database path
+unless `YOUYU_REDIS_HEALTH_ENABLED=true` was explicitly enabled for dependency
+health validation.
+
+Recommended Redis health policy:
+
+- local / CI: `YOUYU_REDIS_CACHE_ENABLED=false`,
+  `YOUYU_REDIS_HEALTH_ENABLED=false`
+- staging cache rehearsal: `YOUYU_REDIS_CACHE_ENABLED=true`,
+  `YOUYU_REDIS_HEALTH_ENABLED=true`
+- production if Redis is accepted as a launch dependency:
+  `YOUYU_REDIS_CACHE_ENABLED=true`, `YOUYU_REDIS_HEALTH_ENABLED=true`
+
+Redis is cache-only in the current design. Do not include Redis in backup
+restore acceptance; back up MySQL. Monitor Redis availability, memory usage,
+evicted keys, hit/miss ratio, connected clients, blocked clients, and slowlog
+events before treating Redis as production-ready.
+
+To verify the default path stayed schema-only, inspect the active backend
+environment and use a database count query:
+
+```bash
+docker compose exec backend printenv SPRING_PROFILES_ACTIVE
+docker compose exec db sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+  -e "select count(*) as users from users; select count(*) as products from products;"'
+```
+
+The first command must print `staging` for default startup. Seed data may appear
+only after starting with `compose.demo.yml`.
 
 ## Logs
 
@@ -98,7 +153,8 @@ docker run --rm -e BASE_URL=http://host.docker.internal \
 
 This is a baseline smoke for `/api/health`, `/api/products`,
 `/api/search/hot`, and `/api/recommend/home`. It is not a 500-concurrency
-capacity acceptance test.
+capacity acceptance test. When Redis caching is enabled, run the same smoke once
+to warm the cache and again to compare hot-search and recommendation latency.
 
 ## Stop And Roll Back
 
@@ -109,6 +165,35 @@ docker compose down -v
 
 The second command also removes the local rehearsal database volume. Use it
 only when intentionally resetting rehearsal data.
+
+For a non-destructive application rollback rehearsal:
+
+1. Record the currently healthy Git revision and `.env` checksum outside the
+   repository.
+2. Apply or check out the candidate revision.
+3. Run `docker compose config`, `docker compose build --pull`, and
+   `docker compose up -d --force-recreate`.
+4. Run `/api/health`, `/actuator/health`, and the relevant smoke tests.
+5. If the candidate fails, return to the prior revision and repeat the build,
+   recreate, and health-check commands.
+
+Database rollback is not implicit in Compose. Restore backup data into a
+separate `youyu_restore_*` database first, validate it, and promote only after
+manual approval. Treat `docker compose down -v` as a destructive reset option,
+not as release rollback.
+
+## CI/CD Deployment Notes
+
+The current `.github/workflows/ci.yml` workflow validates code but does not
+deploy. A real deployment workflow still needs:
+
+- image registry selection and credentials
+- immutable image tags tied to a Git SHA
+- deployment host or orchestrator credentials
+- environment secret injection outside the repository
+- HTTPS certificate issuance or mount management
+- post-deploy health checks and smoke tests
+- documented approval and rollback gates
 
 ## 2026-05-30 Integration Evidence
 

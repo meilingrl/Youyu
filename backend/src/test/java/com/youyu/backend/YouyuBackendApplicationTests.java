@@ -69,7 +69,8 @@ class YouyuBackendApplicationTests {
                                   "nickname": "链路用户",
                                   "phone": "139%s",
                                   "email": "%s",
-                                  "emailCode": "482913"
+                                  "emailCode": "482913",
+                                  "agreedToTerms": true
                                 }
                                 """.formatted(username, password, String.valueOf(suffix).substring(0, 8), email)))
                 .andExpect(status().isOk())
@@ -1163,6 +1164,31 @@ class YouyuBackendApplicationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    void shopOwnerCanViewPendingOwnShopButOthersCannot() throws Exception {
+        long shopId = 4003L;
+        jdbcTemplate.update("""
+                UPDATE shops
+                SET status = 'inactive',
+                    review_status = 'pending_review',
+                    reviewed_at = NULL,
+                    reviewed_by = NULL,
+                    reject_reason = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """, shopId);
+        mockMvc.perform(get("/api/shops/{shopId}", shopId)
+                        .header("Authorization", "Bearer mock-1002-USER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.shop.id").value((int) shopId));
+
+        mockMvc.perform(get("/api/shops/{shopId}", shopId)
+                        .header("Authorization", "Bearer mock-1010-USER"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false));
     }
 
     @Test

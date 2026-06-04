@@ -8,7 +8,7 @@
     - `backend/src/main/java/com/youyu/backend/controller/search/SearchController.java`
     - `backend/src/main/java/com/youyu/backend/controller/admin/AdminController.java`
   - request sample: `docs/06-http/search.http`
-- Last updated: 2026-06-03
+- Last updated: 2026-06-04
 
 ## Scope
 
@@ -62,6 +62,9 @@ Return the public hot-search ranking based on recent search-log activity.
 - Ranking currently uses a 7-day window with decay weighting.
 - Governance rules may hide, block, or pin keywords before the final top-10 list is returned.
 - `resultCountSum` currently reflects the accumulated `result_count` values recorded at search time, which are based on the returned page size from product search.
+- When `YOUYU_REDIS_CACHE_ENABLED=true`, hot-search ranking may be served from
+  Redis for the configured TTL. Admin create/update/delete governance mutations
+  evict the hot-search cache so governance changes are visible immediately.
 
 ### `GET /api/search/suggest`
 

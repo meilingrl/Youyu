@@ -108,6 +108,22 @@ npm run build
 mvnw.cmd test
 ```
 
+## Docker Demo Notes
+
+The Compose stack exposes the frontend through Nginx on `HTTP_PORT` and proxies
+`/api/` plus uploaded media under `/uploads/` to the backend container.
+
+For a fresh seeded demo environment:
+
+```bash
+.\scripts\run-demo-fresh.ps1 -Detach
+```
+
+Runtime uploads are stored in the `backend-uploads` Docker volume. If Alipay
+sandbox is enabled, `ALIPAY_SANDBOX_NOTIFY_URL` must be a stable public HTTPS
+URL that reaches `/api/payments/callbacks/alipay-sandbox`; localhost, container
+hostnames, and expired tunnel URLs cannot receive Alipay callbacks.
+
 ### End-to-end
 
 From `frontend/`:

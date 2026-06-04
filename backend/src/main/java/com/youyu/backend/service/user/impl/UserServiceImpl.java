@@ -34,6 +34,13 @@ public class UserServiceImpl implements UserService {
 
     private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
+    private static final Set<String> CONSENT_TYPES = Set.of(
+            "registration_terms",
+            "privacy_policy",
+            "cookie_functional",
+            "cookie_analytics",
+            "account_deletion_request"
+    );
 
     private final UserMapper userMapper;
     private final StudentVerificationMapper studentVerificationMapper;
@@ -325,6 +332,75 @@ public class UserServiceImpl implements UserService {
         return linkedMap("addressId", addressId, "deleted", true);
     }
 
+    @Override
+    @Transactional
+    public Map<String, Object> logConsent(Map<String, Object> request, String requestSource, String userAgent) {
+        Long userId = currentUserId();
+        String consentType = request == null ? "" : trim(String.valueOf(request.getOrDefault("consentType", "")));
+        if (consentType.isBlank() || !CONSENT_TYPES.contains(consentType)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Consent type is not supported");
+        }
+        boolean consented = request != null && toBoolean(request.get("consented"));
+        String source = request == null ? "client" : trim(String.valueOf(request.getOrDefault("source", "client")));
+        userMapper.insertConsentLog(userId, consentType, consented, source, requestSource, userAgent);
+        return linkedMap(
+                "logged", true,
+                "consentType", consentType,
+                "consented", consented
+        );
+    }
+
+    @Override
+    public List<Map<String, Object>> consentHistory() {
+        return userMapper.findConsentLogs(currentUserId());
+    }
+
+    @Override
+    public Map<String, Object> exportPersonalData() {
+        Long userId = currentUserId();
+        Map<String, Object> user = userMapper.findById(userId)
+                .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "User does not exist"));
+        return linkedMap(
+                "generatedAt", DATETIME_FORMATTER.format(LocalDateTime.now()),
+                "profile", publicUser(user),
+                "privilege", userMapper.findPrivilegeProfile(userId).orElseGet(Map::of),
+                "verification", verificationStatus(),
+                "addresses", addresses(),
+                "preference", preference(),
+                "consentHistory", userMapper.findConsentLogs(userId),
+                "orders", userMapper.findOrdersForUserExport(userId),
+                "reviews", userMapper.findReviewsForUserExport(userId),
+                "shopReviews", userMapper.findShopReviewsForUserExport(userId),
+                "limitations", List.of(
+                        "Export includes data currently available from implemented profile, address, preference, consent, order, and review tables.",
+                        "It excludes other users' personal data and internal security fields such as password hashes.",
+                        "Account deletion is a soft closure flow; historical order records are retained for transaction traceability."
+                )
+        );
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> deleteAccount(Map<String, Object> request, String requestSource, String userAgent) {
+        Long userId = currentUserId();
+        String confirmation = request == null ? "" : trim(String.valueOf(request.getOrDefault("confirmation", "")));
+        if (!"DELETE_ACCOUNT".equals(confirmation)) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "Account deletion requires confirmation");
+        }
+        userMapper.insertConsentLog(userId, "account_deletion_request", true, "account_deletion", requestSource, userAgent);
+        String anonymizedUsername = "deleted_user_" + userId + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        userMapper.anonymizeAndCloseAccount(userId, anonymizedUsername, "account_deleted_" + UUID.randomUUID());
+        return linkedMap(
+                "deleted", true,
+                "status", "deleted",
+                "retainedRecords", List.of(
+                        "Historical order records remain for transaction traceability.",
+                        "Reviews remain associated with anonymized account identifiers.",
+                        "Consent and deletion request logs remain for audit history."
+                )
+        );
+    }
+
     private Map<String, Object> publicUser(Map<String, Object> user) {
         return linkedMap(
                 "id", user.get("id"),
@@ -493,6 +569,13 @@ public class UserServiceImpl implements UserService {
 
     private boolean sameId(Long expected, Object actual) {
         return expected != null && actual instanceof Number number && expected.equals(number.longValue());
+    }
+
+    private boolean toBoolean(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        return value != null && Boolean.parseBoolean(String.valueOf(value));
     }
 
     private Long currentUserId() {

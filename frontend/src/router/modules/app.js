@@ -344,6 +344,17 @@ export default {
       }
     },
     {
+      path: 'settings/privacy',
+      name: 'app-settings-privacy',
+      component: () => import('@/views/app/PrivacyRightsView.vue'),
+      meta: {
+        title: '隐私与数据权利',
+        requiresAuth: true,
+        role: 'user',
+        navKey: '/app/settings'
+      }
+    },
+    {
       path: 'settings/auto-reply',
       name: 'app-settings-auto-reply',
       component: () => import('@/views/app/SettingsAutoReplyView.vue'),

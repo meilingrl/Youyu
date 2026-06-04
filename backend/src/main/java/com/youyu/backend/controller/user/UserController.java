@@ -2,6 +2,7 @@ package com.youyu.backend.controller.user;
 
 import com.youyu.backend.common.api.ApiResponse;
 import com.youyu.backend.common.auth.LoginRequired;
+import com.youyu.backend.common.auth.UserRole;
 import com.youyu.backend.common.support.RequestContext;
 import com.youyu.backend.controller.user.dto.CreateUserAddressRequest;
 import com.youyu.backend.controller.user.dto.SubmitStudentVerificationRequest;
@@ -24,7 +25,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
-@LoginRequired
+@LoginRequired(roles = {
+        UserRole.USER,
+        UserRole.ADMIN,
+        UserRole.SUPER_ADMIN,
+        UserRole.SUPPORT_AGENT,
+        UserRole.REVIEWER,
+        UserRole.OPERATOR,
+        UserRole.ORDER_ADMIN
+})
 public class UserController {
 
     private final UserService userService;
@@ -151,6 +160,40 @@ public class UserController {
                                                               HttpServletRequest request) {
         return ApiResponse.success(
                 userService.setDefaultAddress(addressId),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @PostMapping("/consent/log")
+    public ApiResponse<Map<String, Object>> logConsent(@RequestBody Map<String, Object> body,
+                                                       HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.logConsent(body, request.getRemoteAddr(), request.getHeader("User-Agent")),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @GetMapping("/consent/history")
+    public ApiResponse<List<Map<String, Object>>> consentHistory(HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.consentHistory(),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @PostMapping("/me/data-export")
+    public ApiResponse<Map<String, Object>> exportPersonalData(HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.exportPersonalData(),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @DeleteMapping("/me/account")
+    public ApiResponse<Map<String, Object>> deleteAccount(@RequestBody(required = false) Map<String, Object> body,
+                                                          HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.deleteAccount(body, request.getRemoteAddr(), request.getHeader("User-Agent")),
                 (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
         );
     }

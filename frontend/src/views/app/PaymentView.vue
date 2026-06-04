@@ -23,6 +23,7 @@ import {
   getOrderStatusMeta,
   getPaymentStatusMeta
 } from '@/components/trade/trade-meta'
+import { handleImageFallback } from '@/utils/image-fallback'
 
 const route = useRoute()
 const router = useRouter()
@@ -53,6 +54,15 @@ const canConfirmLocally = computed(
   () => hasActiveAttempt.value && getPaymentMethodMeta(payment.value?.paymentMethod).confirmLocally
 )
 const busy = computed(() => initiating.value || confirming.value)
+const paymentLineItems = computed(() => {
+  const items = Array.isArray(order.value?.items) ? order.value.items : []
+  return items.map((item) => ({
+    ...item,
+    title: item.productTitleSnapshot || item.productTitle || item.title || '',
+    coverUrl: item.productCoverSnapshot || item.coverUrl || item.productImage || '',
+    subtotal: item.subtotalAmount || item.subtotal || 0
+  }))
+})
 const mobileActionLabel = computed(() => {
   if (!canPay.value) return '返回订单'
   if (canConfirmLocally.value) return '确认支付'
@@ -275,6 +285,24 @@ onMounted(loadOrder)
         <section class="payment-grid">
           <article class="shell-card payment-card">
             <h2>订单信息</h2>
+            <div v-if="paymentLineItems.length" class="payment-item-list">
+              <article v-for="item in paymentLineItems" :key="item.id" class="payment-item">
+                <img
+                  v-if="item.coverUrl"
+                  class="payment-item__cover"
+                  :src="item.coverUrl"
+                  :alt="item.title"
+                  @error="(event) => handleImageFallback(event, item.title)"
+                />
+                <div v-else class="payment-item__cover payment-item__cover--empty">
+                  <span>{{ item.title.slice(0, 1) || 'Y' }}</span>
+                </div>
+                <div class="payment-item__copy">
+                  <strong>{{ item.title }}</strong>
+                  <span>x{{ item.quantity }} · {{ formatCurrency(item.subtotal) }}</span>
+                </div>
+              </article>
+            </div>
             <div class="payment-detail-list">
               <div class="payment-detail-list__row">
                 <span>订单号</span>
@@ -441,9 +469,49 @@ onMounted(loadOrder)
 .payment-detail-list__row span,
 .payment-card__lead,
 .payment-method-list__item span,
+.payment-item__copy span,
 .payment-qr-card p {
   color: var(--cm-text-secondary);
   line-height: 1.6;
+}
+
+.payment-item-list {
+  display: grid;
+  gap: 10px;
+}
+
+.payment-item {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.payment-item__cover {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: rgba(50, 91, 63, 0.08);
+}
+
+.payment-item__cover--empty {
+  display: grid;
+  place-items: center;
+  color: var(--cm-text-secondary);
+  font-weight: 700;
+}
+
+.payment-item__copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.payment-item__copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .payment-card__amount {

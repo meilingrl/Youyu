@@ -13,6 +13,7 @@ import { useChatStore } from '@/stores/chat'
 import { useMarketStore } from '@/stores/market'
 import { useRecommendStore } from '@/stores/recommend'
 import { useReviewStore } from '@/stores/review'
+import { handleImageFallback } from '@/utils/image-fallback'
 import { isValidEntityId } from '@/utils/id-utils'
 
 const props = defineProps({
@@ -361,7 +362,12 @@ onMounted(loadProduct)
       <section class="product-detail">
         <div class="product-detail__gallery shell-card">
           <div class="product-detail__gallery-main">
-            <img :src="selectedMedia || detailModel.coverUrl" :alt="detailModel.title" loading="eager" />
+            <img
+              :src="selectedMedia || detailModel.coverUrl"
+              :alt="detailModel.title"
+              loading="eager"
+              @error="(event) => handleImageFallback(event, detailModel.title)"
+            />
           </div>
 
           <div v-if="mediaList.length > 1" class="product-detail__thumbs">
@@ -373,7 +379,12 @@ onMounted(loadProduct)
               :class="{ 'is-active': index === activeMediaIndex }"
               @click="activeMediaIndex = index"
             >
-              <img :src="media" :alt="`${detailModel.title} 预览 ${index + 1}`" loading="lazy" />
+              <img
+                :src="media"
+                :alt="`${detailModel.title} 预览 ${index + 1}`"
+                loading="lazy"
+                @error="(event) => handleImageFallback(event, detailModel.title)"
+              />
             </button>
           </div>
         </div>
@@ -553,7 +564,14 @@ onMounted(loadProduct)
             class="product-card shell-card"
             @click="$router.push(`/app/products/${item.id}`)"
           >
-            <img :src="item.cover" :alt="item.title" class="product-card__cover" loading="lazy" decoding="async" />
+            <img
+              :src="item.cover"
+              :alt="item.title"
+              class="product-card__cover"
+              loading="lazy"
+              decoding="async"
+              @error="(event) => handleImageFallback(event, item.title)"
+            />
             <div class="product-card__body">
               <div class="product-card__meta">
                 <el-tag size="small">{{ item.categoryName }}</el-tag>

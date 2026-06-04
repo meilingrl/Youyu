@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS student_verifications (
     CONSTRAINT fk_student_verification_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-DROP INDEX uk_student_verifications_approved_student_no;
+DROP INDEX uk_student_verifications_approved_student_no ON student_verifications;
 
 CREATE INDEX idx_student_verifications_user_submitted ON student_verifications(user_id, submitted_at, id);
 CREATE INDEX idx_student_verifications_status_submitted ON student_verifications(verification_status, submitted_at, id);
@@ -135,6 +135,21 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_user_preferences_user FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS user_consent_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    consent_type VARCHAR(50) NOT NULL,
+    consented BOOLEAN NOT NULL,
+    source VARCHAR(64),
+    ip_address VARCHAR(45),
+    user_agent VARCHAR(500),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_consent_logs_user FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_user_consent_logs_user_created ON user_consent_logs(user_id, created_at, id);
+CREATE INDEX idx_user_consent_logs_type_created ON user_consent_logs(consent_type, created_at, id);
 
 CREATE TABLE IF NOT EXISTS categories (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

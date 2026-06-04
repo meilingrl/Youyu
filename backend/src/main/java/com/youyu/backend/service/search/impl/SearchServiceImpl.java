@@ -2,8 +2,10 @@ package com.youyu.backend.service.search.impl;
 
 import static com.youyu.backend.mapper.common.MapperTypeConverters.toInt;
 
+import com.youyu.backend.common.cache.RedisCacheSupport;
 import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.exception.BusinessException;
+import com.youyu.backend.config.RedisCacheProperties;
 import com.youyu.backend.mapper.product.ProductMapper;
 import com.youyu.backend.mapper.search.SearchGovernanceMapper;
 import com.youyu.backend.mapper.search.SearchLogMapper;
@@ -47,15 +49,21 @@ public class SearchServiceImpl implements SearchService {
     private final SearchGovernanceMapper searchGovernanceMapper;
     private final ProductMapper productMapper;
     private final ProductSearchIndex productSearchIndex;
+    private final RedisCacheSupport cacheSupport;
+    private final RedisCacheProperties cacheProperties;
 
     public SearchServiceImpl(SearchLogMapper searchLogMapper,
                              SearchGovernanceMapper searchGovernanceMapper,
                              ProductMapper productMapper,
-                             ProductSearchIndex productSearchIndex) {
+                             ProductSearchIndex productSearchIndex,
+                             RedisCacheSupport cacheSupport,
+                             RedisCacheProperties cacheProperties) {
         this.searchLogMapper = searchLogMapper;
         this.searchGovernanceMapper = searchGovernanceMapper;
         this.productMapper = productMapper;
         this.productSearchIndex = productSearchIndex;
+        this.cacheSupport = cacheSupport;
+        this.cacheProperties = cacheProperties;
     }
 
     @Override
@@ -93,6 +101,15 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public List<Map<String, Object>> listHotKeywords() {
+        return cacheSupport.getList("search:hot")
+                .orElseGet(() -> {
+                    List<Map<String, Object>> result = loadHotKeywords();
+                    cacheSupport.putList("search:hot", result, cacheProperties.getHotSearchTtl());
+                    return result;
+                });
+    }
+
+    private List<Map<String, Object>> loadHotKeywords() {
         GovernanceSnapshot governance = loadGovernanceSnapshot();
         List<Map<String, Object>> ranked = buildRankedKeywords(
                 searchLogMapper.findRecentDailyAggregates(HOT_SEARCH_DAYS),
@@ -293,6 +310,7 @@ public class SearchServiceImpl implements SearchService {
         rule.put("keyword", keyword);
         rule.put("displayLabel", displayLabel.isBlank() ? null : displayLabel);
         Long id = searchGovernanceMapper.insert(rule);
+        cacheSupport.evict("search:hot");
         return searchGovernanceMapper.findById(id)
                 .orElseThrow(() -> new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "创建规则后查询失败"));
     }
@@ -321,6 +339,7 @@ public class SearchServiceImpl implements SearchService {
 
         if (!updates.isEmpty()) {
             searchGovernanceMapper.update(id, updates);
+            cacheSupport.evict("search:hot");
         }
         return searchGovernanceMapper.findById(id)
                 .orElseThrow(() -> new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "更新规则后查询失败"));
@@ -331,6 +350,7 @@ public class SearchServiceImpl implements SearchService {
         searchGovernanceMapper.findById(id)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "治理规则不存在"));
         searchGovernanceMapper.delete(id);
+        cacheSupport.evict("search:hot");
     }
 
     @Override

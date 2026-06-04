@@ -20,7 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "management.endpoint.health.show-components=always",
                 "management.endpoint.health.show-details=never",
                 "management.health.db.enabled=true",
-                "management.health.diskspace.enabled=true"
+                "management.health.diskspace.enabled=true",
+                "management.health.redis.enabled=false"
         }
 )
 class HealthEndpointTest {
@@ -34,7 +35,10 @@ class HealthEndpointTest {
                 .andExpect(status().isOk())
                 .andExpect(header().exists("X-Trace-Id"))
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.status").value("UP"));
+                .andExpect(jsonPath("$.data.status").value("UP"))
+                .andExpect(jsonPath("$.data.database.status").value("UP"))
+                .andExpect(jsonPath("$.data.database.url").doesNotExist())
+                .andExpect(jsonPath("$.data.database.username").doesNotExist());
     }
 
     @Test

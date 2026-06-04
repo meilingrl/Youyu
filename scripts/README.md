@@ -17,3 +17,7 @@ Useful local scripts:
 - `generate-perf-catalog-sql.mjs`
   - Generate `backend/src/main/resources/seed/data-perf-catalog.sql`.
   - Example: `node scripts/generate-perf-catalog-sql.mjs 4000`
+- `generate-demo-expansion-sql.mjs`
+  - Validate `backend/src/main/resources/seed/demo-expansion.sql` for the final demo overlay.
+- `run-demo-fresh.ps1`
+  - Destroy the demo Docker volumes and rebuild the `compose.yml` + `compose.demo.yml` stack with a fresh `staging,seed` backend boot.
