@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from '@/plugins/element-plus-services'
@@ -21,64 +21,20 @@ import {
   updateAdminSupportTicketStatus
 } from '@/api/modules/admin'
 import { resolveErrorMessage } from '@/utils/error-utils'
+import {
+  POLL_INTERVAL,
+  chatFilterOptions,
+  statusMeta,
+  ticketCategoryOptions,
+  ticketMessageTypeOptions,
+  ticketStatusOptions,
+  workspaceDisplayMeta,
+  workspaces
+} from './support-view-options'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-
-const POLL_INTERVAL = 8000
-const workspaces = [
-  {
-    key: 'chat',
-    title: '在线客服',
-    eyebrow: '实时接待',
-    description: '用于处理升级到人工的在线客服会话，由 /api/admin/support/chat/** 提供支持。'
-  },
-  {
-    key: 'tickets',
-    title: '支持工单',
-    eyebrow: '异步工单',
-    description: '用于承接用户创建的客服工单，由 /api/admin/support/tickets/** 提供支持。'
-  }
-]
-const chatFilters = [
-  { value: 'pending', label: '待接入' },
-  { value: 'active', label: '进行中' },
-  { value: 'mine', label: '我处理的' },
-  { value: 'closed', label: '已结束' }
-]
-const ticketStatuses = [
-  { value: '', label: '全部状态' },
-  { value: 'open', label: '待受理' },
-  { value: 'in_progress', label: '处理中' },
-  { value: 'waiting_user', label: '待用户补充' },
-  { value: 'resolved', label: '已解决' },
-  { value: 'closed', label: '已关闭' }
-]
-const ticketCategories = [
-  { value: '', label: '全部分类' },
-  { value: 'account', label: '账号' },
-  { value: 'order', label: '订单' },
-  { value: 'product', label: '商品' },
-  { value: 'shop', label: '店铺' },
-  { value: 'payment', label: '支付' },
-  { value: 'report', label: '举报' },
-  { value: 'other', label: '其他' }
-]
-const ticketMessageTypes = [
-  { value: 'public_reply', label: '公开回复' },
-  { value: 'internal_note', label: '内部备注' }
-]
-const statusMeta = {
-  ai: { label: '智能客服', type: 'info' },
-  pending: { label: '待接入', type: 'warning' },
-  human: { label: '进行中', type: 'primary' },
-  closed: { label: '已结束', type: 'info' },
-  open: { label: '待受理', type: 'warning' },
-  in_progress: { label: '处理中', type: 'primary' },
-  waiting_user: { label: '待用户补充', type: 'danger' },
-  resolved: { label: '已解决', type: 'success' }
-}
 
 const workspace = ref(normalizeWorkspace(route.query.lane))
 
@@ -122,50 +78,6 @@ const ticketReplyForm = reactive({
   content: ''
 })
 
-const workspaceDisplayMeta = {
-  chat: {
-    title: '在线客服',
-    eyebrow: '实时接待',
-    description: '接待需要人工跟进的在线咨询，快速响应当前用户会话。'
-  },
-  tickets: {
-    title: '支持工单',
-    eyebrow: '持续跟进',
-    description: '处理用户提交的客服工单，统一跟进补充材料、进度更新和处理结论。'
-  }
-}
-
-const chatFilterOptions = [
-  { value: 'pending', label: '待接入' },
-  { value: 'active', label: '处理中' },
-  { value: 'mine', label: '我负责的' },
-  { value: 'closed', label: '已结束' }
-]
-
-const ticketStatusOptions = [
-  { value: '', label: '全部状态' },
-  { value: 'open', label: '待受理' },
-  { value: 'in_progress', label: '处理中' },
-  { value: 'waiting_user', label: '待用户补充' },
-  { value: 'resolved', label: '已解决' },
-  { value: 'closed', label: '已关闭' }
-]
-
-const ticketCategoryOptions = [
-  { value: '', label: '全部分类' },
-  { value: 'account', label: '账号' },
-  { value: 'order', label: '订单' },
-  { value: 'product', label: '商品' },
-  { value: 'shop', label: '店铺' },
-  { value: 'payment', label: '支付' },
-  { value: 'report', label: '举报' },
-  { value: 'other', label: '其他' }
-]
-
-const ticketMessageTypeOptions = [
-  { value: 'public_reply', label: '公开回复' },
-  { value: 'internal_note', label: '内部备注' }
-]
 const loadingTicketList = ref(false)
 const loadingTicketDetail = ref(false)
 const updatingTicketStatus = ref(false)
@@ -254,12 +166,12 @@ function normalizeWorkspace(value) {
 
 function normalizeTicketStatus(value) {
   const candidate = Array.isArray(value) ? value[0] : value
-  return ticketStatuses.some((item) => item.value === candidate) ? candidate : ''
+  return ticketStatusOptions.some((item) => item.value === candidate) ? candidate : ''
 }
 
 function normalizeTicketCategory(value) {
   const candidate = Array.isArray(value) ? value[0] : value
-  return ticketCategories.some((item) => item.value === candidate) ? candidate : ''
+  return ticketCategoryOptions.some((item) => item.value === candidate) ? candidate : ''
 }
 
 function normalizeQueryString(value) {
@@ -682,7 +594,7 @@ onBeforeUnmount(stopPolling)
     </section>
 
     <section v-if="workspace === 'chat'" class="admin-cs__workspace">
-      <aside class="admin-cs__queue">
+      <aside class="admin-cs__queue ui-surface-panel ui-stack-card">
         <div class="admin-cs__filters">
           <button
             v-for="item in chatFilterOptions"
@@ -728,7 +640,7 @@ onBeforeUnmount(stopPolling)
         </div>
       </aside>
 
-      <main class="admin-cs__thread">
+      <main class="admin-cs__thread ui-surface-panel">
         <ErrorBlock v-if="chatDetailError" :message="chatDetailError" @retry="loadConversationDetail(selectedConversationId)" />
         <SkeletonCard v-else-if="loadingChatDetail && !conversationMessages.length" :count="3" />
         <EmptyState
@@ -802,7 +714,7 @@ onBeforeUnmount(stopPolling)
         </template>
       </main>
 
-      <aside v-if="conversationDetail" class="admin-cs__context">
+      <aside v-if="conversationDetail" class="admin-cs__context ui-surface-panel ui-stack-card">
         <section class="admin-cs__panel">
           <h3>请求者</h3>
           <p class="admin-cs__requester">{{ requesterName(conversationDetail) }}</p>
@@ -845,7 +757,7 @@ onBeforeUnmount(stopPolling)
 
     <section v-else class="ticket-workspace">
       <aside class="ticket-workspace__queue">
-        <section class="ticket-card">
+        <section class="ticket-card ui-surface-panel ui-stack-card">
           <header class="ticket-card__head">
             <div>
               <h2>支持工单队列</h2>
@@ -914,7 +826,7 @@ onBeforeUnmount(stopPolling)
         </section>
       </aside>
 
-      <main class="ticket-card ticket-detail">
+      <main class="ticket-card ticket-detail ui-surface-panel ui-stack-card">
         <ErrorBlock v-if="ticketDetailError" :message="ticketDetailError" @retry="loadTicketDetail(selectedTicketId)" />
         <SkeletonCard v-else-if="loadingTicketDetail" :count="3" />
         <EmptyState
@@ -1019,369 +931,4 @@ onBeforeUnmount(stopPolling)
   </div>
 </template>
 
-<style scoped>
-.admin-support__hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 18px;
-}
-
-.admin-support__hero-actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.admin-support__workspace-chip {
-  display: grid;
-  gap: 4px;
-  min-width: 150px;
-  padding: 14px 16px;
-  border: 1px solid var(--cm-border);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--cm-text-secondary);
-  text-align: left;
-  cursor: pointer;
-}
-
-.admin-support__workspace-chip strong {
-  color: var(--cm-text);
-}
-
-.admin-support__workspace-chip.is-active {
-  border-color: rgba(var(--cm-primary-rgb), 0.4);
-  background: rgba(var(--cm-primary-rgb), 0.1);
-  color: var(--cm-primary);
-}
-
-.admin-cs__workspace,
-.ticket-workspace {
-  display: grid;
-  gap: 16px;
-  align-items: start;
-}
-
-.admin-cs__workspace {
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(220px, 280px);
-}
-
-.ticket-workspace {
-  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
-}
-
-.admin-cs__queue,
-.admin-cs__thread,
-.admin-cs__context,
-.ticket-card {
-  min-width: 0;
-  border: 1px solid var(--cm-border);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.84);
-  box-shadow: var(--cm-shadow-soft);
-}
-
-.admin-cs__queue,
-.admin-cs__context,
-.ticket-card {
-  display: grid;
-  gap: 14px;
-  padding: 16px;
-}
-
-.admin-cs__filters,
-.ticket-filter-grid,
-.ticket-filter-grid__keyword,
-.admin-cs__links,
-.ticket-detail__links,
-.admin-cs__actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.admin-cs__filter,
-.ticket-list__item,
-.admin-support__workspace-chip {
-  font: inherit;
-}
-
-.admin-cs__filter {
-  position: relative;
-  height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--cm-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--cm-text-secondary);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.admin-cs__filter.is-active {
-  border-color: rgba(var(--cm-primary-rgb), 0.4);
-  background: rgba(var(--cm-primary-rgb), 0.1);
-  color: var(--cm-primary);
-}
-
-.admin-cs__filter-badge {
-  margin-left: 4px;
-  color: #dc2626;
-}
-
-.admin-cs__list,
-.ticket-list,
-.ticket-messages,
-.ticket-detail,
-.ticket-detail__panel,
-.ticket-reply,
-.ticket-detail__content {
-  display: grid;
-  gap: 10px;
-}
-
-.admin-cs__session,
-.ticket-list__item {
-  display: grid;
-  gap: 6px;
-  padding: 12px;
-  border: 1px solid var(--cm-border);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--cm-text);
-  text-align: left;
-  cursor: pointer;
-}
-
-.admin-cs__session.is-active,
-.ticket-list__item.is-active {
-  border-color: rgba(var(--cm-primary-rgb), 0.4);
-  background: rgba(var(--cm-primary-rgb), 0.08);
-}
-
-.admin-cs__session-top,
-.admin-cs__session-foot,
-.ticket-list__top,
-.ticket-detail__head,
-.ticket-message header {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.admin-cs__session-preview,
-.admin-cs__session-foot span,
-.ticket-list__meta,
-.ticket-list__time,
-.ticket-card__head p,
-.ticket-message header span,
-.ticket-detail__muted,
-.ticket-detail__head p {
-  color: var(--cm-text-secondary);
-  font-size: 13px;
-}
-
-.admin-cs__session-unread {
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: #dc2626;
-  color: #fff !important;
-  font-size: 11px;
-  line-height: 18px;
-  text-align: center;
-}
-
-.admin-cs__thread {
-  display: flex;
-  flex-direction: column;
-  min-height: 640px;
-}
-
-.admin-cs__thread-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid var(--cm-border);
-}
-
-.admin-cs__thread-head h2,
-.ticket-card__head h2,
-.ticket-detail__head h2,
-.ticket-detail__panel h3,
-.ticket-reply h3,
-.ticket-messages h3,
-.ticket-detail__content h3 {
-  margin: 0;
-}
-
-.admin-cs__messages {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  overflow-y: auto;
-  background: rgba(0, 0, 0, 0.015);
-}
-
-.admin-cs__bubble {
-  max-width: 72%;
-  padding: 10px 14px;
-  border-radius: 14px;
-}
-
-.admin-cs__bubble--other {
-  align-self: flex-start;
-  background: #fff;
-  border: 1px solid var(--cm-border);
-}
-
-.admin-cs__bubble--self {
-  align-self: flex-end;
-  background: rgba(var(--cm-primary-rgb), 0.12);
-}
-
-.admin-cs__bubble p,
-.ticket-message p,
-.ticket-detail__content p {
-  margin: 0;
-  line-height: 1.6;
-}
-
-.admin-cs__bubble time {
-  display: block;
-  margin-top: 4px;
-  font-size: 11px;
-  opacity: 0.6;
-}
-
-.admin-cs__bubble-recalled {
-  color: var(--cm-text-secondary);
-  font-style: italic;
-}
-
-.admin-cs__composer {
-  position: relative;
-  display: grid;
-  gap: 10px;
-  padding: 14px 16px;
-  border-top: 1px solid var(--cm-border);
-}
-
-.admin-cs__composer-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.admin-cs__quick-reply {
-  position: absolute;
-  left: 16px;
-  bottom: calc(100% - 6px);
-  z-index: 10;
-}
-
-.admin-cs__requester {
-  margin: 0;
-  font-weight: 700;
-}
-
-.admin-cs__requester-sub {
-  margin: 0;
-  color: var(--cm-text-secondary);
-  font-size: 13px;
-}
-
-.admin-cs__links a,
-.ticket-detail__links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid var(--cm-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.76);
-  color: var(--cm-text);
-  font-weight: 700;
-}
-
-.ticket-card__head,
-.ticket-detail__grid {
-  display: grid;
-  gap: 14px;
-}
-
-.ticket-card__head {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-}
-
-.ticket-card__head strong {
-  color: var(--cm-primary);
-  font-size: 28px;
-  line-height: 1;
-}
-
-.ticket-filter-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.ticket-filter-grid__keyword {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-.ticket-detail__content,
-.ticket-detail__panel,
-.ticket-message {
-  padding: 14px;
-  border: 1px solid var(--cm-border);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.7);
-}
-
-.ticket-detail__content {
-  background: rgba(var(--cm-primary-rgb), 0.06);
-}
-
-.ticket-detail__grid {
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
-
-.ticket-message.is-internal {
-  border-color: rgba(234, 88, 12, 0.22);
-  background: rgba(234, 88, 12, 0.06);
-}
-
-.ticket-reply {
-  gap: 12px;
-}
-
-@media (max-width: 1180px) {
-  .admin-cs__workspace,
-  .ticket-workspace {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .admin-support__hero,
-  .ticket-card__head,
-  .admin-cs__session-top,
-  .admin-cs__session-foot,
-  .ticket-list__top,
-  .ticket-message header,
-  .ticket-detail__head,
-  .ticket-filter-grid__keyword {
-    grid-template-columns: 1fr;
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-</style>
+<style scoped src="./SupportView.css"></style>

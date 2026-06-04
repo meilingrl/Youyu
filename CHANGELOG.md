@@ -1,3 +1,19 @@
+## [2026-06-04] - Code Structure And CSS Reuse Optimization
+
+### changed
+- Moved the message center and admin support scoped styles into adjacent CSS files, reducing the oversized Vue SFCs while preserving their templates and runtime behavior.
+- Moved admin support view option/status metadata into `support-view-options.js`.
+- Added reusable `ui-surface-panel` and `ui-stack-card` utilities and applied them to repeated admin support panel surfaces.
+- Extracted admin dashboard assembly into `AdminDashboardBuilder` and CSV export assembly into `AdminCsvExportBuilder`, bringing `AdminServiceImpl` below 800 lines.
+- Recorded the completed cross-cutting optimization task in `docs/08-tasks/archived/`.
+
+### verify
+- Backend `.\mvnw.cmd test` passed, 251 tests.
+- Frontend `npm test` passed, 63 tests.
+- Frontend `npm run build` passed, with existing Rollup annotation and chunk-size warnings.
+
+---
+
 ## [2026-06-04] - Docker Demo Upload And Shop Detail Stabilization
 
 ### changed
