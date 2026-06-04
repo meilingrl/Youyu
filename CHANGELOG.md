@@ -1,3 +1,27 @@
+## [2026-06-04] - Launch Readiness Task Evidence Sync
+
+### changed
+- Updated the active launch-readiness task records to distinguish completed foundation work from true remaining blockers.
+- Marked completed security, compliance, deployment, backup, logging, Redis cache, and frontend chunk-splitting evidence in the task acceptance criteria.
+- Corrected task file references to the current `compose.yml` and `frontend/nginx/default.conf` paths.
+- Added a launch-readiness monitoring and alerting standard with P0/P1 thresholds, response steps, log-search keys, severity definitions, and an incident-record template.
+
+### verify
+- Documentation-only synchronization; no automated tests required.
+
+---
+
+## [2026-06-04] - Launch Readiness Active Task Split
+
+### changed
+- Added active task records for the remaining launch readiness tracks: security hardening, compliance, deployment/runbook, backup/restore, monitoring/alerting, and performance/cache.
+- Kept the new work scoped to `docs/08-tasks/active/` so implementation ownership remains separated from archived launch-preparation wave records.
+
+### verify
+- Documentation-only task split; no automated tests run.
+
+---
+
 ## [2026-06-04] - Docker Demo Upload And Shop Detail Stabilization
 
 ### changed

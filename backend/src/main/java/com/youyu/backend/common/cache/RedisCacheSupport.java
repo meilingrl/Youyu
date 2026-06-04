@@ -4,12 +4,14 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.youyu.backend.config.RedisCacheProperties;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +21,8 @@ public class RedisCacheSupport {
     private static final Logger log = LoggerFactory.getLogger(RedisCacheSupport.class);
     private static final TypeReference<List<Map<String, Object>>> LIST_OF_MAPS = new TypeReference<>() {
     };
+    private static final int PREFIX_EVICTION_SCAN_COUNT = 500;
+    private static final int PREFIX_EVICTION_DELETE_BATCH_SIZE = 500;
 
     private final RedisCacheProperties properties;
     private final StringRedisTemplate redisTemplate;
@@ -88,9 +92,22 @@ public class RedisCacheSupport {
         }
         String namespacedPrefix = namespacedKey(prefix);
         try {
-            Set<String> keys = redisTemplate.keys(namespacedPrefix + "*");
-            if (keys != null && !keys.isEmpty()) {
-                redisTemplate.delete(keys);
+            ScanOptions options = ScanOptions.scanOptions()
+                    .match(namespacedPrefix + "*")
+                    .count(PREFIX_EVICTION_SCAN_COUNT)
+                    .build();
+            List<String> batch = new ArrayList<>(PREFIX_EVICTION_DELETE_BATCH_SIZE);
+            try (Cursor<String> cursor = redisTemplate.scan(options)) {
+                while (cursor.hasNext()) {
+                    batch.add(cursor.next());
+                    if (batch.size() >= PREFIX_EVICTION_DELETE_BATCH_SIZE) {
+                        redisTemplate.delete(batch);
+                        batch.clear();
+                    }
+                }
+            }
+            if (!batch.isEmpty()) {
+                redisTemplate.delete(batch);
             }
         } catch (RuntimeException ex) {
             log.warn("Redis cache prefix eviction failed for prefix={}", namespacedPrefix, ex);

@@ -41,6 +41,14 @@ export default defineConfig({
             return 'vue-core'
           }
 
+          if (id.includes('node_modules/echarts') || id.includes('node_modules/vue-echarts')) {
+            return 'echarts'
+          }
+
+          if (id.includes('node_modules/zrender')) {
+            return 'zrender'
+          }
+
           if (id.includes('node_modules')) {
             return 'vendor'
           }
