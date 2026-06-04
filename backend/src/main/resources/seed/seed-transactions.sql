@@ -58,8 +58,8 @@ INSERT INTO order_items (
 (8103, 8003, 3003, 'Dorm Storage Rack', 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=80', 18.00, 1, 18.00, 'physical', '2026-05-10 10:22:00'),
 (8104, 8004, 3002, 'Engineering Drawing Tool Set', 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80', 35.00, 1, 35.00, 'physical', '2026-05-10 10:25:00'),
 (8105, 8005, 3001, 'Advanced Math Review Pack', 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=900&q=80', 19.90, 1, 19.90, 'digital', '2026-05-10 10:26:00'),
-(8106, 8006, 3010, 'Seed USB Hub 4-Port', 'https://images.unsplash.com/photo-1625948515291-69613efd103f?auto=format&fit=crop&w=900&q=80', 22.00, 2, 44.00, 'physical', '2026-05-10 10:27:00'),
-(8107, 8007, 3011, 'Seed Wireless Mouse', 'https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=900&q=80', 16.50, 1, 16.50, 'physical', '2026-05-10 10:28:00'),
+(8106, 8006, 3010, 'Compact USB Hub 4-Port', 'https://images.unsplash.com/photo-1625948515291-69613efd103f?auto=format&fit=crop&w=900&q=80', 22.00, 2, 44.00, 'physical', '2026-05-10 10:27:00'),
+(8107, 8007, 3011, 'Wireless Mouse Campus Edition', 'https://images.unsplash.com/photo-1527814050087-3793815479db?auto=format&fit=crop&w=900&q=80', 16.50, 1, 16.50, 'physical', '2026-05-10 10:28:00'),
 (8108, 8008, 3003, 'Dorm Storage Rack', 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=80', 18.00, 1, 18.00, 'physical', '2026-05-10 10:29:00'),
 (8109, 8009, 3001, 'Advanced Math Review Pack', 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=900&q=80', 19.90, 1, 19.90, 'digital', '2026-05-10 10:30:00'),
 (8110, 8010, 3002, 'Engineering Drawing Tool Set', 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=900&q=80', 35.00, 1, 35.00, 'physical', '2026-05-10 10:31:00');
@@ -129,11 +129,11 @@ INSERT INTO reports (
     reason_type, content, status, submitted_at, processed_at, processed_by,
     resolution, created_at, updated_at
 ) VALUES
-(6010, 1010, 'Seed Buyer', 'order', 8001, 'Order SEED8001',
+(6010, 1010, 'Chen Bo', 'order', 8001, 'Order 8001',
  'after_sales_dispute', 'Buyer says the drawing tool shipment has not been clarified.',
  'pending', '2026-05-27 09:10:00', NULL, NULL, '',
  '2026-05-27 09:10:00', CURRENT_TIMESTAMP),
-(6011, 1010, 'Seed Buyer', 'order', 8008, 'Order SEED8008',
+(6011, 1010, 'Chen Bo', 'order', 8008, 'Order 8008',
  'payment_delivery_dispute', 'Buyer and seller disagree on whether the offline rack order should proceed.',
  'processing', '2026-05-27 09:20:00', '2026-05-27 09:35:00', 'Admin9001',
  'Escalated to mediation case MED-SEED-8008.',

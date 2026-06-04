@@ -1,4 +1,11 @@
 services:
+  db:
+    volumes:
+      - mysql-data-demo:/var/lib/mysql
+
   backend:
     environment:
       SPRING_PROFILES_ACTIVE: staging,seed
+
+volumes:
+  mysql-data-demo:

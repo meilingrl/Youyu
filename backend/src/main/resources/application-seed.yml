@@ -1,4 +1,4 @@
-# Optional demo + performance catalog inserts. Use when the DB file is new or you deleted ~/.youyu/h2/.
+# Demo dataset inserts. Intended for fresh demo/staging databases.
 # Example: mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=seed
 spring:
   config:
@@ -6,4 +6,5 @@ spring:
       on-profile: seed
   sql:
     init:
-      data-locations: classpath:seed/data.sql,classpath:seed/seed-transactions.sql,classpath:seed/seed-zhangsan-spend.sql,classpath:seed/data-realistic-products.sql,classpath:seed/seed-chat-data.sql
+      continue-on-error: true
+      data-locations: classpath:seed/data.sql,classpath:seed/seed-transactions.sql,classpath:seed/seed-zhangsan-spend.sql,classpath:seed/seed-chat-data.sql,classpath:seed/demo-expansion.sql
