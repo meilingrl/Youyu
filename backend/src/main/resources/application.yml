@@ -27,6 +27,7 @@ server:
 youyu:
   auth:
     enabled: true
+    mock-token-enabled: ${YOUYU_AUTH_MOCK_TOKEN_ENABLED:true}
     ignored-paths:
       - /api/health
       - /actuator/health
@@ -76,6 +77,22 @@ youyu:
       api-key: ${MEILISEARCH_API_KEY:}
       product-index: ${MEILISEARCH_PRODUCT_INDEX:youyu_products}
       timeout: ${MEILISEARCH_TIMEOUT:2s}
+  cors:
+    allowed-origins:
+      - ${YOUYU_CORS_ALLOWED_ORIGIN_LOCAL_FRONTEND:http://localhost:5173}
+      - ${YOUYU_CORS_ALLOWED_ORIGIN_LOCAL_BACKEND:http://localhost:8080}
+    allowed-origin-patterns: []
+    allowed-methods:
+      - GET
+      - POST
+      - PUT
+      - PATCH
+      - DELETE
+      - OPTIONS
+    allowed-headers:
+      - "*"
+    allow-credentials: true
+    max-age: 3600
 
 logging:
   level:

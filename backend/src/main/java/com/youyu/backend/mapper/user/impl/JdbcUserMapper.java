@@ -490,6 +490,147 @@ public class JdbcUserMapper implements UserMapper {
                 .toList();
     }
 
+    @Override
+    public void insertConsentLog(Long userId,
+                                 String consentType,
+                                 boolean consented,
+                                 String source,
+                                 String ipAddress,
+                                 String userAgent) {
+        jdbcTemplate.update(
+                """
+                        INSERT INTO user_consent_logs
+                        (user_id, consent_type, consented, source, ip_address, user_agent, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        """,
+                userId,
+                consentType,
+                consented,
+                blankToNull(source),
+                blankToNull(ipAddress),
+                truncate(userAgent, 500)
+        );
+    }
+
+    @Override
+    public List<Map<String, Object>> findConsentLogs(Long userId) {
+        return jdbcTemplate.queryForList(
+                        """
+                                SELECT id, user_id, consent_type, consented, source, ip_address, user_agent, created_at
+                                FROM user_consent_logs
+                                WHERE user_id = ?
+                                ORDER BY created_at DESC, id DESC
+                                """,
+                        userId
+                ).stream()
+                .map(this::normalizeConsentLog)
+                .toList();
+    }
+
+    @Override
+    public List<Map<String, Object>> findOrdersForUserExport(Long userId) {
+        return jdbcTemplate.queryForList(
+                        """
+                                SELECT id, order_no, buyer_user_id, seller_user_id, shop_id, order_status,
+                                       fulfillment_type, payment_status, goods_amount, discount_amount,
+                                       pay_amount, submitted_at, paid_at, completed_at, cancelled_at, closed_reason
+                                FROM orders
+                                WHERE buyer_user_id = ? OR seller_user_id = ?
+                                ORDER BY submitted_at DESC, id DESC
+                                """,
+                        userId,
+                        userId
+                ).stream()
+                .map(row -> {
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("id", row.get("id"));
+                    result.put("orderNo", row.get("order_no"));
+                    result.put("buyerUserId", row.get("buyer_user_id"));
+                    result.put("sellerUserId", row.get("seller_user_id"));
+                    result.put("shopId", row.get("shop_id"));
+                    result.put("orderStatus", row.get("order_status"));
+                    result.put("fulfillmentType", row.get("fulfillment_type"));
+                    result.put("paymentStatus", row.get("payment_status"));
+                    result.put("goodsAmount", row.get("goods_amount"));
+                    result.put("discountAmount", row.get("discount_amount"));
+                    result.put("payAmount", row.get("pay_amount"));
+                    result.put("submittedAt", format(row.get("submitted_at")));
+                    result.put("paidAt", format(row.get("paid_at")));
+                    result.put("completedAt", format(row.get("completed_at")));
+                    result.put("cancelledAt", format(row.get("cancelled_at")));
+                    result.put("closedReason", defaultString(row.get("closed_reason")));
+                    return result;
+                })
+                .toList();
+    }
+
+    @Override
+    public List<Map<String, Object>> findReviewsForUserExport(Long userId) {
+        return jdbcTemplate.queryForList(
+                        """
+                                SELECT id, order_item_id, buyer_user_id, product_id, score, content, created_at, updated_at
+                                FROM reviews
+                                WHERE buyer_user_id = ?
+                                ORDER BY created_at DESC, id DESC
+                                """,
+                        userId
+                ).stream()
+                .map(row -> {
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("id", row.get("id"));
+                    result.put("orderItemId", row.get("order_item_id"));
+                    result.put("buyerUserId", row.get("buyer_user_id"));
+                    result.put("productId", row.get("product_id"));
+                    result.put("score", row.get("score"));
+                    result.put("content", defaultString(row.get("content")));
+                    result.put("createdAt", format(row.get("created_at")));
+                    result.put("updatedAt", format(row.get("updated_at")));
+                    return result;
+                })
+                .toList();
+    }
+
+    @Override
+    public List<Map<String, Object>> findShopReviewsForUserExport(Long userId) {
+        return jdbcTemplate.queryForList(
+                        """
+                                SELECT id, shop_id, buyer_user_id, score, content, created_at, updated_at
+                                FROM shop_reviews
+                                WHERE buyer_user_id = ?
+                                ORDER BY created_at DESC, id DESC
+                                """,
+                        userId
+                ).stream()
+                .map(row -> {
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("id", row.get("id"));
+                    result.put("shopId", row.get("shop_id"));
+                    result.put("buyerUserId", row.get("buyer_user_id"));
+                    result.put("score", row.get("score"));
+                    result.put("content", defaultString(row.get("content")));
+                    result.put("createdAt", format(row.get("created_at")));
+                    result.put("updatedAt", format(row.get("updated_at")));
+                    return result;
+                })
+                .toList();
+    }
+
+    @Override
+    public void anonymizeAndCloseAccount(Long userId, String anonymizedUsername, String passwordHash) {
+        jdbcTemplate.update(
+                """
+                        UPDATE users
+                        SET username = ?, phone = NULL, email = NULL, password_hash = ?, nickname = ?,
+                            avatar = NULL, status = 'deleted', updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        """,
+                anonymizedUsername,
+                passwordHash,
+                "Deleted account",
+                userId
+        );
+    }
+
     private String baseUserSql() {
         return """
                 SELECT u.id, u.username, u.phone, u.email, u.password_hash, u.nickname, u.avatar,
@@ -603,6 +744,19 @@ public class JdbcUserMapper implements UserMapper {
         return result;
     }
 
+    private Map<String, Object> normalizeConsentLog(Map<String, Object> row) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("id", row.get("id"));
+        result.put("userId", row.get("user_id"));
+        result.put("consentType", row.get("consent_type"));
+        result.put("consented", toBoolean(row.get("consented")));
+        result.put("source", defaultString(row.get("source")));
+        result.put("ipAddress", defaultString(row.get("ip_address")));
+        result.put("userAgent", defaultString(row.get("user_agent")));
+        result.put("createdAt", format(row.get("created_at")));
+        return result;
+    }
+
     private String privilegeLabel(Map<String, Object> row) {
         if (toBoolean(row.get("is_restricted"))) {
             return "受限";
@@ -673,6 +827,14 @@ public class JdbcUserMapper implements UserMapper {
 
     private String blankToNull(String value) {
         return isBlank(value) ? null : value.trim();
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.length() <= maxLength ? trimmed : trimmed.substring(0, maxLength);
     }
 
     private boolean isBlank(String value) {

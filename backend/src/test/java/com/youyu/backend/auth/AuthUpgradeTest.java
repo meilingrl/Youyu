@@ -81,12 +81,40 @@ class AuthUpgradeTest extends BackendTestBase {
                 .andExpect(jsonPath("$.data.token").doesNotExist())
                 .andExpect(jsonPath("$.data.role").doesNotExist());
 
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user_consent_logs WHERE user_id = (SELECT id FROM users WHERE username = ?) AND consented = TRUE",
+                Long.class,
+                "auth_wave_register"
+        )).isEqualTo(2L);
+
         Boolean consumed = jdbcTemplate.queryForObject(
                 "SELECT is_consumed FROM auth_email_verification_challenges WHERE email = ?",
                 Boolean.class,
                 email
         );
         assertThat(consumed).isTrue();
+    }
+
+    @Test
+    void registrationRejectsMissingAgreementConsent() throws Exception {
+        String email = "auth-no-consent@example.test";
+        sendEmailCode(email, "register").andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "username": "auth_wave_no_consent",
+                                  "password": "pass123456",
+                                  "nickname": "No Consent Test",
+                                  "email": "%s",
+                                  "emailCode": "482913",
+                                  "agreedToTerms": false
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
     }
 
     @Test
@@ -296,12 +324,17 @@ class AuthUpgradeTest extends BackendTestBase {
                   "password": "pass123456",
                   "nickname": "Auth Wave Test",
                   "email": "%s",
-                  "emailCode": "%s"
+                  "emailCode": "%s",
+                  "agreedToTerms": true
                 }
                 """.formatted(username, email, emailCode);
     }
 
     private void clearCreatedUsers() {
+        jdbcTemplate.update("""
+                DELETE FROM user_consent_logs
+                WHERE user_id IN (SELECT id FROM users WHERE username LIKE 'auth_wave_%')
+                """);
         jdbcTemplate.update("""
                 DELETE FROM user_privilege_profiles
                 WHERE user_id IN (SELECT id FROM users WHERE username LIKE 'auth_wave_%')

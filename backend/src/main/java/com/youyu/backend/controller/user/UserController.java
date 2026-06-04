@@ -154,4 +154,38 @@ public class UserController {
                 (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
         );
     }
+
+    @PostMapping("/consent/log")
+    public ApiResponse<Map<String, Object>> logConsent(@RequestBody Map<String, Object> body,
+                                                       HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.logConsent(body, request.getRemoteAddr(), request.getHeader("User-Agent")),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @GetMapping("/consent/history")
+    public ApiResponse<List<Map<String, Object>>> consentHistory(HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.consentHistory(),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @PostMapping("/me/data-export")
+    public ApiResponse<Map<String, Object>> exportPersonalData(HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.exportPersonalData(),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
+
+    @DeleteMapping("/me/account")
+    public ApiResponse<Map<String, Object>> deleteAccount(@RequestBody(required = false) Map<String, Object> body,
+                                                          HttpServletRequest request) {
+        return ApiResponse.success(
+                userService.deleteAccount(body, request.getRemoteAddr(), request.getHeader("User-Agent")),
+                (String) request.getAttribute(RequestContext.TRACE_ID_ATTRIBUTE)
+        );
+    }
 }

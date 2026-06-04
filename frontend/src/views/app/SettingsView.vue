@@ -59,6 +59,14 @@ const settingsSections = computed(() => [
     badgeType: 'success',
     description: '控制订单提醒、评价提醒等通知的开关。',
     detail: `订单提醒：${marketStore.userPreference.notificationPreference.orderReminder ? '开启' : '关闭'} · 评价提醒：${marketStore.userPreference.notificationPreference.reviewReminder ? '开启' : '关闭'}`
+  },
+  {
+    title: 'Privacy Rights',
+    path: '/app/settings/privacy',
+    badge: 'Available',
+    badgeType: 'success',
+    description: 'Review consent history, generate a personal data export, and request soft account closure.',
+    detail: 'Account closure anonymizes profile fields and retains transaction history.'
   }
 ])
 

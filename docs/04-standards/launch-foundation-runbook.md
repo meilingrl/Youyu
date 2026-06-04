@@ -2,7 +2,8 @@
 
 This runbook covers a single-host staging rehearsal. It proves that the current
 application can be built, started, checked, backed up, and restored. It is not
-a production deployment procedure.
+a production deployment procedure, and the `staging` profile is a
+production-like rehearsal profile rather than production approval.
 
 ## Production Blockers
 
@@ -14,6 +15,11 @@ a production deployment procedure.
 - HTTP is the default rehearsal entry point. A real release must install and
   verify HTTPS using the provided Nginx template and an environment-specific
   certificate mount.
+- No registry publishing, server provisioning, TLS certificate issuance,
+  deployment approval gate, or production rollback automation exists in the
+  current repository.
+- Generated secrets, certificates, reports, backups, and local `.env` files
+  must stay untracked.
 
 ## Environment
 
@@ -26,11 +32,16 @@ Optional host-port overrides are `HTTP_PORT` and `BACKEND_PORT`. Their defaults
 are `18080` and `18081`. The published MySQL rehearsal port defaults to
 `13306`; containers still communicate with MySQL internally on `3306`.
 
+Optional Alipay sandbox, SMTP, Meilisearch, Amap, and logistics tracking
+variables are forwarded by Compose but remain disabled or empty by default.
+Configure them only for a rehearsal that explicitly validates that integration.
+
 ## Start And Check
 
 Start the schema-only staging rehearsal:
 
 ```bash
+docker compose config
 docker compose up -d --build
 docker compose ps
 curl http://localhost:18080/api/health
@@ -44,12 +55,25 @@ exposed; metrics and Prometheus endpoints are intentionally unavailable.
 Start the explicit demo overlay only when stable seed records are needed:
 
 ```bash
+docker compose -f compose.yml -f compose.demo.yml config
 docker compose -f compose.yml -f compose.demo.yml up -d --build
 ```
 
 The default command activates `staging`; the demo overlay activates
 `staging,seed`. Spring Boot continues to initialize the existing `schema.sql`;
 this wave does not introduce Flyway.
+
+To verify the default path stayed schema-only, inspect the active backend
+environment and use a database count query:
+
+```bash
+docker compose exec backend printenv SPRING_PROFILES_ACTIVE
+docker compose exec db sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE" \
+  -e "select count(*) as users from users; select count(*) as products from products;"'
+```
+
+The first command must print `staging` for default startup. Seed data may appear
+only after starting with `compose.demo.yml`.
 
 ## Logs
 
@@ -109,6 +133,35 @@ docker compose down -v
 
 The second command also removes the local rehearsal database volume. Use it
 only when intentionally resetting rehearsal data.
+
+For a non-destructive application rollback rehearsal:
+
+1. Record the currently healthy Git revision and `.env` checksum outside the
+   repository.
+2. Apply or check out the candidate revision.
+3. Run `docker compose config`, `docker compose build --pull`, and
+   `docker compose up -d --force-recreate`.
+4. Run `/api/health`, `/actuator/health`, and the relevant smoke tests.
+5. If the candidate fails, return to the prior revision and repeat the build,
+   recreate, and health-check commands.
+
+Database rollback is not implicit in Compose. Restore backup data into a
+separate `youyu_restore_*` database first, validate it, and promote only after
+manual approval. Treat `docker compose down -v` as a destructive reset option,
+not as release rollback.
+
+## CI/CD Deployment Notes
+
+The current `.github/workflows/ci.yml` workflow validates code but does not
+deploy. A real deployment workflow still needs:
+
+- image registry selection and credentials
+- immutable image tags tied to a Git SHA
+- deployment host or orchestrator credentials
+- environment secret injection outside the repository
+- HTTPS certificate issuance or mount management
+- post-deploy health checks and smoke tests
+- documented approval and rollback gates
 
 ## 2026-05-30 Integration Evidence
 

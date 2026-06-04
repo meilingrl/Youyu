@@ -65,7 +65,8 @@ public class AuthServiceImpl implements AuthService {
             throw invalidCredentials();
         }
         authChallengeService.clearLoginFailures(idTrim, requestSource);
-        if ("disabled".equalsIgnoreCase(String.valueOf(user.get("status")))) {
+        String status = String.valueOf(user.get("status"));
+        if ("disabled".equalsIgnoreCase(status) || "deleted".equalsIgnoreCase(status)) {
             throw new BusinessException(ResultCode.FORBIDDEN, "Account is disabled. Contact support.");
         }
         userMapper.updateLastLoginAt(uid);
@@ -86,7 +87,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public Map<String, Object> register(RegisterRequest request) {
+    public Map<String, Object> register(RegisterRequest request, String requestSource, String userAgent) {
         String username = trim(request.getUsername());
         String email = trim(request.getEmail());
         String phone = trim(request.getPhone());
@@ -94,6 +95,9 @@ public class AuthServiceImpl implements AuthService {
         String password = request.getPassword();
         if (isBlank(username) || isBlank(password) || isBlank(nickname) || isBlank(email)) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "Username, password, nickname, and email are required");
+        }
+        if (!Boolean.TRUE.equals(request.getAgreedToTerms())) {
+            throw new BusinessException(ResultCode.BAD_REQUEST, "User agreement and privacy policy consent is required");
         }
         if (userMapper.findByLoginId(username).isPresent() || userMapper.findByEmail(email).isPresent()) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "Username or email is already in use");
@@ -105,6 +109,8 @@ public class AuthServiceImpl implements AuthService {
         try {
             Long userId = userMapper.insert(username, phone, email, passwordService.encode(password), nickname);
             userMapper.insertDefaultPrivilegeProfile(userId);
+            userMapper.insertConsentLog(userId, "registration_terms", true, "registration", requestSource, userAgent);
+            userMapper.insertConsentLog(userId, "privacy_policy", true, "registration", requestSource, userAgent);
             Map<String, Object> user = userMapper.findById(userId)
                     .orElseThrow(() -> new BusinessException(
                             ResultCode.INTERNAL_SERVER_ERROR,
