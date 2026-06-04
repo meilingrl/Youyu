@@ -9,6 +9,7 @@ import TradeMobileActionBar from '@/components/trade/TradeMobileActionBar.vue'
 import TradeMetricStrip from '@/components/trade/TradeMetricStrip.vue'
 import TradePageShell from '@/components/trade/TradePageShell.vue'
 import { formatCurrency } from '@/components/trade/trade-meta'
+import { handleImageFallback } from '@/utils/image-fallback'
 
 const router = useRouter()
 const loading = ref(false)
@@ -227,6 +228,7 @@ onMounted(loadCart)
               class="cart-item__cover"
               loading="lazy"
               decoding="async"
+              @error="(event) => handleImageFallback(event, item.title)"
             />
             <div class="cart-item__content">
               <div class="cart-item__top">
