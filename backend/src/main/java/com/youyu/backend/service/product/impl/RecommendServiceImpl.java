@@ -1,10 +1,10 @@
 package com.youyu.backend.service.product.impl;
 
+import com.youyu.backend.common.cache.RedisCacheSupport;
+import com.youyu.backend.config.RedisCacheProperties;
 import com.youyu.backend.mapper.recommend.RecommendMapper;
 import com.youyu.backend.mapper.user.UserMapper;
 import com.youyu.backend.service.product.RecommendService;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,16 +16,32 @@ public class RecommendServiceImpl implements RecommendService {
 
     private final RecommendMapper recommendMapper;
     private final UserMapper userMapper;
+    private final RedisCacheSupport cacheSupport;
+    private final RedisCacheProperties cacheProperties;
 
-    public RecommendServiceImpl(RecommendMapper recommendMapper, UserMapper userMapper) {
+    public RecommendServiceImpl(RecommendMapper recommendMapper,
+                                UserMapper userMapper,
+                                RedisCacheSupport cacheSupport,
+                                RedisCacheProperties cacheProperties) {
         this.recommendMapper = recommendMapper;
         this.userMapper = userMapper;
+        this.cacheSupport = cacheSupport;
+        this.cacheProperties = cacheProperties;
     }
 
     @Override
     public List<Map<String, Object>> recommendForHome(int limit, Long userId) {
         int effectiveLimit = Math.max(1, Math.min(limit, 50));
+        String cacheKey = "recommend:home:" + (userId == null ? "anonymous" : userId) + ":" + effectiveLimit;
+        return cacheSupport.getList(cacheKey)
+                .orElseGet(() -> {
+                    List<Map<String, Object>> result = loadHomeRecommendations(effectiveLimit, userId);
+                    cacheSupport.putList(cacheKey, result, cacheProperties.getHomeRecommendTtl());
+                    return result;
+                });
+    }
 
+    private List<Map<String, Object>> loadHomeRecommendations(int effectiveLimit, Long userId) {
         if (userId == null) {
             return recommendMapper.findPopularProducts(effectiveLimit);
         }
@@ -76,6 +92,17 @@ public class RecommendServiceImpl implements RecommendService {
     @Override
     public List<Map<String, Object>> recommendAlsoBought(Long productId, int limit) {
         int effectiveLimit = Math.max(1, Math.min(limit, 20));
-        return recommendMapper.findCoPurchased(productId, effectiveLimit);
+        String cacheKey = "recommend:also-bought:" + productId + ":" + effectiveLimit;
+        return cacheSupport.getList(cacheKey)
+                .orElseGet(() -> {
+                    List<Map<String, Object>> result = recommendMapper.findCoPurchased(productId, effectiveLimit);
+                    cacheSupport.putList(cacheKey, result, cacheProperties.getAlsoBoughtTtl());
+                    return result;
+                });
+    }
+
+    @Override
+    public void invalidateRecommendationCaches() {
+        cacheSupport.evictByPrefix("recommend:");
     }
 }

@@ -4,6 +4,7 @@ import com.youyu.backend.common.api.ResultCode;
 import com.youyu.backend.common.exception.BusinessException;
 import com.youyu.backend.mapper.review.ReviewMapper;
 import com.youyu.backend.mapper.shop.ShopMapper;
+import com.youyu.backend.service.product.RecommendService;
 import com.youyu.backend.service.review.ReviewService;
 import com.youyu.backend.service.transaction.support.TransactionDataStore;
 import java.util.ArrayList;
@@ -29,13 +30,16 @@ public class ReviewServiceImpl implements ReviewService {
     private final ReviewMapper reviewMapper;
     private final TransactionDataStore transactionDataStore;
     private final ShopMapper shopMapper;
+    private final RecommendService recommendService;
 
     public ReviewServiceImpl(ReviewMapper reviewMapper,
                              TransactionDataStore transactionDataStore,
-                             ShopMapper shopMapper) {
+                             ShopMapper shopMapper,
+                             RecommendService recommendService) {
         this.reviewMapper = reviewMapper;
         this.transactionDataStore = transactionDataStore;
         this.shopMapper = shopMapper;
+        this.recommendService = recommendService;
     }
 
     @Override
@@ -82,6 +86,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         recalculateProductRating(productId);
+        recommendService.invalidateRecommendationCaches();
 
         return reviewMapper.findProductReviewById(reviewId)
                 .orElseThrow(() -> new BusinessException(ResultCode.INTERNAL_SERVER_ERROR, "评价创建失败"));

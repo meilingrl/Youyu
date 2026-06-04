@@ -8,4 +8,6 @@ public interface RecommendService {
     List<Map<String, Object>> recommendForHome(int limit, Long userId);
 
     List<Map<String, Object>> recommendAlsoBought(Long productId, int limit);
+
+    void invalidateRecommendationCaches();
 }

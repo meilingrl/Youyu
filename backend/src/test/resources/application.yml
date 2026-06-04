@@ -10,3 +10,8 @@ spring:
       continue-on-error: true
       schema-locations: classpath:schema.sql
       data-locations: classpath:seed/data.sql,classpath:seed/seed-transactions.sql,classpath:seed/data-perf-catalog.sql
+
+management:
+  health:
+    redis:
+      enabled: false

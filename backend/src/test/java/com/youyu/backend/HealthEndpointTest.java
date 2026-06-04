@@ -20,7 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
                 "management.endpoint.health.show-components=always",
                 "management.endpoint.health.show-details=never",
                 "management.health.db.enabled=true",
-                "management.health.diskspace.enabled=true"
+                "management.health.diskspace.enabled=true",
+                "management.health.redis.enabled=false"
         }
 )
 class HealthEndpointTest {

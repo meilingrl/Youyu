@@ -9,6 +9,7 @@ import com.youyu.backend.mapper.product.ProductReviewTaskMapper;
 import com.youyu.backend.mapper.shop.ShopMapper;
 import com.youyu.backend.mapper.user.UserMapper;
 import com.youyu.backend.service.product.ProductService;
+import com.youyu.backend.service.product.RecommendService;
 import com.youyu.backend.service.search.ProductSearchCriteria;
 import com.youyu.backend.service.search.ProductSearchResult;
 import com.youyu.backend.service.search.SearchService;
@@ -34,17 +35,20 @@ public class ProductServiceImpl implements ProductService {
     private final ShopMapper shopMapper;
     private final UserMapper userMapper;
     private final SearchService searchService;
+    private final RecommendService recommendService;
 
     public ProductServiceImpl(ProductMapper productMapper,
                               ProductReviewTaskMapper productReviewTaskMapper,
                               ShopMapper shopMapper,
                               UserMapper userMapper,
-                              SearchService searchService) {
+                              SearchService searchService,
+                              RecommendService recommendService) {
         this.productMapper = productMapper;
         this.productReviewTaskMapper = productReviewTaskMapper;
         this.shopMapper = shopMapper;
         this.userMapper = userMapper;
         this.searchService = searchService;
+        this.recommendService = recommendService;
     }
 
     @Override
@@ -156,6 +160,7 @@ public class ProductServiceImpl implements ProductService {
         Map<String, Object> created = productMapper.findById(productId)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Product not found"));
         syncSearchDocument(productId);
+        recommendService.invalidateRecommendationCaches();
         return created;
     }
 
@@ -174,6 +179,7 @@ public class ProductServiceImpl implements ProductService {
         Map<String, Object> updated = productMapper.findById(productId)
                 .orElseThrow(() -> new BusinessException(ResultCode.NOT_FOUND, "Product not found"));
         syncSearchDocument(productId);
+        recommendService.invalidateRecommendationCaches();
         return updated;
     }
 
@@ -187,6 +193,7 @@ public class ProductServiceImpl implements ProductService {
         Map<String, Object> updated = new LinkedHashMap<>(product);
         updated.put("status", status);
         syncSearchDocument(productId);
+        recommendService.invalidateRecommendationCaches();
         return updated;
     }
 
@@ -196,6 +203,7 @@ public class ProductServiceImpl implements ProductService {
         productMapper.softDelete(productId);
         product.put("status", "closed");
         searchService.removeProductSearchDocument(productId);
+        recommendService.invalidateRecommendationCaches();
         return product;
     }
 
