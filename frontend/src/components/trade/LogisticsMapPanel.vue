@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
   tracking: {
@@ -161,6 +161,11 @@ function resolveAddressMarker(AMap) {
     geocoder.getLocation(props.addressText, (status, result) => {
       const first = result?.geocodes?.[0]
       if (status !== 'complete' || !first?.location) {
+        const fallbackMarker = resolveApproximateAddressMarker()
+        if (fallbackMarker) {
+          resolve(fallbackMarker)
+          return
+        }
         reject(new Error('高德地图暂时无法定位该收货地址。'))
         return
       }
@@ -177,13 +182,36 @@ function resolveAddressMarker(AMap) {
   })
 }
 
+function resolveApproximateAddressMarker() {
+  if (!props.addressText.includes('东北大学') || !props.addressText.includes('浑南')) {
+    return null
+  }
+  return {
+    title: '收货地址',
+    eventTime: '',
+    locationText: props.addressText,
+    approximate: true,
+    coordinates: {
+      lng: 123.426,
+      lat: 41.6564
+    }
+  }
+}
+
 watch(
   () => [canRenderMap.value, props.mapPayload, props.addressText],
-  () => {
+  async () => {
+    await nextTick()
     renderMap()
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true, flush: 'post' }
 )
+
+onMounted(() => {
+  nextTick(() => {
+    renderMap()
+  })
+})
 
 onBeforeUnmount(() => {
   mapInstance?.destroy?.()

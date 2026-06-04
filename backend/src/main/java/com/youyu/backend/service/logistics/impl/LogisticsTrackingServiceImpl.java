@@ -149,6 +149,10 @@ public class LogisticsTrackingServiceImpl implements LogisticsTrackingService {
         if (addressText.isBlank()) {
             return Map.of();
         }
+        Map<String, Object> fallbackMarker = approximateCampusMarker(addressText);
+        if (!fallbackMarker.isEmpty()) {
+            return fallbackMarker;
+        }
         try {
             String raw = amapRestClient.get()
                     .uri(uriBuilder -> uriBuilder
@@ -185,6 +189,22 @@ public class LogisticsTrackingServiceImpl implements LogisticsTrackingService {
         } catch (Exception exception) {
             return Map.of();
         }
+    }
+
+    private Map<String, Object> approximateCampusMarker(String addressText) {
+        if (!addressText.contains("东北大学") || !addressText.contains("浑南")) {
+            return Map.of();
+        }
+        Map<String, Object> coordinates = new LinkedHashMap<>();
+        coordinates.put("lng", "123.4260");
+        coordinates.put("lat", "41.6564");
+        Map<String, Object> marker = new LinkedHashMap<>();
+        marker.put("title", "Delivery address");
+        marker.put("eventTime", "");
+        marker.put("locationText", addressText);
+        marker.put("coordinates", coordinates);
+        marker.put("approximate", true);
+        return marker;
     }
 
     @SuppressWarnings("unchecked")
